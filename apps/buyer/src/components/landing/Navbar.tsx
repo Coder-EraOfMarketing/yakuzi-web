@@ -151,6 +151,30 @@ export default function Navbar({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSearchChatOpen, setIsSearchChatOpen] = useState(false);
+
+  // Opening either panel used to leave the caret nowhere, so you had to click a
+  // second time inside the box before you could type. Focus it on open.
+  //
+  // Done in an effect rather than with autoFocus: the textarea mounts inside a
+  // framer-motion container that is still animating, and autoFocus fires before
+  // that settles — it lands inconsistently and can scroll the page as the panel
+  // transforms. Waiting a frame is reliable, and preventScroll keeps the
+  // viewport still on mobile, where the panel slides up over the nav bar.
+  useEffect(() => {
+    if (!isSearchChatOpen) return;
+    const frame = requestAnimationFrame(() =>
+      searchInputRef.current?.focus({ preventScroll: true }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [isSearchChatOpen]);
+
+  useEffect(() => {
+    if (!isChatOpen) return;
+    const frame = requestAnimationFrame(() =>
+      chatInputRef.current?.focus({ preventScroll: true }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [isChatOpen]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatSessions, setChatSessions] = useState<{ id: string, date: number, messages: ChatMessage[] }[]>([]);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -166,6 +190,8 @@ export default function Navbar({
   const navPanelRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLTextAreaElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: categoriesData } = useCategories();
   const categories = Array.isArray(categoriesData) ? categoriesData : (categoriesData as any)?.data ?? [];
@@ -743,6 +769,7 @@ export default function Navbar({
                       </div>
                     )}
                     <textarea
+                      ref={chatInputRef}
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => {
@@ -886,6 +913,7 @@ export default function Navbar({
                   {/* Chat Box Header / Input Area */}
                   <div className="flex-1 pb-4 z-10">
                     <textarea
+                      ref={searchInputRef}
                       value={searchInput}
                       onChange={(e) => setSearchInput(e.target.value)}
                       onKeyDown={(e) => {
