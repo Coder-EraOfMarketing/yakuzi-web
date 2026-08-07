@@ -157,6 +157,17 @@ export default function Navbar({
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [searchInput, setSearchInput] = useState("");
+  const searchTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Focus the input the moment the panel opens - having to click into an
+  // obviously-waiting search box before typing reads as broken. The small
+  // delay lets the panel's mount animation attach the element first.
+  useEffect(() => {
+    if (!isSearchChatOpen) return;
+    const timer = setTimeout(() => searchTextareaRef.current?.focus(), 80);
+    return () => clearTimeout(timer);
+  }, [isSearchChatOpen]);
+
   // Live results shown inside the search panel while typing.
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
@@ -913,6 +924,8 @@ export default function Navbar({
                   {/* Chat Box Header / Input Area */}
                   <div className="pb-2 z-10">
                     <textarea
+                      ref={searchTextareaRef}
+                      autoFocus
                       value={searchInput}
                       onChange={(e) => setSearchInput(e.target.value)}
                       onKeyDown={(e) => {
