@@ -7,6 +7,7 @@ import { useBroadcastNotification, useNotificationHistory, useMyNotificationHist
 import { toast } from "react-hot-toast";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Tabs, Badge, Pagination } from "@/components/ui";
+import { Can } from "@/components/access/can";
 
 export default function NotificationsPage() {
   const [target, setTarget] = useState<"ALL" | "BUYER" | "SELLER">("ALL");
@@ -229,6 +230,7 @@ export default function NotificationsPage() {
 
           {/* Action Button */}
           <div className="pt-4 border-t border-white/10 flex justify-end">
+            <Can tab="notifications" level="full">
             <button
               onClick={handleSend}
               disabled={isPending || !message.trim()}
@@ -247,6 +249,7 @@ export default function NotificationsPage() {
               )}
               {isPending ? "Broadcasting..." : "Broadcast Message"}
             </button>
+            </Can>
           </div>
         </motion.div>}
       </div>

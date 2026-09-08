@@ -404,7 +404,19 @@ export async function getAdmins() {
   return data.data;
 }
 
-export async function createAdmin(payload: { phone: string; name: string; role?: string; permissions?: string }) {
+/** Tab groups, labels and levels the grant screen renders from. */
+export async function getAccessCatalog() {
+  const { data } = await apiClient.get<{ data: any }>("/admin/admins/access-catalog");
+  return data.data;
+}
+
+export async function createAdmin(payload: {
+  phone: string;
+  name: string;
+  department?: string;
+  /** Tab-level grants, e.g. { isSuper: false, tabs: { orders: "partial" } }. */
+  access?: { isSuper: boolean; tabs: Record<string, string> };
+}) {
   const { data } = await apiClient.post<{ data: any }>("/admin/admins", payload);
   return data.data;
 }

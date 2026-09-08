@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Badge, Button, EmptyState, Input, Pagination, Select, Skeleton } from "@/components/ui";
 import { useAdminBlogPosts, useDeleteBlogPost, useUpdateBlogPostStatus } from "@/hooks/useBlogs";
+import { Can } from "@/components/access/can";
 
 const BUYER_URL = process.env.NEXT_PUBLIC_BUYER_URL ?? "https://yukizi.com";
 
@@ -126,9 +127,11 @@ export default function AdminBlogsPage() {
                         <Link href={`/blogs/${post.id}`}>
                           <Button variant="ghost" size="sm" title="Edit"><Pencil className="h-3.5 w-3.5" /></Button>
                         </Link>
-                        <Button variant="ghost" size="sm" title="Delete" onClick={() => handleDelete(post.id, post.title)}>
-                          <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                        </Button>
+                        <Can tab="blogs" level="full">
+                          <Button variant="ghost" size="sm" title="Delete" onClick={() => handleDelete(post.id, post.title)}>
+                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                          </Button>
+                        </Can>
                       </div>
                     </td>
                   </tr>

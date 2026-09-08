@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { useAdminUsers, useAdminSellers, useAffirmUserStatus, useUserById, useUpdateGstPanStatus, useDeleteUser, usePresignedUrl } from "@/hooks/useAdmin";
+import { Can } from "@/components/access/can";
 
 type RoleFilter = "all" | "BUYER" | "SELLER" | "ADMIN";
 type StatusFilter = "all" | "APPROVED" | "PENDING" | "BLOCKED" | "VACATION";
@@ -379,10 +380,12 @@ export default function UsersPage() {
                                 className="h-7 w-7 rounded-lg flex items-center justify-center text-primary hover:bg-primary/10 transition-colors">
                                 <Eye className="h-3.5 w-3.5" />
                               </Link>
-                              <button onClick={(e) => { e.stopPropagation(); void handleDeleteUser(u.id, u.phone); }} aria-label="Delete user" title="Delete user"
-                                className="h-7 w-7 rounded-lg flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                              <Can tab="users" level="full">
+                                <button onClick={(e) => { e.stopPropagation(); void handleDeleteUser(u.id, u.phone); }} aria-label="Delete user" title="Delete user"
+                                  className="h-7 w-7 rounded-lg flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </Can>
                               {isSeller && (
                                 <button onClick={(e) => { e.stopPropagation(); setExpandedUser(isExpanded ? null : u.id); }} aria-label="View details" title="View seller details"
                                   className="h-7 w-7 rounded-lg flex items-center justify-center text-primary hover:bg-primary/10 transition-colors">
@@ -391,7 +394,7 @@ export default function UsersPage() {
                               )}
 
                               {u.status === "PENDING" && (
-                                <>
+                                <Can tab="users" level="full">
                                   <button onClick={(e) => { e.stopPropagation(); void handleAction(u.id, u.phone, "approve"); }} aria-label="Approve" title="Approve user"
                                     className="h-7 w-7 rounded-lg flex items-center justify-center text-green-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
                                     <UserCheck className="h-3.5 w-3.5" />
@@ -400,7 +403,7 @@ export default function UsersPage() {
                                     className="h-7 w-7 rounded-lg flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                                     <UserX className="h-3.5 w-3.5" />
                                   </button>
-                                </>
+                                </Can>
                               )}
                             </div>
 

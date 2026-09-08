@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useAdminOrdersFiltered, useUpdateAdminOrderStatus, useCancelTestOrders, useTestOrdersCount } from "@/hooks/useAdmin";
 import { getPresignedUrl } from "@yukizi/api-client";
 import toast from "react-hot-toast";
+import { Can } from "@/components/access/can";
 
 const STATUS_FILTERS = [
   { label: "All", v: "all" },
@@ -284,14 +285,16 @@ export default function AdminOrdersPage() {
           </p>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setShowCancelTestOrdersModal(false)}>Keep Orders</Button>
-            <Button
-              variant="danger"
-              onClick={handleCancelTestOrders}
-              loading={cancelTestOrders.isPending}
-              disabled={isCountLoading || !testOrdersCount}
-            >
-              Cancel All Test Orders
-            </Button>
+            <Can tab="orders" level="full">
+              <Button
+                variant="danger"
+                onClick={handleCancelTestOrders}
+                loading={cancelTestOrders.isPending}
+                disabled={isCountLoading || !testOrdersCount}
+              >
+                Cancel All Test Orders
+              </Button>
+            </Can>
           </div>
         </div>
       </Modal>
