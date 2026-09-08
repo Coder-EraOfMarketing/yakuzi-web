@@ -33,7 +33,14 @@ apiClient.interceptors.response.use(
         window.location.href = "/auth";
       }
     } else if (status === 403) {
-      toast.error(serverMsg || "You do not have permission to perform this action.");
+      // Only for something the user actually did. Pages fetch data the signed-in
+      // admin may not be granted (the dashboard reads platform settings, for
+      // example); toasting those turns every page load into an error popup,
+      // while the page itself already shows nothing for that section.
+      const isRead = (error?.config?.method ?? "get").toLowerCase() === "get";
+      if (!isRead) {
+        toast.error(serverMsg || "You do not have permission to perform this action.");
+      }
     } else if (status && status >= 500) {
       toast.error(serverMsg || "Something went wrong. Please try again.");
     } else if (!error?.response && error?.request) {
