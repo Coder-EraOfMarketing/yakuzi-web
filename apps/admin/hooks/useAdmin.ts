@@ -12,7 +12,7 @@ import {
   getCategories, createCategory, updateCategory, deleteCategory,
   replaceCategoryBanners, replaceSubCategoryBanners,
   getSubCategories, createSubCategory, updateSubCategory, deleteSubCategory as deleteSubCategoryApi,
-  getAdmins, createAdmin, updateAdmin, deleteAdmin,
+  getAdmins, createAdmin, updateAdmin, deleteAdmin, getAccessCatalog,
   getSuggestions, createSuggestion, updateSuggestion, deleteSuggestion, importSuggestionsCsv,
   getBanners, createBanner, updateBanner, deleteBanner,
   getHomepageSections, createHomepageSection, updateHomepageSection, deleteHomepageSection, reorderHomepageSections,
@@ -458,6 +458,14 @@ export function useSyncSettlements() {
 
 export function useAdmins() { return useQuery({ queryKey: ["admin", "admins"], queryFn: getAdmins, staleTime: 60_000, retry: 1 }); }
 
+/**
+ * Tab groups, labels and levels for the grant screen. Served by the API so
+ * this screen and the server's enforcement cannot drift apart.
+ */
+export function useAccessCatalog() {
+  return useQuery({ queryKey: ["admin", "access-catalog"], queryFn: getAccessCatalog, staleTime: Infinity, retry: 1 });
+}
+
 export function useCreateAdmin() {
   const qc = useQueryClient();
   return useMutation({ mutationFn: createAdmin, onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "admins"] }) });
@@ -467,7 +475,11 @@ export function useUpdateAdmin() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ adminId, payload }: { adminId: string; payload: Record<string, any> }) => updateAdmin(adminId, payload),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "admins"] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin", "admins"] });
+      // Editing your own row changes your sidebar, so refresh the session too.
+      void qc.invalidateQueries({ queryKey: ["admin", "me"] });
+    },
   });
 }
 

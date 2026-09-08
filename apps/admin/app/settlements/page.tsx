@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { useSettlements, useSettlementsSummary, useMarkSettlementPaid, useSyncSettlements, useAdminOrdersFiltered, useUploadSettlementProof } from "@/hooks/useAdmin";
 
 import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Can } from "@/components/access/can";
 import { DateRange } from "react-day-picker";
 import { subDays } from "date-fns";
 import { getSettlements } from "@/api/admin.api";
@@ -354,7 +355,9 @@ export default function AdminSettlementsPage() {
 
                   <div className="pt-2 flex justify-end gap-3">
                     <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
-                    <Button type="submit" loading={markPaid.isPending} leftIcon={<CheckCircle2 className="h-4 w-4" />}>Confirm Paid</Button>
+                    <Can tab="settlements" level="full">
+                      <Button type="submit" loading={markPaid.isPending} leftIcon={<CheckCircle2 className="h-4 w-4" />}>Confirm Paid</Button>
+                    </Can>
                   </div>
                 </form>
               </div>

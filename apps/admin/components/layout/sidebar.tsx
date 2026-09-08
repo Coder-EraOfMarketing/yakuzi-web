@@ -4,33 +4,37 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutDashboard, Users, Package, ClipboardList, Settings, LogOut, Shield, ChevronLeft, FolderTree, CreditCard, Banknote, Ticket, Bell, UserCog, FileSpreadsheet, Image, Gift, Layout, MessageSquare, PackagePlus, Bot, Layers, Tag, Star, Globe, LayoutGrid, Newspaper, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { can, TabKey } from "@/lib/access";
+import { useAdminAccess } from "@/hooks/useAccess";
 import { useAdminAuth } from "@/store";
 import { useState } from "react";
 
-const NAV = [
+// `tab` is the access key this entry needs; entries without one (the
+// dashboard) are visible to every admin.
+const NAV: { icon: any; label: string; href: string; tab?: TabKey }[] = [
   // One entry: the dashboard IS the analytics home (its sub-nav reaches
   // traffic/behavior/audience/real-time/health).
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-  { icon: Bot, label: "AI Chatbot", href: "/chatbot" },
-  { icon: Users, label: "Users", href: "/users" },
-  { icon: Package, label: "Products", href: "/products" },
-  { icon: PackagePlus, label: "Add for Seller", href: "/products/add-for-seller" },
-  { icon: FileSpreadsheet, label: "Suggestions", href: "/suggestions" },
-  { icon: Tag, label: "Brands", href: "/brands" },
-  { icon: Image, label: "HeroSection Image", href: "/banners" },
-  { icon: Layers, label: "Categories", href: "/collections" },
-  { icon: LayoutGrid, label: "Homepage Sections", href: "/homepage-sections" },
-  { icon: ClipboardList, label: "Orders", href: "/orders" },
-  { icon: Truck, label: "Self Ship", href: "/self-ship" },
-  { icon: Layout, label: "Marketing", href: "/marketing" },
-  { icon: Newspaper, label: "Blogs", href: "/blogs" },
-  { icon: Globe, label: "SEO", href: "/seo" },
-  { icon: Banknote, label: "Settlements", href: "/settlements" },
-  { icon: Ticket, label: "Tickets", href: "/tickets" },
-  { icon: Star, label: "Reviews", href: "/reviews" },
-  { icon: UserCog, label: "Admins", href: "/admins" },
-  { icon: Bell, label: "Notifications", href: "/notifications" },
-  { icon: Settings, label: "Settings", href: "/settings" },
+  { icon: Bot, label: "AI Chatbot", href: "/chatbot", tab: "chatbot" },
+  { icon: Users, label: "Users", href: "/users", tab: "users" },
+  { icon: Package, label: "Products", href: "/products", tab: "products" },
+  { icon: PackagePlus, label: "Add for Seller", href: "/products/add-for-seller", tab: "products" },
+  { icon: FileSpreadsheet, label: "Suggestions", href: "/suggestions", tab: "suggestions" },
+  { icon: Tag, label: "Brands", href: "/brands", tab: "brands" },
+  { icon: Image, label: "HeroSection Image", href: "/banners", tab: "banners" },
+  { icon: Layers, label: "Categories", href: "/collections", tab: "categories" },
+  { icon: LayoutGrid, label: "Homepage Sections", href: "/homepage-sections", tab: "homepageSections" },
+  { icon: ClipboardList, label: "Orders", href: "/orders", tab: "orders" },
+  { icon: Truck, label: "Self Ship", href: "/self-ship", tab: "selfShip" },
+  { icon: Layout, label: "Marketing", href: "/marketing", tab: "marketing" },
+  { icon: Newspaper, label: "Blogs", href: "/blogs", tab: "blogs" },
+  { icon: Globe, label: "SEO", href: "/seo", tab: "seo" },
+  { icon: Banknote, label: "Settlements", href: "/settlements", tab: "settlements" },
+  { icon: Ticket, label: "Tickets", href: "/tickets", tab: "tickets" },
+  { icon: Star, label: "Reviews", href: "/reviews", tab: "reviews" },
+  { icon: UserCog, label: "Admins", href: "/admins", tab: "admins" },
+  { icon: Bell, label: "Notifications", href: "/notifications", tab: "notifications" },
+  { icon: Settings, label: "Settings", href: "/settings", tab: "settings" },
 ];
 
 
@@ -39,6 +43,15 @@ export function AdminSidebar() {
   const { user, logout } = useAdminAuth();
   const router = useRouter();
   const [open, setOpen] = useState(true);
+  const { access, isSuper } = useAdminAccess();
+
+  // Only tabs this admin can actually open. Previously every admin saw all 21
+  // entries and found out on click that the route was blocked.
+  const nav = NAV.filter((item) => {
+    if (!item.tab) return true;
+    if (item.tab === "admins") return isSuper; // granting access is super-only
+    return can(access, item.tab, "view");
+  });
 
   return (
     <aside className={cn("fixed top-0 left-0 h-full z-40 flex flex-col glass border-r border-white/30 dark:border-white/10 transition-all duration-300", open ? "w-64" : "w-20")} aria-label="Admin navigation">
@@ -66,13 +79,13 @@ export function AdminSidebar() {
             Seller under Products), only the longest/most specific matching
             href should light up, not both. */}
         {(() => {
-          const activeHref = NAV.reduce<string | null>((best, item) => {
+          const activeHref = nav.reduce<string | null>((best, item) => {
             const matches = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
             if (!matches) return best;
             return !best || item.href.length > best.length ? item.href : best;
           }, null);
 
-          return NAV.map(({ icon: Icon, label, href }) => {
+          return nav.map(({ icon: Icon, label, href }) => {
             const active = href === activeHref;
             return (
               <Link key={href} href={href} aria-current={active ? "page" : undefined}
@@ -93,7 +106,10 @@ export function AdminSidebar() {
         {user && open && (
           <div className="px-3 py-2 mb-1">
             <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
-            <div className="text-xs text-muted-foreground">Super Admin</div>
+            {/* Was hardcoded to "Super Admin" for everyone. */}
+            <div className="text-xs text-muted-foreground">
+              {isSuper ? "Super Admin" : `${nav.length - 1} section${nav.length === 2 ? "" : "s"}`}
+            </div>
           </div>
         )}
         <button onClick={() => { logout(); router.push("/auth"); }}

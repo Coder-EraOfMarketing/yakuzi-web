@@ -7,6 +7,7 @@ import { Badge, Pagination, Button } from "@/components/ui";
 import { Trash2, Star, User, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
+import { Can } from "@/components/access/can";
 
 export default function AdminReviewsPage() {
   const [page, setPage] = useState(1);
@@ -170,16 +171,18 @@ export default function AdminReviewsPage() {
                         {format(new Date(review.createdAt), "MMM d, yyyy")}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleDelete(review.id)}
-                          disabled={isDeleting}
-                          className="h-8 gap-1.5"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </Button>
+                        <Can tab="reviews" level="full">
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleDelete(review.id)}
+                            disabled={isDeleting}
+                            className="h-8 gap-1.5"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </Button>
+                        </Can>
                       </td>
                     </tr>
                   ))

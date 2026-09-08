@@ -3,50 +3,16 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAdminAuth } from "@/store";
 import { useAdminMe } from "@/hooks/useAdmin";
+import { useAdminAccess } from "@/hooks/useAccess";
+import { canOpenRoute, tabForRoute, TAB_LABELS } from "@/lib/access";
 import { Loader2, ShieldAlert } from "lucide-react";
 
-const ROUTE_PERMISSIONS: Record<string, string> = {
-  "/users": "1",
-  "/products": "3",
-  "/categories": "3",
-  "/orders": "5",
-  "/payments": "7",
-  "/settlements": "9",
-  "/tickets": "b",
-  "/suggestions": "d",
-  "/product-requests": "f",
-  "/marketing": "h",
-  "/banners": "v",
-  "/notifications": "j",
-  "/referrals": "l",
-  "/custom-orders": "n",
-  "/analytics": "p",
-  "/settings": "r",
-  "/admins": "t",
-  "/brands": "3",
-};
-
-function hasPermission(permissions: string | undefined, route: string, role?: string, department?: string): boolean {
-  if (
-    role === "SUPER_ADMIN" || 
-    role === "SUPERADMIN" || 
-    permissions?.includes("x") || 
-    permissions === "*" || 
-    permissions?.toLowerCase() === "all" || 
-    permissions?.toLowerCase() === "superadmin" ||
-    department?.toLowerCase() === "super admin" ||
-    department?.toLowerCase() === "superadmin" ||
-    (!permissions && role === "ADMIN") // Fallback for root admin if permissions are null/undefined in DB
-  ) return true; // Super admin always allowed
-
-  const requiredPerm = Object.entries(ROUTE_PERMISSIONS).find(
-    ([prefix]) => route === prefix || route.startsWith(prefix + "/")
-  );
-
-  if (!requiredPerm) return true; // No specific permission required for this route (e.g., Dashboard)
-  
-  return !!permissions && permissions.includes(requiredPerm[1]);
-}
+/**
+ * Route access now comes from the tab grants the API issues (see lib/access).
+ * The old map keyed pages to single letter codes, left most of the sidebar -
+ * blogs, SEO, reviews, self ship, homepage sections - completely ungated, and
+ * treated a free-text department of "Super Admin" as a full-access backdoor.
+ */
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, isAuth, logout } = useAdminAuth();
@@ -54,8 +20,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
-
-  const permissions = (user as any)?.adminProfile?.permissions || (user as any)?.permissions;
+  const { access } = useAdminAccess();
 
   useEffect(() => {
     setMounted(true);
@@ -113,16 +78,19 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const department = (user as any)?.adminProfile?.department || (user as any)?.department;
-
-  // Check route-level permissions
-  if (!hasPermission(permissions, pathname, (user as any)?.role, department)) {
+  // Check route-level access. The sidebar already hides what an admin cannot
+  // open, so reaching this screen means a typed URL or a stale bookmark.
+  if (!canOpenRoute(access, pathname)) {
+    const tab = tabForRoute(pathname);
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center space-y-4 p-6 glass-card max-w-sm rounded-2xl border border-destructive/20 shadow-2xl">
           <ShieldAlert className="h-12 w-12 text-destructive mx-auto animate-pulse" />
-          <h2 className="text-lg font-semibold">Access Denied</h2>
-          <p className="text-sm text-muted-foreground">You don&apos;t have permission to access <strong>{pathname}</strong>.</p>
+          <h2 className="text-lg font-semibold">No access to this section</h2>
+          <p className="text-sm text-muted-foreground">
+            Your account does not have access to{" "}
+            <strong>{tab ? TAB_LABELS[tab] ?? pathname : pathname}</strong>. Ask a Super Admin if you need it.
+          </p>
           <div className="pt-2 space-y-2">
             <button onClick={() => router.replace("/dashboard")} className="text-sm text-primary underline block w-full">Go to Dashboard</button>
             <button onClick={() => { logout(); router.replace("/auth"); }} className="text-xs text-muted-foreground hover:text-foreground block w-full mt-2 transition-colors">Logout & Login again</button>
