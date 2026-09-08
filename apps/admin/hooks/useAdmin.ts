@@ -647,7 +647,14 @@ export function useMyNotificationHistory() {
 
 // ─── Platform Settings ───────────────────────────────
 
-export function usePlatformSettings() { return useQuery({ queryKey: ["admin", "settings"], queryFn: getPlatformSettings, staleTime: 60_000, retry: 1 }); }
+/**
+ * `enabled` so a caller can skip the request when the signed-in admin has no
+ * Settings access - the dashboard used to fire it for everyone, which 403'd on
+ * every login for a restricted admin.
+ */
+export function usePlatformSettings(enabled = true) {
+  return useQuery({ queryKey: ["admin", "settings"], queryFn: getPlatformSettings, staleTime: 60_000, enabled });
+}
 
 export function useUpdatePlatformSettings() {
   const qc = useQueryClient();

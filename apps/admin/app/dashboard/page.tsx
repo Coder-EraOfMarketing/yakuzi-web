@@ -9,6 +9,7 @@ import { AdminLayout } from "@/components/layout/admin-layout";
 import { StatCard, Badge, StatusBadge, Button } from "@/components/ui";
 import { formatCurrency, formatCompact } from "@yukizi/utils";
 import { useAdminDashboard, usePlatformSettings, useUpdatePlatformSettings } from "@/hooks/useAdmin";
+import { useAdminAccess } from "@/hooks/useAccess";
 import toast from "react-hot-toast";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
@@ -16,7 +17,12 @@ import { subDays } from "date-fns";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { data: settingsData } = usePlatformSettings();
+  // The Coming Soon switch is a Settings control that happens to live on the
+  // dashboard. Without this an admin who was never granted Settings hit a 403
+  // the moment they logged in.
+  const { can } = useAdminAccess();
+  const canManageSettings = can("settings", "full");
+  const { data: settingsData } = usePlatformSettings(can("settings", "view"));
   const updateSettings = useUpdatePlatformSettings();
   const comingSoonActive = settingsData?.comingSoonMode ?? true;
 
@@ -91,7 +97,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Coming Soon Banner Toggle Widget */}
+      {/* Coming Soon Banner Toggle Widget - a Settings-level control */}
+      {canManageSettings && (
       <div className="mb-6 p-4 rounded-2xl glass-card bg-gradient-to-r from-purple-500/10 via-primary/10 to-indigo-500/10 border border-primary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
         <div className="flex items-center gap-3.5">
           <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
@@ -122,6 +129,7 @@ export default function AdminDashboardPage() {
           <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${comingSoonActive ? "translate-x-5" : "translate-x-0"}`} />
         </button>
       </div>
+      )}
 
 
       {/* Critical alerts */}
@@ -137,7 +145,7 @@ export default function AdminDashboardPage() {
                   <p className="text-xs text-yellow-600 dark:text-yellow-500">Orders awaiting processing</p>
                 </div>
               </div>
-              <Link href="/orders"><Button size="xs" variant="warning">Review</Button></Link>
+              {can("orders") && <Link href="/orders"><Button size="xs" variant="warning">Review</Button></Link>}
             </motion.div>
           )}
           {stats.openTickets > 0 && (
@@ -150,7 +158,7 @@ export default function AdminDashboardPage() {
                   <p className="text-xs text-red-500">Support tickets need attention</p>
                 </div>
               </div>
-              <Link href="/tickets"><Button size="xs" variant="danger">Review</Button></Link>
+              {can("tickets") && <Link href="/tickets"><Button size="xs" variant="danger">Review</Button></Link>}
             </motion.div>
           )}
           {stats.pendingProductRequests > 0 && (
@@ -163,7 +171,7 @@ export default function AdminDashboardPage() {
                   <p className="text-xs text-blue-500">Sellers requesting new items</p>
                 </div>
               </div>
-              <Link href="/product-requests"><Button size="xs" variant="primary">Review</Button></Link>
+              {can("products") && <Link href="/product-requests"><Button size="xs" variant="primary">Review</Button></Link>}
             </motion.div>
           )}
         </div>
@@ -195,7 +203,7 @@ export default function AdminDashboardPage() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="glass-card rounded-2xl overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-border/50">
           <div><h2 className="font-semibold text-foreground">Recent Platform Orders</h2><p className="text-xs text-muted-foreground mt-0.5">Latest orders across the platform</p></div>
-          <Link href="/orders"><Button variant="ghost" size="sm">View all</Button></Link>
+          {can("orders") && <Link href="/orders"><Button variant="ghost" size="sm">View all</Button></Link>}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full" aria-label="Platform orders">
