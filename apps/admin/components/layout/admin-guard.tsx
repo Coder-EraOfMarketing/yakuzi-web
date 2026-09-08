@@ -4,7 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAdminAuth } from "@/store";
 import { useAdminMe } from "@/hooks/useAdmin";
 import { useAdminAccess } from "@/hooks/useAccess";
-import { canOpenRoute, tabForRoute, TAB_LABELS } from "@/lib/access";
+import { canOpenRoute, firstAccessibleRoute, tabForRoute, TAB_LABELS } from "@/lib/access";
 import { Loader2, ShieldAlert } from "lucide-react";
 
 /**
@@ -45,7 +45,15 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     if (isAuth && pathname === "/auth") {
       router.replace("/");
     }
-  }, [isAuth, user?.status, pathname, mounted, router, logout]);
+
+    // "/" force-redirects to /dashboard, which is now a granted tab. An admin
+    // without it should land on their first accessible section rather than on
+    // an access-denied screen the moment they log in.
+    if (isAuth && pathname === "/dashboard" && !canOpenRoute(access, pathname)) {
+      const landing = firstAccessibleRoute(access);
+      if (landing) router.replace(landing);
+    }
+  }, [isAuth, user?.status, pathname, mounted, router, logout, access]);
 
   if (!mounted) {
     return (
@@ -82,6 +90,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   // open, so reaching this screen means a typed URL or a stale bookmark.
   if (!canOpenRoute(access, pathname)) {
     const tab = tabForRoute(pathname);
+    const landing = firstAccessibleRoute(access);
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center space-y-4 p-6 glass-card max-w-sm rounded-2xl border border-destructive/20 shadow-2xl">
@@ -92,7 +101,13 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             <strong>{tab ? TAB_LABELS[tab] ?? pathname : pathname}</strong>. Ask a Super Admin if you need it.
           </p>
           <div className="pt-2 space-y-2">
-            <button onClick={() => router.replace("/dashboard")} className="text-sm text-primary underline block w-full">Go to Dashboard</button>
+            {landing ? (
+              <button onClick={() => router.replace(landing)} className="text-sm text-primary underline block w-full">
+                Go to {TAB_LABELS[tabForRoute(landing) ?? ""] ?? "your sections"}
+              </button>
+            ) : (
+              <p className="text-xs text-muted-foreground">Your account has no sections yet.</p>
+            )}
             <button onClick={() => { logout(); router.replace("/auth"); }} className="text-xs text-muted-foreground hover:text-foreground block w-full mt-2 transition-colors">Logout & Login again</button>
           </div>
         </div>
