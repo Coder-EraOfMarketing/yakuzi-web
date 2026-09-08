@@ -15,6 +15,7 @@ export type AccessLevel = (typeof ACCESS_LEVELS)[number];
 const LEVEL_RANK: Record<AccessLevel, number> = { none: 0, view: 1, partial: 2, full: 3 };
 
 export type TabKey =
+  | "dashboard"
   | "products"
   | "brands"
   | "categories"
@@ -52,11 +53,31 @@ export interface AccessGroup {
   label: string;
   tabs: { key: TabKey; label: string }[];
   supportsPartial: boolean;
+  /** Exactly which levels to offer, when the group is not the usual four. */
+  levels?: AccessLevel[];
   partialMeans?: string;
   fullMeans: string;
 }
 
+/** The levels a group's picker should show. */
+export function levelsForGroup(group: AccessGroup): AccessLevel[] {
+  if (group.levels?.length) return group.levels;
+  return group.supportsPartial
+    ? [...ACCESS_LEVELS]
+    : ACCESS_LEVELS.filter((level) => level !== "partial");
+}
+
 export const ACCESS_GROUPS: AccessGroup[] = [
+  {
+    key: "overview",
+    label: "Overview",
+    // Revenue, order counts and customer totals live here, so it is granted
+    // like any other section. Nothing on it can be edited.
+    supportsPartial: false,
+    levels: ["none", "view"],
+    fullMeans: "See the dashboard: revenue, orders, customers and traffic",
+    tabs: [{ key: "dashboard", label: "Dashboard" }],
+  },
   {
     key: "catalog",
     label: "Catalog",
@@ -121,6 +142,7 @@ export const ACCESS_GROUPS: AccessGroup[] = [
     key: "system",
     label: "System",
     supportsPartial: false,
+    levels: ["none", "view", "full"],
     fullMeans: "Change platform settings. Granting admin access itself always requires Super Admin.",
     tabs: [
       { key: "admins", label: "Admins" },
@@ -177,11 +199,13 @@ export function can(access: AdminAccess, tab: TabKey, required: AccessLevel = "v
 }
 
 /**
- * Page route -> tab. Only routes listed here are gated; anything else (the
- * dashboard, analytics, a details page under a listed prefix) follows its
- * prefix or is open.
+ * Page route -> tab, in sidebar order (firstAccessibleRoute walks this list).
+ * Only routes listed here are gated; anything else follows its prefix or is
+ * open.
  */
 const ROUTE_TABS: [string, TabKey][] = [
+  ["/dashboard", "dashboard"],
+  ["/analytics", "dashboard"],
   ["/products", "products"],
   ["/product-requests", "products"],
   ["/brands", "brands"],
@@ -208,6 +232,19 @@ const ROUTE_TABS: [string, TabKey][] = [
   ["/admins", "admins"],
   ["/settings", "settings"],
 ];
+
+/**
+ * Where to send an admin who has no business on the dashboard. Follows the
+ * sidebar's order so the landing page is the first thing they can actually
+ * open; returns null when they have nothing at all.
+ */
+export function firstAccessibleRoute(adminAccess: AdminAccess): string | null {
+  if (adminAccess.isSuper) return "/dashboard";
+  const match = ROUTE_TABS.find(([, tab]) =>
+    tab === "admins" ? adminAccess.isSuper : can(adminAccess, tab, "view"),
+  );
+  return match ? match[0] : null;
+}
 
 export function tabForRoute(pathname: string): TabKey | null {
   const match = ROUTE_TABS.find(

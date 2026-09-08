@@ -23,6 +23,7 @@ import {
   AdminAccess,
   TabKey,
   levelFor,
+  levelsForGroup,
 } from "@/lib/access";
 
 /**
@@ -128,8 +129,12 @@ export default function AdminManagementPage() {
   const formAccess: AdminAccess = form.access;
   const editingSelf = editingAdmin?.id && editingAdmin.id === (currentUser as any)?.id;
 
-  const optionsFor = (group: AccessGroup) =>
-    group.supportsPartial ? LEVEL_OPTIONS : LEVEL_OPTIONS.filter((o) => o.value !== "partial");
+  // A group states which levels make sense for it - the Dashboard cannot be
+  // edited at all, System has no everyday tier.
+  const optionsFor = (group: AccessGroup) => {
+    const allowed = levelsForGroup(group);
+    return LEVEL_OPTIONS.filter((option) => allowed.includes(option.value));
+  };
 
   const setGroup = (group: AccessGroup, level: AccessLevel) => {
     setForm((f) => {
@@ -530,8 +535,8 @@ export default function AdminManagementPage() {
                   );
                 })}
                 <p className="text-[11px] text-muted-foreground pt-1">
-                  The Dashboard is always visible. Granting admin access always requires Super
-                  Admin.
+                  An admin with no sections cannot use the panel at all. Granting admin access
+                  always requires Super Admin.
                 </p>
               </div>
             )}

@@ -4,17 +4,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutDashboard, Users, Package, ClipboardList, Settings, LogOut, Shield, ChevronLeft, FolderTree, CreditCard, Banknote, Ticket, Bell, UserCog, FileSpreadsheet, Image, Gift, Layout, MessageSquare, PackagePlus, Bot, Layers, Tag, Star, Globe, LayoutGrid, Newspaper, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { can, TabKey } from "@/lib/access";
+import { can, firstAccessibleRoute, TabKey } from "@/lib/access";
 import { useAdminAccess } from "@/hooks/useAccess";
 import { useAdminAuth } from "@/store";
 import { useState } from "react";
 
-// `tab` is the access key this entry needs; entries without one (the
-// dashboard) are visible to every admin.
+// `tab` is the access key this entry needs; entries without one are visible
+// to every admin.
 const NAV: { icon: any; label: string; href: string; tab?: TabKey }[] = [
   // One entry: the dashboard IS the analytics home (its sub-nav reaches
   // traffic/behavior/audience/real-time/health).
-  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", tab: "dashboard" },
   { icon: Bot, label: "AI Chatbot", href: "/chatbot", tab: "chatbot" },
   { icon: Users, label: "Users", href: "/users", tab: "users" },
   { icon: Package, label: "Products", href: "/products", tab: "products" },
@@ -44,6 +44,7 @@ export function AdminSidebar() {
   const router = useRouter();
   const [open, setOpen] = useState(true);
   const { access, isSuper } = useAdminAccess();
+  const homeHref = firstAccessibleRoute(access) ?? "/dashboard";
 
   // Only tabs this admin can actually open. Previously every admin saw all 21
   // entries and found out on click that the route was blocked.
@@ -56,7 +57,7 @@ export function AdminSidebar() {
   return (
     <aside className={cn("fixed top-0 left-0 h-full z-40 flex flex-col glass border-r border-white/30 dark:border-white/10 transition-all duration-300", open ? "w-64" : "w-20")} aria-label="Admin navigation">
       <div className="h-16 flex items-center justify-between px-4 border-b border-white/20 flex-shrink-0">
-        <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
+        <Link href={homeHref} className="flex items-center gap-2.5 min-w-0">
           <div className="h-8 w-8 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
             <Shield className="h-4 w-4 text-white" strokeWidth={2.5} />
           </div>
@@ -108,7 +109,7 @@ export function AdminSidebar() {
             <div className="text-sm font-medium text-foreground truncate">{user.name}</div>
             {/* Was hardcoded to "Super Admin" for everyone. */}
             <div className="text-xs text-muted-foreground">
-              {isSuper ? "Super Admin" : `${nav.length - 1} section${nav.length === 2 ? "" : "s"}`}
+              {isSuper ? "Super Admin" : `${nav.length} section${nav.length === 1 ? "" : "s"}`}
             </div>
           </div>
         )}
