@@ -227,13 +227,9 @@ export default async function CategoryPage({
   // approach) could resolve to a *different* parent than the one this page
   // actually matched, showing e.g. "DC Comics > Funko Pop" for a Funko Pop
   // page reached via Collectables.
-  const breadcrumbs: string[] = categoryData
-    ? matchedSubName
-      ? [categoryName, matchedSubName]
-      : [categoryName]
-    : [];
-
-  const displayCategoryName = breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1] : categoryName;
+  // The mobile header's big title: the sub-collection when there is one,
+  // otherwise the collection itself.
+  const displayCategoryName = matchedSubName ?? categoryName;
 
   // Admin-authored category FAQs (SEO dashboard → CATEGORY override), same
   // pattern the PDP uses: visible <SeoFaq> + FAQPage JSON-LD from the SAME
@@ -252,9 +248,16 @@ export default async function CategoryPage({
       faqs = validFaqs((await fetchSeoOverride('CATEGORY', categoryData.id))?.faq);
     }
   }
-  // One array, used for both the JSON-LD and the visible trail below, so the
-  // two can never describe different navigation.
-  const crumbs = [{ name: 'Home', path: '/' }, { name: categoryName }];
+  // One array for the JSON-LD and the one visible trail, so the two can never
+  // describe different navigation. A sub-collection page adds its own step and
+  // links the parent back to /category/<slug>, which the old array left out
+  // entirely - the markup claimed "Home > Collectables" on a page whose own
+  // trail read "Collectables > Anime & Manga".
+  const crumbs = [
+    { name: 'Home', path: '/' },
+    matchedSubName ? { name: categoryName, path: `/category/${slug}` } : { name: categoryName },
+    ...(matchedSubName ? [{ name: matchedSubName }] : []),
+  ];
 
   const jsonLd: object[] = [
     breadcrumbSchema(crumbs),
@@ -293,23 +296,19 @@ export default async function CategoryPage({
             </div>
           )}
 
-          {/* Mobile Header (Category Name & Breadcrumb). Not an h1 — the page's
-              single h1 is CategoryBanner's sr-only one, and this block stays in
-              the DOM at every viewport (sm:hidden only hides it visually), so an
-              h1 here made every category page carry TWO h1s. */}
+          {/* Mobile header: the collection name only. It used to carry a second
+              breadcrumb trail of its own, so a phone showed the page's
+              navigation twice, in two different shapes - <Breadcrumbs> above
+              said "Home > Collectables" while this said "Collectables >
+              Anime & Manga". There is one trail now, and it is the one above.
+
+              Not an h1 — the page's single h1 is CategoryBanner's sr-only one,
+              and this block stays in the DOM at every viewport (sm:hidden only
+              hides it visually), so an h1 here made every category page carry
+              TWO h1s. */}
           <div className="flex flex-col px-4 sm:hidden pt-4 pb-2">
-            <p aria-hidden="true" className="text-3xl xs:text-3xl font-bold text-gray-500 tracking-tight leading-none mb-1.5">
+            <p aria-hidden="true" className="text-3xl xs:text-3xl font-bold text-gray-500 tracking-tight leading-none">
               {displayCategoryName}
-            </p>
-            <p className="text-sm xs:text-sm text-gray-400 font-medium flex flex-wrap gap-1 items-center">
-              {breadcrumbs.length > 0
-                ? breadcrumbs.map((crumb, idx) => (
-                    <span key={idx} className="flex items-center gap-1">
-                      {crumb}
-                      {idx < breadcrumbs.length - 1 && <span>&gt;</span>}
-                    </span>
-                  ))
-                : categoryName}
             </p>
           </div>
 
