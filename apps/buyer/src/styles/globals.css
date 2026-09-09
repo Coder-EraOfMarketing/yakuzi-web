@@ -828,6 +828,50 @@
    Geometry is untouched: no height, padding, radius, width or font here.
    ─────────────────────────────────────────────────────────────────────── */
 @media (max-width: 639px) {
+  /* The halo is sized in PERCENTAGES of its own box, which is viewport-wide,
+     so it did not survive the trip to a phone: `ellipse 30%` is ~384px across
+     a 1280px desktop - a bloom wider than the bar - but only ~117px on a 390px
+     phone, where it collapsed into a faint patch hidden behind the mascot. The
+     phone bar had no separation from the grid at all.
+
+     Widened to span the bar and pulled UP off the bottom edge. The desktop bar
+     floats with page visible on every side, so its bloom reads all the way
+     around; the phone bar is docked flush to the bottom, so anything centred
+     on it is simply behind the opaque pills. Centring at 70% of a 120px-taller
+     box puts the bright part in the band just above the bar, which is the only
+     place a phone can show it.
+
+     Alpha is higher than desktop because there is less of it visible, but the
+     vertical radius is deliberately tight (40%): at 52% the wash reached the
+     product row and faded the cards - the same failure the desktop pill glow
+     was scaled back for. Reaches zero before the top edge: no line anywhere. */
+  .nav-halo {
+    top: -120px;
+    background: radial-gradient(
+      ellipse 80% 40% at 50% 70%,
+      rgba(255, 255, 255, 0.78) 0%,
+      rgba(255, 255, 255, 0.45) 32%,
+      rgba(255, 255, 255, 0.12) 60%,
+      rgba(255, 255, 255, 0) 80%
+    );
+  }
+
+  /* Same swap the desktop halo makes: on a purple panel or in dark mode the
+     white bloom would read as a rim, so it becomes a dark one. Repeated inside
+     this block because `.dark .nav-halo` outside it carries more specificity
+     and would otherwise keep the desktop geometry on phones. */
+  .nav-halo.on-dark-surface,
+  .dark .nav-halo {
+    top: -120px;
+    background: radial-gradient(
+      ellipse 80% 40% at 50% 70%,
+      rgba(28, 8, 56, 0.70) 0%,
+      rgba(28, 8, 56, 0.44) 32%,
+      rgba(28, 8, 56, 0.14) 60%,
+      rgba(28, 8, 56, 0) 80%
+    );
+  }
+
   .nav-pill.nav-pill {
     background:
       linear-gradient(
