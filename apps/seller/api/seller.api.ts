@@ -132,10 +132,6 @@ export async function getSellerSettlementSummary() {
   return data.data ?? data;
 }
 
-export async function requestSellerPayout() {
-  const { data } = await apiClient.post<{ data: any }>("/settlements/request");
-  return data.data ?? data;
-}
 
 export async function toggleVacationMode(isVacation: boolean) {
   const { data } = await apiClient.patch<any>("/sellers/profile", { isVacation });

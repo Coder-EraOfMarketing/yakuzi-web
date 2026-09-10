@@ -13,7 +13,6 @@ import {
   useUpdateSellerProduct,
   useSellerSettlements,
   useSellerSettlementSummary,
-  useRequestPayout,
   useSellerCustomOrders,
   useSellerCancelledOrders,
   useSellerDashboard,
@@ -527,7 +526,6 @@ export function PayoutsContent() {
   const { data: payouts, isLoading: loadingPayouts } = useSellerSettlements();
   const { data: summary, isLoading: loadingSummary } = useSellerSettlementSummary();
   const { data: ordersData } = useSellerOrders();
-  const requestPayout = useRequestPayout();
 
   const payoutsData = payouts as any;
   const recordedPayouts: any[] = Array.isArray(payoutsData) ? payoutsData : (payoutsData?.data ?? payoutsData?.settlements ?? []);
@@ -549,10 +547,16 @@ export function PayoutsContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div><h1 className="font-semibold text-2xl text-foreground">Payouts</h1><p className="text-sm text-muted-foreground mt-0.5">Track your earnings and payouts</p></div>
-        <Button leftIcon={<CreditCard className="h-4 w-4" />} disabled={requestPayout.isPending || (stats.pendingPayouts || 0) <= 0} onClick={() => { requestPayout.mutate(undefined, { onSuccess: () => { import("react-hot-toast").then(({ default: toast }) => toast.success("Payout request submitted! You will receive it within 3-5 business days.")); }, onError: (err: any) => { import("react-hot-toast").then(({ default: toast }) => toast.error(err?.response?.data?.message || "Failed to request payout")); } }); }}>{requestPayout.isPending ? "Requesting..." : "Request Payout"}</Button>
+        {/* No "Request Payout" button: payouts are released by the Yukizi
+            team, and the button called an endpoint that never existed, so it
+            only ever produced "Failed to request payout". Saying what happens
+            is more use than a control that does nothing. */}
+        <p className="text-sm text-muted-foreground max-w-xs text-right">
+          Payouts are released by the Yukizi team. <a href="/support" className="text-primary underline underline-offset-2">Contact support</a> with any question about a payout.
+        </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Available Balance" value={formatCurrency(stats.pendingPayouts || 0)} change="Ready to withdraw" up icon={CreditCard} iconClass="bg-green-50 text-green-600 dark:bg-green-900/20" delay={0} />
+        <StatCard title="Available Balance" value={formatCurrency(stats.pendingPayouts || 0)} change="Awaiting payout" up icon={CreditCard} iconClass="bg-green-50 text-green-600 dark:bg-green-900/20" delay={0} />
         <StatCard title="Total Paid Out" value={formatCurrency(stats.paidPayouts || 0)} change="Lifetime earnings" up icon={CheckCircle} iconClass="bg-blue-50 text-blue-600 dark:bg-blue-900/20" delay={0.07} />
         <StatCard title="Total Earnings" value={formatCurrency(stats.totalEarnings || 0)} change="All time" icon={Clock} iconClass="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20" delay={0.14} />
       </div>
