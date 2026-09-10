@@ -2,14 +2,15 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Clock, CreditCard, FileText, User, MapPin, Phone, Building2, Mail, ExternalLink, Navigation, Calculator, RefreshCw, Loader2 } from "lucide-react";
+import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Clock, CreditCard, FileText, User, MapPin, Phone, Building2, Mail, ExternalLink, Navigation, Calculator, RefreshCw, Loader2, Download, Receipt } from "lucide-react";
 
 
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Badge, Modal, Input, Skeleton } from "@/components/ui";
 import { formatCurrency, calculatePricing } from "@yukizi/utils";
 import { cn } from "@/lib/utils";
-import { useOrderById, useUpdateAdminOrderStatus, useCancelOrder, useUpdateAdminShippingDocs, useUploadAdminOrderDocument, useOrderTracking } from "@/hooks/useAdmin";
+import { useOrderById, useUpdateAdminOrderStatus, useCancelOrder, useUpdateAdminShippingDocs, useUploadAdminOrderDocument, useOrderTracking, useOrderInvoices } from "@/hooks/useAdmin";
+import { downloadOrderInvoicePdf, type OrderInvoice } from "@/api/admin.api";
 import toast from "react-hot-toast";
 
 const ORDER_STATUSES = [
@@ -27,6 +28,21 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const { data: order, isLoading } = useOrderById(id);
   const { data: tracking, isLoading: isTrackingLoading, isFetching: isTrackingFetching, isError: isTrackingError, refetch: refetchTracking } = useOrderTracking(id, !!order?.shiprocketOrderId);
+  const { data: invoices, isLoading: isInvoicesLoading, isError: isInvoicesError } = useOrderInvoices(id);
+  // Which invoice is being fetched, so only its own button spins.
+  const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(null);
+
+  const handleInvoiceDownload = async (invoice: OrderInvoice) => {
+    if (downloadingInvoice) return;
+    setDownloadingInvoice(invoice.invoiceNumber);
+    try {
+      await downloadOrderInvoicePdf(id, invoice);
+    } catch {
+      toast.error("Could not download that invoice. Please try again.");
+    } finally {
+      setDownloadingInvoice(null);
+    }
+  };
   const updateStatus = useUpdateAdminOrderStatus();
   const cancelOrder = useCancelOrder();
   
@@ -667,6 +683,53 @@ export default function OrderDetailPage() {
                   <span className="text-sm font-semibold text-foreground">{formatCurrency(order.totalAmount ?? 0)}</span>
                 </div>
               </div>
+            </motion.div>
+
+            {/* Tax invoices — one per seller, since the seller is the supplier of
+                record. Outside the shipping blocks on purpose: those only render
+                for Shiprocket orders, and an invoice exists either way. */}
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.21 }} className="glass-card rounded-2xl p-6">
+              <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-primary" /> Tax {invoices && invoices.length === 1 ? "Invoice" : "Invoices"}
+              </h2>
+
+              {isInvoicesLoading ? (
+                <Skeleton className="h-16 w-full rounded-xl" />
+              ) : isInvoicesError ? (
+                <p className="text-xs text-muted-foreground">Could not load invoices for this order.</p>
+              ) : !invoices?.length ? (
+                <p className="text-xs text-muted-foreground">There is nothing to invoice on this order.</p>
+              ) : (
+                <div className="space-y-2">
+                  {invoices.map((invoice) => (
+                    <div key={invoice.invoiceNumber} className="flex items-center justify-between gap-3 rounded-xl border border-border/40 p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground">{invoice.seller?.name || "Seller"}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{invoice.invoiceNumber}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="text-sm font-semibold text-foreground">{formatCurrency(invoice.totalAmount ?? 0)}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleInvoiceDownload(invoice)}
+                          disabled={!!downloadingInvoice}
+                        >
+                          {downloadingInvoice === invoice.invoiceNumber ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Download className="h-3.5 w-3.5" />
+                          )}
+                          <span className="ml-1.5">PDF</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <p className="pt-1 text-[11px] text-muted-foreground">
+                    One invoice per seller. A copy of each is also emailed to the Admin Alert Email when the order is paid.
+                  </p>
+                </div>
+              )}
             </motion.div>
 
             {/* Tracking Info */}

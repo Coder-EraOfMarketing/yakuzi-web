@@ -384,9 +384,49 @@ export async function cancelTestOrders() {
   return data.data;
 }
 
-export async function getOrderInvoice(orderId: string) {
-  const { data } = await apiClient.get<{ data: any }>(`/admin/orders/${orderId}/invoice`);
+// ─── Tax invoices ────────────────────────────────────
+// Always a list, one entry per seller. Checkout splits a cart into an order
+// per seller so a new order carries exactly one, but orders migrated from
+// before that can hold several.
+//
+// NOTE: these hit /orders, not /admin/orders. The invoice endpoints authorize
+// per role themselves — an admin gets every invoice on the order — and there
+// is no /admin mirror of them. The previous getOrderInvoice() called
+// /admin/orders/:id/invoice, which has never existed on the API.
+
+export interface OrderInvoice {
+  invoiceNumber: string;
+  invoiceDate: string;
+  /** Which seller supplied it — how one invoice is addressed for download. */
+  sellerId: string;
+  seller: { name: string; gstin: string | null };
+  buyer: { name: string };
+  totalAmount: number;
+}
+
+export async function getOrderInvoices(orderId: string) {
+  const { data } = await apiClient.get<{ data: OrderInvoice[] }>(`/orders/${orderId}/invoices`);
   return data.data;
+}
+
+/**
+ * Fetches one seller's invoice PDF with the admin's token and hands the
+ * browser a download. Not a plain link: the endpoint needs an Authorization
+ * header, which an <a href> cannot send.
+ */
+export async function downloadOrderInvoicePdf(orderId: string, invoice: OrderInvoice): Promise<void> {
+  const res = await apiClient.get(`/orders/${orderId}/invoices/${invoice.sellerId}/pdf`, {
+    responseType: "blob",
+  });
+  const url = URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  // Invoice numbers carry slashes (YKZ/INV/2026-27/00323711); a filename cannot.
+  a.download = `${invoice.invoiceNumber.replace(/[\\/]/g, "-")}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 // ─── Settlements (Extended) ──────────────────────────
