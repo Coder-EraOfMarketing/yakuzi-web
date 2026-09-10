@@ -25,6 +25,46 @@ const INDIAN_STATES = [
   'Uttarakhand','West Bengal','Delhi','Jammu and Kashmir','Ladakh',
 ];
 
+/**
+ * "Save this information for next time".
+ *
+ * On this device, because that is exactly what the label promises — and it is
+ * opt-in: unticking the box deletes what was stored, so a shared computer does
+ * not keep someone's address and phone number. Every access is wrapped: private
+ * browsing and disabled storage throw on access, and a checkout must never
+ * break over a convenience feature.
+ */
+const SAVED_ADDRESS_KEY = 'yukizi_checkout_address';
+
+type SavedAddress = {
+  firstName: string; lastName: string; name: string; phone: string;
+  address: string; city: string; state: string; pincode: string; email: string;
+};
+
+function readSavedAddress(): Partial<SavedAddress> | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(SAVED_ADDRESS_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Partial<SavedAddress>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistSavedAddress(value: SavedAddress | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (value) window.localStorage.setItem(SAVED_ADDRESS_KEY, JSON.stringify(value));
+    else window.localStorage.removeItem(SAVED_ADDRESS_KEY);
+  } catch {
+    // Storage unavailable — the form still works, it just will not remember.
+  }
+}
+
 export default function CheckoutPage() {
   useEffect(() => {
     track('checkout_started');
@@ -73,7 +113,21 @@ export default function CheckoutPage() {
     email: '',
   });
 
+  // What the buyer saved last time, before anything else has a chance to fill
+  // the form. Runs once, and marks the form as owned so the profile effect
+  // below cannot overwrite the address they actually ship to with the one
+  // they happened to register with.
+  const hydratedFromSaved = useRef(false);
   useEffect(() => {
+    const saved = readSavedAddress();
+    if (!saved) return;
+    hydratedFromSaved.current = true;
+    setSaveInfo(true);
+    setAddress((prev) => ({ ...prev, ...saved }));
+  }, []);
+
+  useEffect(() => {
+    if (hydratedFromSaved.current) return;
     const profile = (profileData as any)?.data || profileData;
     if (profile) {
       const fullName = profile.legalName || profile.name || (user as any)?.name || '';
@@ -254,6 +308,27 @@ export default function CheckoutPage() {
     }
 
     setSyncError(null);
+
+    // Honour the checkbox that has sat on this page doing nothing. Saved at
+    // this point rather than after payment: the details are validated, and if
+    // the payment then fails the buyer should not have to type them again —
+    // which is the whole point of "next time".
+    persistSavedAddress(
+      saveInfo
+        ? {
+            firstName: address.firstName,
+            lastName: address.lastName,
+            name: combinedName,
+            phone: address.phone,
+            address: address.address,
+            city: address.city,
+            state: address.state,
+            pincode: address.pincode,
+            email: address.email,
+          }
+        : null,
+    );
+
     // The backend DTO accepts these fields. Email is included: it is how the
     // receipt and tax invoice reach the buyer, and it is validated above.
     const orderAddress = {
@@ -443,10 +518,16 @@ export default function CheckoutPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <p className="co-section-title">Contact</p>
               </div>
+              {/* name + autoComplete on every field below is what lets the
+                  browser's own saved address fill this form. Without them
+                  Chrome cannot classify the inputs and offers nothing — which
+                  is why this checkout had to be typed out by hand every time. */}
               <input
                 className="co-input"
                 type="email"
                 required
+                name="email"
+                autoComplete="email"
                 placeholder="Email address"
                 value={address.email}
                 onChange={(e) => setAddress({ ...address, email: e.target.value })}
@@ -466,46 +547,55 @@ export default function CheckoutPage() {
 
               <div style={{ marginBottom: 10 }}>
                 <label style={{ fontSize: 12, color: '#888', display: 'block', marginBottom: 4 }}>Country/Region</label>
-                <select className="co-select" defaultValue="India">
+                <select className="co-select" defaultValue="India" name="country" autoComplete="country-name">
                   <option>India</option>
                 </select>
               </div>
 
               <div className="co-name-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                <input className="co-input" placeholder="First name (optional)" value={address.firstName}
+                <input className="co-input" placeholder="First name (optional)" name="givenName" autoComplete="given-name" value={address.firstName}
                   onChange={(e) => setAddress({ ...address, firstName: e.target.value })} />
-                <input className="co-input" placeholder="Last name" value={address.lastName}
+                <input className="co-input" placeholder="Last name" name="familyName" autoComplete="family-name" value={address.lastName}
                   onChange={(e) => setAddress({ ...address, lastName: e.target.value })} />
               </div>
 
               <div style={{ position: 'relative', marginBottom: 10 }}>
-                <input className="co-input" style={{ paddingRight: 36 }} placeholder="Address"
+                <input className="co-input" style={{ paddingRight: 36 }} placeholder="Address" name="addressLine1" autoComplete="address-line1"
                   value={address.address} onChange={(e) => setAddress({ ...address, address: e.target.value })} />
                 <Search size={16} color="#aaa" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               </div>
 
               <div className="co-addr-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: 10, marginBottom: 10 }}>
-                <input className="co-input" placeholder="City" value={address.city}
+                <input className="co-input" placeholder="City" name="city" autoComplete="address-level2" value={address.city}
                   onChange={(e) => setAddress({ ...address, city: e.target.value })} />
                 <div style={{ position: 'relative' }}>
                   <label style={{ position: 'absolute', top: 5, left: 12, fontSize: 10, color: '#888', pointerEvents: 'none', zIndex: 1 }}>State</label>
                   <select className="co-select" style={{ paddingTop: 16, height: 42, fontSize: 14 }}
+                    name="state" autoComplete="address-level1"
                     value={address.state} onChange={(e) => setAddress({ ...address, state: e.target.value })}>
                     {INDIAN_STATES.map((s) => <option key={s}>{s}</option>)}
                   </select>
                 </div>
-                <input className="co-input" placeholder="PIN code" value={address.pincode}
+                <input className="co-input" placeholder="PIN code" name="postalCode" autoComplete="postal-code" inputMode="numeric" value={address.pincode}
                   onChange={(e) => setAddress({ ...address, pincode: e.target.value })} />
               </div>
 
               <div style={{ position: 'relative' }}>
                 <input className="co-input" style={{ paddingRight: 36 }} placeholder="Phone" required
+                  type="tel" name="phone" autoComplete="tel" inputMode="tel"
                   value={address.phone} onChange={(e) => setAddress({ ...address, phone: e.target.value })} />
                 <HelpCircle size={16} color="#aaa" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               </div>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, cursor: 'pointer' }}>
-                <input type="checkbox" checked={saveInfo} onChange={(e) => setSaveInfo(e.target.checked)}
+                <input type="checkbox" checked={saveInfo}
+                  onChange={(e) => {
+                    setSaveInfo(e.target.checked);
+                    // Unticking clears immediately rather than at the next
+                    // order: someone turning this off on a shared computer
+                    // means "forget me now", not "forget me if I check out".
+                    if (!e.target.checked) persistSavedAddress(null);
+                  }}
                   style={{ width: 14, height: 14, accentColor: '#0066cc', cursor: 'pointer' }} />
                 <span style={{ fontSize: 14, color: '#555' }}>Save this information for next time</span>
               </label>
