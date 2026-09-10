@@ -2,12 +2,13 @@
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Banknote, Loader2, CheckCircle2, CreditCard, Clock, TrendingUp, RefreshCw, Image as ImageIcon, ExternalLink, Upload, X } from "lucide-react";
+import { Search, Banknote, Loader2, CheckCircle2, CreditCard, Clock, TrendingUp, RefreshCw, Image as ImageIcon, ExternalLink, Upload, X, FileText } from "lucide-react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Input, Badge, Pagination, StatCard } from "@/components/ui";
 import { formatCurrency, formatDate } from "@yukizi/utils";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { previewCommissionInvoice } from "@/api/admin.api";
 import { useSettlements, useSettlementsSummary, useMarkSettlementPaid, useSyncSettlements, useAdminOrdersFiltered, useUploadSettlementProof } from "@/hooks/useAdmin";
 
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -39,6 +40,21 @@ export default function AdminSettlementsPage() {
     dateTo: dateRange?.to?.toISOString(),
   });
   const markPaid = useMarkSettlementPaid();
+  // Reading the commission invoice BEFORE paying out: it opens the same
+  // document the seller is emailed on payout. Read-only — nothing is sent and
+  // no status changes.
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
+  const handlePreviewInvoice = async (settlementId: string) => {
+    if (previewingId) return;
+    setPreviewingId(settlementId);
+    try {
+      await previewCommissionInvoice(settlementId);
+    } catch {
+      toast.error("Could not open that invoice. The settlement may not exist yet.");
+    } finally {
+      setPreviewingId(null);
+    }
+  };
   const syncSettlements = useSyncSettlements();
 
   // Modal State
@@ -264,6 +280,23 @@ export default function AdminSettlementsPage() {
                       </Badge>
                     </td>
                     <td className="px-5 py-4 text-right">
+                      {/* A PROJECTED row has no settlement record yet, so there
+                          is nothing to raise an invoice against. */}
+                      {!String(s.id).startsWith("projected-") && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void handlePreviewInvoice(s.id)}
+                          disabled={!!previewingId}
+                          className="h-9 px-3 rounded-xl mr-2"
+                          leftIcon={
+                            previewingId === s.id
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <FileText className="h-4 w-4" />
+                          }>
+                          Invoice
+                        </Button>
+                      )}
                       {s.payoutStatus !== "PAID" ? (
                         <Button 
                           size="sm" 
