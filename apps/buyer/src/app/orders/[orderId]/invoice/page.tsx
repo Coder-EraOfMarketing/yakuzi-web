@@ -14,9 +14,9 @@ import { useToast } from '@/components/shared/Toast';
  * Yukizi generates the document on their behalf. Printing uses the browser,
  * so no PDF library is needed on the small API box.
  *
- * Yukizi's own registered details in the footer are intentionally blank until
- * the real legal name, GSTIN, CIN and address are supplied. Placeholder values
- * on a tax document are worse than empty ones.
+ * Yukizi's own registered details do not appear on it at all: the sale is
+ * between the buyer and the seller, so the GSTIN and address that belong on
+ * the document are the seller's.
  */
 
 const money = (n: number) =>
@@ -280,16 +280,18 @@ export default function InvoicePage({ params }: { params: { orderId: string } })
               </div>
             </div>
 
-            {/* Footer — Yukizi's registered details. Only the support address is
-                known; legal name, GSTIN, CIN and registered address are left
-                blank rather than filled with placeholders on a tax document. */}
+            {/* Footer — no Yukizi GSTIN or CIN. This invoice is the seller's to
+                the buyer; Yukizi is the marketplace they met on, not a party to
+                the sale, so the registered details that matter are the
+                seller's, printed with their address above. */}
             <div className="bg-[#593696] px-8 py-6 text-white">
-              <p className="text-sm font-bold">&nbsp;</p>
-              <p className="text-xs opacity-90 mt-1">GSTIN:&nbsp;</p>
-              <p className="text-xs opacity-90">Address:&nbsp;</p>
-              <p className="text-xs opacity-90">CIN:&nbsp;</p>
               <p className="text-xs opacity-90">
-                Email: <a href="mailto:support@yukizi.com" className="underline">support@yukizi.com</a> | Website:&nbsp;
+                Sold to you by the seller named above, whose registered details and
+                GSTIN appear with their address. Yukizi operates the marketplace.
+              </p>
+              <p className="text-xs opacity-90 mt-1">
+                Questions about this order:{' '}
+                <a href="mailto:support@yukizi.com" className="underline">support@yukizi.com</a> | yukizi.com
               </p>
               <p className="text-xs opacity-75 text-center mt-4">
                 This is a system generated invoice and does not require signature.
