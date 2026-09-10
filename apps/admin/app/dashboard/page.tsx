@@ -13,7 +13,6 @@ import { useAdminAccess } from "@/hooks/useAccess";
 import toast from "react-hot-toast";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
-import { subDays } from "date-fns";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -39,10 +38,12 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 30),
-    to: new Date(),
-  });
+  // All dates by default. A 30-day window hid genuine older orders behind a
+  // filter nobody had set — a paid order from five weeks ago simply was not
+  // there, and the dashboard read zero revenue because of it. An admin who
+  // wants a window can pick one; the screen should not quietly pick one for
+  // them.
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
 
   const { data: d, isLoading } = useAdminDashboard({
