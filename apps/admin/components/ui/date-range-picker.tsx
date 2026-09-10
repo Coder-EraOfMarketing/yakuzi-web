@@ -83,7 +83,10 @@ export function DateRangePicker({
             format(range.from, "LLL dd, y")
           )
         ) : (
-          <span>Pick a date range</span>
+          // No range IS the "All Dates" quick filter, so say so. "Pick a date
+          // range" reads as nothing-selected-yet, which left admins unsure
+          // whether the figures beside it were filtered or not.
+          <span>All Dates</span>
         )}
       </Button>
 
