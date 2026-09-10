@@ -133,9 +133,10 @@ export default function Navbar({
       // the guess was short by roughly the bar's own height and the bar sat on
       // top of the last product row (measured 97px of overlap on the PDP).
       // 24px of breathing room on top of the measured height.
+      const navHeight = Math.round(nav.getBoundingClientRect().height);
       document.documentElement.style.setProperty(
         '--nav-clearance',
-        `${Math.round(nav.getBoundingClientRect().height) + 24}px`,
+        `${navHeight + 24}px`,
       );
 
       const footer = document.querySelector('footer');
@@ -144,10 +145,26 @@ export default function Navbar({
         return;
       }
 
+      const rect = footer.getBoundingClientRect();
+
+      // The footer can only cover the bar once it reaches the BOTTOM of the
+      // viewport. Measuring only its TOP edge was wrong: on a short page —
+      // an empty or error state, or any page still loading — the footer sits
+      // high up with nothing but page background beneath it, so there is
+      // nothing to avoid, yet `innerHeight - top` is a large number. On
+      // /orders that threw the bar 832px upward, clean off the top of the
+      // screen, and the offset stuck there once the page settled.
+      const reachesViewportBottom = rect.bottom >= window.innerHeight - 1;
+
       // How far the footer has intruded into the viewport, if at all.
-      const overlap = window.innerHeight - footer.getBoundingClientRect().top;
-      nav.style.transform =
-        overlap > 0 ? `translate3d(0, ${-Math.round(overlap)}px, 0)` : '';
+      const overlap = reachesViewportBottom ? window.innerHeight - rect.top : 0;
+
+      // Belt and braces: whatever the footer does — taller than the viewport,
+      // scrolled past its own top edge — the bar must never leave the screen.
+      const maxLift = Math.max(0, window.innerHeight - navHeight);
+      const lift = Math.max(0, Math.min(Math.round(overlap), maxLift));
+
+      nav.style.transform = lift > 0 ? `translate3d(0, ${-lift}px, 0)` : '';
     };
 
     const schedule = () => {
