@@ -5,7 +5,7 @@ import {
   getAdminDashboard, getAdminUsers, getUserById, approveUser, rejectUser, blockUser, unblockUser,
   getBuyers, getSellers, setSellerSelfShip, updateUser, deleteUser, updateUserStatus, updateGstPanStatus, updateSellerProfile,
   getAdminProducts, getAdminProductsFiltered, getProductById, disableProduct, enableProduct, deleteProduct, createProduct, updateProduct, approveProduct, rejectProduct,
-  getAdminOrders, getAdminOrdersFiltered, getOrderById, updateAdminOrderStatus, updateAdminShippingDocs, uploadAdminOrderDocument, cancelOrder, getTestOrdersCount, cancelTestOrders, getOrderInvoice, getOrderTracking, classifyOrder,
+  getAdminOrders, getAdminOrdersFiltered, getOrderById, updateAdminOrderStatus, updateAdminShippingDocs, uploadAdminOrderDocument, cancelOrder, getTestOrdersCount, cancelTestOrders, getOrderInvoices, getOrderTracking, classifyOrder,
   getPayments, confirmPayment, rejectPayment,
   getSettlements, getSettlementsSummary, markSettlementPaid, getSellerSettlements, createSettlement, syncSettlements,
   getTickets, getTicketById, replyToTicket, updateTicketStatus,
@@ -415,8 +415,9 @@ export function useCancelTestOrders() {
   });
 }
 
-export function useOrderInvoice(orderId: string) {
-  return useQuery({ queryKey: ["admin", "order", orderId, "invoice"], queryFn: () => getOrderInvoice(orderId), enabled: !!orderId });
+/** Tax invoices on an order, one per seller. */
+export function useOrderInvoices(orderId: string) {
+  return useQuery({ queryKey: ["admin", "order", orderId, "invoices"], queryFn: () => getOrderInvoices(orderId), enabled: !!orderId });
 }
 
 /** Pin an order to the real or test side, or return it to the phone rule. */

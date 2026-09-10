@@ -58,7 +58,7 @@ export default function AdminSettingsPage() {
 
   const SECTIONS: { id: string; icon: any; title: string; fields: { key: string; label: string; type?: string }[] }[] = [
     { id: "notifications", icon: Bell, title: "Notifications", fields: [
-      { key: "adminAlertEmail", label: "Admin Alert Email (receives new-seller signups and seller shipping-details submissions)" },
+      { key: "adminAlertEmail", label: "Admin Alert Email (receives new-seller signups, seller shipping-details submissions, and a copy of every tax invoice issued)" },
       { key: "mailFromAddress", label: "Sender Email (must be a verified alias on the mail account, else Gmail will reject it)" },
     ]},
     // Published to customers, so it is worth being explicit that these are
