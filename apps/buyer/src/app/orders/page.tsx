@@ -145,6 +145,8 @@ function OrdersPageContent() {
                         productImage={productImage}
                         paymentMethod={order.paymentMethod}
                         paymentStatus={order.paymentStatus}
+                        trackingUrl={order.trackingUrl}
+                        courierName={order.courierName}
                       />
                     </div>
                   </motion.div>

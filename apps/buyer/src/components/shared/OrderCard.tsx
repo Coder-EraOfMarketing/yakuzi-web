@@ -13,9 +13,12 @@ interface OrderCardProps {
   productImage?: string;
   paymentMethod?: string;
   paymentStatus?: string;
+  /** Courier page for this order — self-ship link or Shiprocket's, same field. */
+  trackingUrl?: string | null;
+  courierName?: string | null;
 }
 
-export default function OrderCard({ orderId, date, status, total, itemCount, productName, productImage, paymentMethod, paymentStatus }: OrderCardProps) {
+export default function OrderCard({ orderId, date, status, total, itemCount, productName, productImage, paymentMethod, paymentStatus, trackingUrl, courierName }: OrderCardProps) {
   const getStatusConfig = (s: string) => {
     switch (s.toUpperCase()) {
       case 'DELIVERED': 
@@ -90,6 +93,24 @@ export default function OrderCard({ orderId, date, status, total, itemCount, pro
             </p>
             {/* Show total on mobile below text */}
             <p className="text-lg font-bold text-gray-950 tracking-tighter mt-1 sm:hidden">{total}</p>
+
+            {/* Straight to the courier from the list. Without this the link was
+                three interactions deep — open the order, open the products
+                drawer, expand the item — which is no use to someone who opened
+                Orders specifically to see where their parcel is.
+                stopPropagation because the whole card opens the order drawer. */}
+            {trackingUrl && (
+              <a
+                href={trackingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-2xs font-bold uppercase tracking-[0.15em] text-purple-700 transition-colors hover:bg-purple-100"
+              >
+                <Truck className="h-3 w-3" />
+                Track{courierName ? ` · ${courierName}` : ''}
+              </a>
+            )}
           </div>
         </div>
 
