@@ -58,6 +58,18 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
   ]);
 }
 
+/**
+ * Cache tag for one entity's override. The API sends this exact string to
+ * /api/revalidate when an admin saves, which drops both this fetch's cached
+ * response and any page render that used it. Without it an edit waits out
+ * this fetch's five minutes AND the reading page's own five — up to ten.
+ *
+ * Must stay in step with StorefrontRevalidationService on the API.
+ */
+export function seoOverrideTag(type: SeoEntityType, id: string): string {
+  return `seo:${type}:${id}`;
+}
+
 export async function fetchSeoOverride(
   type: SeoEntityType,
   id: string,
@@ -67,7 +79,7 @@ export async function fetchSeoOverride(
   try {
     const res = await withTimeout(
       fetch(`${base}/seo/meta?type=${type}&id=${encodeURIComponent(id)}`, {
-        next: { revalidate: 300 },
+        next: { revalidate: 300, tags: [seoOverrideTag(type, id)] },
       }),
       OVERRIDE_TIMEOUT_MS,
     );
