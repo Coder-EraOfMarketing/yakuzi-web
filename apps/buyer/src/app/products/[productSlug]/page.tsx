@@ -7,7 +7,6 @@ import { absoluteUrl, metaTruncate, SITE_NAME } from '@/lib/seo/site';
 import { productSchema, breadcrumbSchema, faqPageSchema, graph, organizationSchema, webSiteSchema } from '@/lib/seo/schema';
 import { applySeoOverride, fetchSeoOverride, mergeStructuredData, validFaqs } from '@/lib/seo/overrides';
 import JsonLd from '@/components/seo/JsonLd';
-import SeoFaq from '@/components/seo/SeoFaq';
 import ProductPageClient from './ProductPageClient';
 
 // Was force-dynamic, which sets `private, no-store` and made every product
@@ -198,7 +197,14 @@ export default async function ProductPage({ params }: { params: { productSlug: s
   return (
     <>
       <JsonLd data={jsonLd} />
-      <ProductPageClient productSlug={params.productSlug} initialProduct={product} initialRelated={initialRelated} imageAltOverrides={override?.imageAltOverrides ?? undefined} />
+      {/* faqs go THROUGH the client component: they render as one more row in
+          the product's accordion stack (DESCRIPTION / SPECIFICATIONS / …),
+          which is where a shopper looks for them. As its own band under the
+          Related Products strip they were both easy to miss and partly hidden
+          behind the fixed bottom nav. Client component or not, this is still
+          server-rendered into the HTML, so the FAQPage JSON-LD below keeps
+          describing text that is really on the page. */}
+      <ProductPageClient productSlug={params.productSlug} initialProduct={product} initialRelated={initialRelated} imageAltOverrides={override?.imageAltOverrides ?? undefined} faqs={faqs} />
       {/* "More from <category>" removed at Rishi's request — it duplicated the
           Related Products strip above it.
 
@@ -209,9 +215,6 @@ export default async function ProductPage({ params }: { params: { productSlug: s
           this page: 4 product links in the served HTML with it, 0 without.
           Fix properly by server-rendering the visible strip, not by restoring
           a second row of the same products. */}
-      {/* Visible, server-rendered — outside the client component, so the PDP's
-          mobile/desktop dual JSX trees are not involved. */}
-      <SeoFaq faqs={faqs} />
     </>
   );
 }

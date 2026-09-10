@@ -90,6 +90,39 @@ function Accordion({
   );
 }
 
+/**
+ * Admin-authored FAQ, as one more row in the accordion stack.
+ *
+ * Deliberately a native <details> rather than the <Accordion> above: that one
+ * mounts its content only while open, and this content is also advertised as
+ * FAQPage JSON-LD. Google requires the answers to be present on the page, so
+ * they have to survive in the served HTML while collapsed — which is exactly
+ * what <details> does and a conditional render does not. It also keeps the
+ * section working with JavaScript disabled.
+ *
+ * Rendered inside the product column (both layouts) instead of as its own
+ * band at the foot of the page, where the fixed bottom nav sat on top of it.
+ */
+function FaqAccordion({ faqs }: { faqs: Array<{ question: string; answer: string }> }) {
+  if (!faqs.length) return null;
+  return (
+    <details className="group border-b border-gray-100 py-3">
+      <summary className="flex w-full cursor-pointer list-none items-center justify-between text-left text-xs font-normal uppercase tracking-wider text-gray-500 focus:outline-none sm:text-sm xl:text-sm 2xl:text-base [&::-webkit-details-marker]:hidden">
+        Frequently Asked Questions
+        <Plus size={14} className="text-gray-500 group-open:hidden" strokeWidth={3} />
+        <Minus size={14} className="hidden text-gray-500 group-open:block" strokeWidth={3} />
+      </summary>
+      <div className="purple-scroll relative max-h-[160px] overflow-y-auto pr-4 pt-2 text-xs font-normal leading-relaxed text-gray-500 sm:text-sm xl:text-sm 2xl:text-base">
+        {faqs.map((f, i) => (
+          <div key={i} className={i ? 'mt-3' : undefined}>
+            <p className="font-medium text-gray-600">{f.question}</p>
+            <p className="mt-0.5 whitespace-pre-line">{f.answer}</p>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
 
 // Shared by the mobile and desktop layouts so the two trails can't drift apart.
 function ProductBreadcrumbs({
@@ -837,7 +870,7 @@ function ReviewSubmissionForm({
   );
 }
 
-export default function ProductPageClient({ productSlug, initialProduct, initialRelated, imageAltOverrides }: { productSlug: string; initialProduct?: any; initialRelated?: any; imageAltOverrides?: Record<string, string> }) {
+export default function ProductPageClient({ productSlug, initialProduct, initialRelated, imageAltOverrides, faqs = [] }: { productSlug: string; initialProduct?: any; initialRelated?: any; imageAltOverrides?: Record<string, string>; faqs?: Array<{ question: string; answer: string }> }) {
   const [activeImage, setActiveImage] = useState(0);
   const [selectedVariantName, setSelectedVariantName] = useState<string>('');
 
@@ -1335,6 +1368,7 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
               content={product.specifications || 'No specifications available for this product.'}
             />
             <Accordion title="SHIPPING & RETURN INFO" content={SHIPPING_RETURN_INFO} />
+            <FaqAccordion faqs={faqs} />
           </div>
 
           {/* Related Products */}
@@ -1506,6 +1540,7 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
                   content={product.specifications || 'No specifications available for this product.'}
                 />
                 <Accordion title="SHIPPING & RETURN INFO" content={SHIPPING_RETURN_INFO} />
+                <FaqAccordion faqs={faqs} />
               </div>
 
             </div>
