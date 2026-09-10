@@ -71,71 +71,53 @@ function normalizeTicketListResponse(response: any): TicketListResponse {
   };
 }
 
+/**
+ * Every call here used to try `/buyers/tickets` first, take the 404, and then
+ * call `/tickets` — the route that has always existed. Two round trips for
+ * every ticket read and write, and a 404 in the console each time.
+ *
+ * The API's ticket routes are, and only are:
+ *   GET  /tickets            POST /tickets
+ *   GET  /tickets/:id        POST /tickets/:id/messages
+ */
+
+/** Unwrap whichever envelope the endpoint used. */
+const unwrapTicket = (data: any) =>
+  normalizeTicket(data?.data?.ticket ?? data?.ticket ?? data?.data ?? data);
+
 export async function getTickets(params?: {
   page?: number;
   limit?: number;
   status?: string;
 }): Promise<TicketListResponse> {
-  try {
-    const { data } = await api.get('/buyers/tickets', { params });
-    return normalizeTicketListResponse(data);
-  } catch (error: any) {
-    if (error?.response?.status === 404 || error?.response?.status === 405) {
-      const { data } = await api.get('/tickets', { params });
-      return normalizeTicketListResponse(data);
-    }
-    throw error;
-  }
+  const { data } = await api.get('/tickets', { params });
+  return normalizeTicketListResponse(data);
 }
 
 export async function getTicketById(id: string): Promise<Ticket> {
-  try {
-    const { data } = await api.get(`/buyers/tickets/${id}`);
-    return normalizeTicket(data.data?.ticket ?? data.ticket ?? data.data ?? data);
-  } catch (error: any) {
-    if (error?.response?.status === 404 || error?.response?.status === 405) {
-      const { data } = await api.get(`/tickets/${id}`);
-      return normalizeTicket(data.data?.ticket ?? data.ticket ?? data.data ?? data);
-    }
-    throw error;
-  }
+  const { data } = await api.get(`/tickets/${id}`);
+  return unwrapTicket(data);
 }
 
 export async function createTicket(input: CreateTicketInput): Promise<Ticket> {
-  try {
-    const { data } = await api.post('/buyers/tickets', input);
-    return normalizeTicket(data.data?.ticket ?? data.ticket ?? data.data ?? data);
-  } catch (error: any) {
-    if (error?.response?.status === 404 || error?.response?.status === 405) {
-      const { data } = await api.post('/tickets', input);
-      return normalizeTicket(data.data?.ticket ?? data.ticket ?? data.data ?? data);
-    }
-    throw error;
-  }
+  const { data } = await api.post('/tickets', input);
+  return unwrapTicket(data);
 }
 
 export async function addTicketMessage(ticketId: string, message: string): Promise<TicketMessage> {
-  try {
-    const { data } = await api.post(`/buyers/tickets/${ticketId}/messages`, { message });
-    return normalizeTicket(data.data?.ticket ?? data.ticket ?? data.data ?? data);
-  } catch (error: any) {
-    if (error?.response?.status === 404 || error?.response?.status === 405) {
-      const { data } = await api.post(`/tickets/${ticketId}/messages`, { message });
-      return normalizeTicket(data.data?.ticket ?? data.ticket ?? data.data ?? data);
-    }
-    throw error;
-  }
+  const { data } = await api.post(`/tickets/${ticketId}/messages`, { message });
+  return unwrapTicket(data);
 }
 
+/**
+ * NOTE: there is no close route on the API — not at this path and not at
+ * `/buyers/tickets/:id/close` either, so the old fallback only turned one 404
+ * into two. The "Close ticket" button in SupportDrawer calls this and has
+ * therefore never worked. Left pointing at the path it would live on, rather
+ * than deleted, because the button is real and the endpoint is the missing
+ * half. Adding `PATCH /tickets/:id/close` on the API makes it work as-is.
+ */
 export async function closeTicket(ticketId: string): Promise<Ticket> {
-  try {
-    const { data } = await api.patch(`/buyers/tickets/${ticketId}/close`);
-    return normalizeTicket(data.data?.ticket ?? data.ticket ?? data.data ?? data);
-  } catch (error: any) {
-    if (error?.response?.status === 404 || error?.response?.status === 405) {
-      const { data } = await api.patch(`/tickets/${ticketId}/close`);
-      return normalizeTicket(data.data?.ticket ?? data.ticket ?? data.data ?? data);
-    }
-    throw error;
-  }
+  const { data } = await api.patch(`/tickets/${ticketId}/close`);
+  return unwrapTicket(data);
 }
