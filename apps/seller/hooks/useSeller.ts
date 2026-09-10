@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { sendOtp, verifyOtp, getCurrentUser } from "@/api/auth.api";
 import {
   getSellerDashboard, getSellerProducts, getSellerOrders, getSellerSettlements,
-  getSellerSettlementSummary, requestSellerPayout, createSellerProduct, updateSellerProduct, deleteSellerProduct,
+  getSellerSettlementSummary, createSellerProduct, updateSellerProduct, deleteSellerProduct,
   updateSellerOrderStatus, getSellerProfile, updateSellerProfile, getSellerProductById,
   getCategories, toggleVacationMode, getSellerTickets, getSellerTicketById, createSellerTicket, addTicketMessage,
   getSellerOrderById, acceptSellerOrder, rejectSellerOrder, uploadOrderDocument, updateShippingDetails, submitSelfShipTracking,
@@ -118,16 +118,6 @@ export function useSellerSettlements(params: { dateFrom?: string; dateTo?: strin
 
 export function useSellerSettlementSummary() { return useQuery({ queryKey: ["seller", "settlement-summary"], queryFn: getSellerSettlementSummary, staleTime: 60_000, retry: 1 }); }
 
-export function useRequestPayout() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: requestSellerPayout,
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["seller", "settlements"] });
-      void qc.invalidateQueries({ queryKey: ["seller", "settlement-summary"] });
-    },
-  });
-}
 
 export function useToggleVacationMode() {
   const qc = useQueryClient();
