@@ -132,6 +132,16 @@ export async function getOrderTracking(orderId: string) {
   return data.data;
 }
 
+/**
+ * Pin one order to the real or the test side, or hand it back to the
+ * TEST_BUYER_PHONES rule with "auto". The phone rule on its own cannot say
+ * "these two are real orders, everything else from that number was testing".
+ */
+export async function classifyOrder(orderId: string, classification: "real" | "test" | "auto") {
+  const { data } = await apiClient.patch<{ data: any }>(`/admin/orders/${orderId}/classification`, { classification });
+  return data.data;
+}
+
 // ─── Payments ────────────────────────────────────────
 export async function getPayments(page = 1, limit = 50) {
   const { data } = await apiClient.get<any>(`/admin/payments?page=${page}&limit=${limit}`);

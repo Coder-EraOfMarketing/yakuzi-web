@@ -5,7 +5,7 @@ import {
   getAdminDashboard, getAdminUsers, getUserById, approveUser, rejectUser, blockUser, unblockUser,
   getBuyers, getSellers, setSellerSelfShip, updateUser, deleteUser, updateUserStatus, updateGstPanStatus, updateSellerProfile,
   getAdminProducts, getAdminProductsFiltered, getProductById, disableProduct, enableProduct, deleteProduct, createProduct, updateProduct, approveProduct, rejectProduct,
-  getAdminOrders, getAdminOrdersFiltered, getOrderById, updateAdminOrderStatus, updateAdminShippingDocs, uploadAdminOrderDocument, cancelOrder, getTestOrdersCount, cancelTestOrders, getOrderInvoice, getOrderTracking,
+  getAdminOrders, getAdminOrdersFiltered, getOrderById, updateAdminOrderStatus, updateAdminShippingDocs, uploadAdminOrderDocument, cancelOrder, getTestOrdersCount, cancelTestOrders, getOrderInvoice, getOrderTracking, classifyOrder,
   getPayments, confirmPayment, rejectPayment,
   getSettlements, getSettlementsSummary, markSettlementPaid, getSellerSettlements, createSettlement, syncSettlements,
   getTickets, getTicketById, replyToTicket, updateTicketStatus,
@@ -417,6 +417,19 @@ export function useCancelTestOrders() {
 
 export function useOrderInvoice(orderId: string) {
   return useQuery({ queryKey: ["admin", "order", orderId, "invoice"], queryFn: () => getOrderInvoice(orderId), enabled: !!orderId });
+}
+
+/** Pin an order to the real or test side, or return it to the phone rule. */
+export function useClassifyOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, classification }: { orderId: string; classification: "real" | "test" | "auto" }) =>
+      classifyOrder(orderId, classification),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin", "orders"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "test-orders-count"] });
+    },
+  });
 }
 
 export function useOrderTracking(orderId: string, enabled: boolean) {
