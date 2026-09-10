@@ -382,6 +382,13 @@ export default function CheckoutPage() {
             if (status === 403) {
               toast(backendMsg || 'Please complete your KYC verification before placing orders.', 'error');
               router.push('/onboarding');
+            } else if (status === 409) {
+              // The phone or email they typed belongs to another account, so
+              // they have to change it before this can go through. A toast
+              // disappears; this has to stay on screen next to the button
+              // that is refusing them.
+              setSyncError(backendMsg || 'Those contact details are already registered to another account.');
+              toast(backendMsg || 'Those contact details are already registered to another account.', 'error');
             } else {
               toast(backendMsg || error?.message || 'Failed to place order', 'error');
             }
