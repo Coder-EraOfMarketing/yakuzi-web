@@ -194,6 +194,23 @@ export async function markSettlementPaid(settlementId: string, payoutReference: 
   return data.data;
 }
 
+/**
+ * Opens a settlement's commission invoice for the admin to READ before paying
+ * out. Read-only: it sends nothing to the seller and changes no status.
+ *
+ * Fetched through the API client rather than a plain link because the
+ * endpoint needs an Authorization header an <a href> cannot send.
+ */
+export async function previewCommissionInvoice(settlementId: string): Promise<void> {
+  const res = await apiClient.get(`/admin/settlements/${settlementId}/commission-invoice`, {
+    responseType: "blob",
+  });
+  const url = URL.createObjectURL(res.data as Blob);
+  window.open(url, "_blank", "noopener");
+  // Revoked on a timer, not immediately: the new tab has to fetch it first.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 // ─── Tickets ─────────────────────────────────────────
 export async function getTickets(page = 1, limit = 50) {
   const { data } = await apiClient.get<any>(`/admin/tickets?page=${page}&limit=${limit}`);
