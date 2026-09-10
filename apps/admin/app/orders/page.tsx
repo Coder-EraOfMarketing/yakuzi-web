@@ -7,7 +7,7 @@ import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Input, Badge, Pagination, Modal } from "@/components/ui";
 import { formatCurrency } from "@yukizi/utils";
 import { cn } from "@/lib/utils";
-import { useAdminOrdersFiltered, useUpdateAdminOrderStatus, useCancelTestOrders, useTestOrdersCount } from "@/hooks/useAdmin";
+import { useAdminOrdersFiltered, useUpdateAdminOrderStatus, useCancelTestOrders, useTestOrdersCount, useClassifyOrder } from "@/hooks/useAdmin";
 import { getPresignedUrl } from "@yukizi/api-client";
 import toast from "react-hot-toast";
 import { Can } from "@/components/access/can";
@@ -56,6 +56,7 @@ export default function AdminOrdersPage() {
   });
   const updateStatus = useUpdateAdminOrderStatus();
   const cancelTestOrders = useCancelTestOrders();
+  const classifyOrder = useClassifyOrder();
   const { data: testOrdersCount, isLoading: isCountLoading } = useTestOrdersCount(showCancelTestOrdersModal);
 
   const handleCancelTestOrders = async () => {
@@ -78,6 +79,23 @@ export default function AdminOrdersPage() {
   const totalPages = Math.max(1, Math.ceil(totalOrders / PAGE_LIMIT));
 
   const filtered = allOrders;
+
+  // Moves ONE order across the test/real line. The phone rule cannot express
+  // "these two are real, everything else from that number was testing", so an
+  // admin pins the exceptions by hand. "auto" hands it back to the rule.
+  const handleClassify = async (e: React.MouseEvent, orderId: string, classification: "real" | "test" | "auto") => {
+    e.stopPropagation();
+    try {
+      await classifyOrder.mutateAsync({ orderId, classification });
+      toast.success(
+        classification === "auto"
+          ? "Order back on the automatic rule"
+          : `Order marked as ${classification === "real" ? "a real order" : "a test order"}`,
+      );
+    } catch {
+      toast.error("Could not change that order's type. Please try again.");
+    }
+  };
 
   const handleOverride = async (e: React.MouseEvent, orderId: string, currentStatus: string, targetStatus?: string) => {
     e.stopPropagation();
@@ -188,7 +206,7 @@ export default function AdminOrdersPage() {
             <table className="w-full" aria-label="Orders">
               <thead>
                 <tr className="border-b border-border/50 bg-muted/20">
-                  {["Order ID", "Buyer", "Seller ID", "Buyer ID", "Items", "Amount", "Payment", "Action", "Date"].map(h => (
+                  {["Order ID", "Buyer", "Seller ID", "Buyer ID", "Items", "Amount", "Payment", "Action", "Type", "Date"].map(h => (
                     <th key={h} scope="col" className="px-5 py-3.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -241,6 +259,35 @@ export default function AdminOrdersPage() {
                           </button>
                         </div>
                       )}
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex flex-col items-start gap-1">
+                        <span className={cn(
+                          "rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                          o.isTestOrder
+                            ? "border-amber-200 bg-amber-50 text-amber-700"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                        )}>
+                          {o.isTestOrder ? "Test" : "Real"}
+                          {o.classification && o.classification !== "auto" ? " ·  pinned" : ""}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => void handleClassify(e, o.id, o.isTestOrder ? "real" : "test")}
+                            className="text-xs text-primary underline hover:text-primary/80"
+                          >
+                            Mark as {o.isTestOrder ? "real" : "test"}
+                          </button>
+                          {o.classification && o.classification !== "auto" && (
+                            <button
+                              onClick={(e) => void handleClassify(e, o.id, "auto")}
+                              className="text-xs text-muted-foreground underline hover:text-foreground"
+                            >
+                              reset
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-5 py-4 text-xs text-muted-foreground whitespace-nowrap">{o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-IN") : "—"}</td>
                   </motion.tr>
