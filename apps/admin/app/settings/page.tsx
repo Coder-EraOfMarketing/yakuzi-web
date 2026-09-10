@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, Key, LifeBuoy } from "lucide-react";
+import { Bell, Key, LifeBuoy, Building2 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Input, Skeleton } from "@/components/ui";
 import toast from "react-hot-toast";
@@ -64,6 +64,18 @@ export default function AdminSettingsPage() {
     // Published to customers, so it is worth being explicit that these are
     // public. Blank falls back to the storefront's built-in details rather
     // than publishing an empty contact.
+    // Yukizi is the SUPPLIER on a commission invoice, so these are its own
+    // registered details — not the seller's, and not the support contact
+    // above. Without the GSTIN the commission document goes out as a payout
+    // statement instead of a tax invoice, because a tax invoice without the
+    // issuer's GSTIN is not one a seller can claim input credit against.
+    { id: "company", icon: Building2, title: "Registered company details (commission invoices)", fields: [
+      { key: "companyLegalName", label: "Registered legal name (as on the GST certificate)" },
+      { key: "companyGstin", label: "GSTIN — REQUIRED before commission invoices count as tax invoices" },
+      { key: "companyState", label: "Registered state (decides CGST + SGST vs IGST against the seller's state)" },
+      { key: "companyAddress", label: "Registered address" },
+      { key: "companyEmail", label: "Accounts email shown on the invoice" },
+    ]},
     { id: "support", icon: LifeBuoy, title: "Public support contact", fields: [
       { key: "supportEmail", label: "Support Email (shown on Contact, About and every policy page — leave blank to keep the current one)" },
       { key: "supportPhone", label: "Support Phone (shown alongside the email and in the site's structured data)" },
