@@ -44,7 +44,11 @@ export function OrderDrawer({ isOpen, onClose, orderId, onLoginClick }: OrderDra
   }, [orderId]);
 
   const { isAuthenticated } = useAuth();
-  const { data: allOrdersData, isLoading: isLoadingAllOrders } = useOrders({ page: 1, limit: 50 });
+  // No page/limit: /orders returns the buyer's whole history, so paging the
+  // endpoint ignores only read as a 50-order cap that was never enforced.
+  // Calling it identically in both drawers also lets them share one cached
+  // result instead of fetching the same list twice.
+  const { data: allOrdersData, isLoading: isLoadingAllOrders } = useOrders();
   const allOrders = Array.isArray(allOrdersData) ? allOrdersData : ((allOrdersData as any)?.data || (allOrdersData as any)?.data?.orders || []);
 
   const effectiveOrderId = selectedOrderId || orderId || (allOrders.length > 0 ? allOrders[0].id : '');
