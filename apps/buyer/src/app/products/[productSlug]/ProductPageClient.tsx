@@ -91,7 +91,13 @@ function Accordion({
 }
 
 /**
- * Admin-authored FAQ, as one more row in the accordion stack.
+ * Admin-authored FAQ: one collapsible row per question.
+ *
+ * One row per question rather than every Q&A stacked inside a single row —
+ * search results are identical either way (the JSON-LD carries the pairs, and
+ * both keep the answers in the served HTML), so this is decided on reading:
+ * the question a shopper wants is a row they can see and open, not something
+ * to scroll for inside a box.
  *
  * Deliberately a native <details> rather than the <Accordion> above: that one
  * mounts its content only while open, and this content is also advertised as
@@ -106,21 +112,23 @@ function Accordion({
 function FaqAccordion({ faqs }: { faqs: Array<{ question: string; answer: string }> }) {
   if (!faqs.length) return null;
   return (
-    <details className="group border-b border-gray-100 py-3">
-      <summary className="flex w-full cursor-pointer list-none items-center justify-between text-left text-xs font-normal uppercase tracking-wider text-gray-500 focus:outline-none sm:text-sm xl:text-sm 2xl:text-base [&::-webkit-details-marker]:hidden">
+    <section aria-label="Frequently asked questions">
+      <h2 className="border-b border-gray-100 py-3 text-xs font-normal uppercase tracking-wider text-gray-400 sm:text-sm xl:text-sm 2xl:text-base">
         Frequently Asked Questions
-        <Plus size={14} className="text-gray-500 group-open:hidden" strokeWidth={3} />
-        <Minus size={14} className="hidden text-gray-500 group-open:block" strokeWidth={3} />
-      </summary>
-      <div className="purple-scroll relative max-h-[160px] overflow-y-auto pr-4 pt-2 text-xs font-normal leading-relaxed text-gray-500 sm:text-sm xl:text-sm 2xl:text-base">
-        {faqs.map((f, i) => (
-          <div key={i} className={i ? 'mt-3' : undefined}>
-            <p className="font-medium text-gray-600">{f.question}</p>
-            <p className="mt-0.5 whitespace-pre-line">{f.answer}</p>
-          </div>
-        ))}
-      </div>
-    </details>
+      </h2>
+      {faqs.map((f, i) => (
+        <details key={i} className="group border-b border-gray-100 py-3">
+          <summary className="flex w-full cursor-pointer list-none items-start justify-between gap-3 text-left text-xs font-normal text-gray-600 focus:outline-none sm:text-sm xl:text-sm 2xl:text-base [&::-webkit-details-marker]:hidden">
+            <span>{f.question}</span>
+            <Plus size={14} className="mt-0.5 shrink-0 text-gray-500 group-open:hidden" strokeWidth={3} />
+            <Minus size={14} className="mt-0.5 hidden shrink-0 text-gray-500 group-open:block" strokeWidth={3} />
+          </summary>
+          <p className="whitespace-pre-line pr-6 pt-2 text-xs font-normal leading-relaxed text-gray-500 sm:text-sm xl:text-sm 2xl:text-base">
+            {f.answer}
+          </p>
+        </details>
+      ))}
+    </section>
   );
 }
 

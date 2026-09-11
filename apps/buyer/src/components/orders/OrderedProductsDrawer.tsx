@@ -49,7 +49,9 @@ export function OrderedProductsDrawer({ isOpen, onClose, orderId }: OrderedProdu
   const { data: trackingResp } = useOrderTracking(orderId || '');
   const tracking = trackingResp?.data;
 
-  const { data: ordersData } = useOrders({ page: 1, limit: 50 });
+  // Same call as OrderDrawer so the two share one cached history — see the
+  // note there on why the ignored page/limit is gone.
+  const { data: ordersData } = useOrders();
   const allOrders = Array.isArray(ordersData) ? ordersData : ((ordersData as any)?.data || (ordersData as any)?.data?.orders || []);
 
   const items = React.useMemo(() => {
