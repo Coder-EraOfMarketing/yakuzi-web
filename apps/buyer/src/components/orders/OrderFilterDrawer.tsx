@@ -42,15 +42,15 @@ export function OrderFilterDrawer({ isOpen, onClose, filters, onApplyFilters }: 
       />
 
       {/* Filter Drawer Panel (styled as a full-page overlay) */}
-      <div className="fixed inset-0 w-full h-full bg-white z-[110] flex flex-col overflow-hidden animate-slide-in-right">
-        <div className="w-full min-h-screen bg-white relative flex flex-col overflow-hidden">
+      <div className="fixed inset-0 w-full h-full glass-overlay z-[110] flex flex-col overflow-hidden animate-slide-in-right">
+        <div className="w-full min-h-screen relative flex flex-col overflow-hidden">
           {/* Close Button */}
-          <button onClick={onClose} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 bg-white/80 rounded-full z-[80] transition-colors border border-gray-100 shadow-sm">
+          <button onClick={onClose} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 bg-white/80 hover:bg-white rounded-full z-[80] transition-colors">
             <X className="w-6 h-6" />
           </button>
         
         {/* Header */}
-        <div className="flex justify-between items-center pr-6 pl-14 py-5 border-b border-gray-100 shrink-0 relative">
+        <div className="flex justify-between items-center pr-6 pl-14 py-5 border-b border-white/50 shrink-0 relative">
           <button onClick={onClose} className="absolute left-4 top-5 text-gray-400 hover:text-gray-800 transition-colors p-1.5 z-[80]">
              <ChevronLeft className="w-8 h-8" />
           </button>
@@ -86,7 +86,7 @@ export function OrderFilterDrawer({ isOpen, onClose, filters, onApplyFilters }: 
                   onClick={() => setPaymentStatus(status)}
                   className={`flex-1 py-3 text-base font-bold rounded-lg ${
                     localFilters.paymentStatus === status 
-                      ? 'bg-purple-600 text-white' 
+                      ? 'bg-[#7B2FBE] text-white' 
                       : 'bg-[#d1d1d1] text-white hover:bg-gray-400'
                   } transition-colors`}
                 >
@@ -109,7 +109,7 @@ export function OrderFilterDrawer({ isOpen, onClose, filters, onApplyFilters }: 
                   onClick={() => setOrderStatus(status)}
                   className={`w-full py-3.5 text-base font-bold rounded-lg ${
                     localFilters.orderStatus === status 
-                      ? 'bg-purple-600 text-white' 
+                      ? 'bg-[#7B2FBE] text-white' 
                       : 'bg-[#d1d1d1] text-white hover:bg-gray-400'
                   } transition-colors`}
                 >
@@ -119,7 +119,7 @@ export function OrderFilterDrawer({ isOpen, onClose, filters, onApplyFilters }: 
             </div>
           </div>
 
-          <div className="border-t border-gray-100 my-4" />
+          <div className="border-t border-white/50 my-4" />
 
           {/* Year */}
           <div className="mb-6">
@@ -133,7 +133,7 @@ export function OrderFilterDrawer({ isOpen, onClose, filters, onApplyFilters }: 
                     onClick={() => setYear(y)}
                     className={`flex-1 py-3 text-base font-bold rounded-lg ${
                       localFilters.year === y 
-                        ? 'bg-purple-600 text-white' 
+                        ? 'bg-[#7B2FBE] text-white' 
                         : 'bg-[#d1d1d1] text-white hover:bg-gray-400'
                     } transition-colors`}
                   >
@@ -155,7 +155,7 @@ export function OrderFilterDrawer({ isOpen, onClose, filters, onApplyFilters }: 
                   onClick={() => setMonth(m)}
                   className={`py-3 text-base font-bold rounded-lg ${
                     localFilters.month === m 
-                      ? 'bg-purple-600 text-white' 
+                      ? 'bg-[#7B2FBE] text-white' 
                       : 'bg-[#d1d1d1] text-white hover:bg-gray-400'
                   } transition-colors`}
                 >
@@ -168,13 +168,13 @@ export function OrderFilterDrawer({ isOpen, onClose, filters, onApplyFilters }: 
         </div>
 
         {/* Action Buttons Footer */}
-        <div className="p-4 border-t border-gray-100 shrink-0">
+        <div className="p-4 border-t border-white/50 shrink-0">
           <button 
             onClick={() => {
               onApplyFilters(localFilters);
               onClose();
             }} 
-            className="w-full bg-purple-600 text-white font-bold py-5 text-xl rounded-2xl hover:bg-purple-700 transition-colors"
+            className="w-full bg-[#7B2FBE] text-white font-bold py-5 text-xl rounded-full hover:bg-[#6a28a6] transition-colors"
           >
             Done
           </button>
