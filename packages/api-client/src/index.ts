@@ -157,6 +157,7 @@ export {
   getWishlist,
   addToWishlist,
   removeFromWishlist,
+  mergeWishlist,
   type Wishlist,
   type WishlistItem,
 } from './modules/wishlist.api';

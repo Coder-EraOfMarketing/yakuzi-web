@@ -95,6 +95,17 @@ export async function addToWishlist(productId: string): Promise<WishlistItem> {
   }
 }
 
+/**
+ * Fold what a browser saved while signed out into the account. Additive on the
+ * server — it never removes a save made on another device.
+ */
+export async function mergeWishlist(productIds: string[]): Promise<{ added: number }> {
+  if (!productIds.length) return { added: 0 };
+  const { data } = await api.post('/wishlist/merge', { productIds });
+  const payload = data?.data ?? data;
+  return { added: payload?.added ?? 0 };
+}
+
 export async function removeFromWishlist(productId: string): Promise<void> {
   try {
     await api.delete(`/wishlist/${productId}`);
