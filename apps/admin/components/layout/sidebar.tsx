@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, Users, Package, ClipboardList, Settings, LogOut, Shield, ChevronLeft, FolderTree, CreditCard, Banknote, Ticket, Bell, UserCog, FileSpreadsheet, Image, Gift, Layout, MessageSquare, PackagePlus, Bot, Layers, Tag, Star, Globe, LayoutGrid, Newspaper, Truck } from "lucide-react";
+import { LayoutDashboard, Users, Package, ClipboardList, Settings, LogOut, Shield, ChevronLeft, FolderTree, CreditCard, Banknote, Ticket, Bell, UserCog, FileSpreadsheet, Image, Gift, Layout, MessageSquare, PackagePlus, Bot, Layers, Tag, Star, Globe, LayoutGrid, Newspaper, Truck, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can, firstAccessibleRoute, TabKey } from "@/lib/access";
 import { useAdminAccess } from "@/hooks/useAccess";
@@ -16,6 +16,9 @@ const NAV: { icon: any; label: string; href: string; tab?: TabKey }[] = [
   // traffic/behavior/audience/real-time/health).
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard", tab: "dashboard" },
   { icon: Bot, label: "AI Chatbot", href: "/chatbot", tab: "chatbot" },
+  // Same permission tab as the chatbot itself: anyone trusted to train it is
+  // trusted to set its voice and its spending ceiling.
+  { icon: SlidersHorizontal, label: "Chatbot Studio", href: "/chatbot/studio", tab: "chatbot" },
   { icon: Users, label: "Users", href: "/users", tab: "users" },
   { icon: Package, label: "Products", href: "/products", tab: "products" },
   { icon: PackagePlus, label: "Add for Seller", href: "/products/add-for-seller", tab: "products" },

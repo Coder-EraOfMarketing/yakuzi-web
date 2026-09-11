@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bot, Save, Send, Eraser, Brain } from "lucide-react";
+import Link from "next/link";
+import { Bot, Save, Send, Eraser, Brain, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { AdminLayout } from "@/components/layout/admin-layout";
@@ -188,14 +189,25 @@ export default function ChatbotAdminPage() {
   return (
     <AdminLayout>
       <div className="p-6 max-w-7xl mx-auto space-y-8">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-primary/10 rounded-xl text-primary">
-            <Bot className="h-6 w-6" />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-primary/10 rounded-xl text-primary">
+              <Bot className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">AI Chatbot Management</h1>
+              <p className="text-muted-foreground text-sm">Teach it specific answers here, and test them live.</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">AI Chatbot Management</h1>
-            <p className="text-muted-foreground text-sm">Configure persona, teach store-specific behavior, and test your assistant.</p>
-          </div>
+          {/* Voice, access and spending limits live in the Studio; this page is
+              for teaching it what to say. */}
+          <Link
+            href="/chatbot/studio"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Open Chatbot Studio
+          </Link>
         </div>
 
         <div className="max-w-3xl mx-auto">
