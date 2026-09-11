@@ -7,6 +7,24 @@ import { Button, Badge, ApprovalBadge } from "@/components/ui";
 import { formatCurrency, formatDate } from "@yukizi/utils";
 import toast from "react-hot-toast";
 
+/**
+ * The image URL out of whatever shape the API sent.
+ *
+ * `GET /products/:id` answers in two shapes: a listing the seller typed in
+ * themselves comes back with `images` as plain URL strings, while a listing
+ * attached to a catalogue product comes back with the image ROWS
+ * (`{ id, url, order, ... }`). Handing a row straight to an <img> renders
+ * src="[object Object]", which is why this page showed broken frames with the
+ * product name underneath. The orders page already unwraps the same two shapes.
+ *
+ * Anything without a usable url is dropped rather than drawn as a broken box.
+ */
+function imageUrl(img: unknown): string | null {
+  if (typeof img === 'string') return img.trim() || null;
+  const url = (img as { url?: unknown } | null)?.url;
+  return typeof url === 'string' && url.trim() ? url : null;
+}
+
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -17,6 +35,9 @@ export default function ProductDetailPage() {
   // rate-limit, timeout, network) is temporary — telling the seller the
   // product is missing or they lack permission would be wrong.
   const isRealMiss = error ? (error as any)?.response?.status === 404 : !product;
+  const productImages = ((product?.images ?? []) as unknown[])
+    .map(imageUrl)
+    .filter((src): src is string => src !== null);
 
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
@@ -114,12 +135,12 @@ export default function ProductDetailPage() {
                <div className="space-y-6">
                  <div className="glass-card p-6 rounded-2xl space-y-4">
                    <h3 className="font-semibold text-lg border-b border-border/50 pb-2">Images</h3>
-                   {product.images && product.images.length > 0 ? (
+                   {productImages.length > 0 ? (
                      <div className="grid grid-cols-2 gap-3">
-                       {product.images.map((img, i) => (
+                       {productImages.map((src, i) => (
                          <div key={i} className="aspect-square rounded-xl overflow-hidden border border-border">
                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                           <img src={img} alt={`${product.name} - ${i}`} className="w-full h-full object-cover" />
+                           <img src={src} alt={`${product.name} - ${i}`} className="w-full h-full object-cover" />
                          </div>
                        ))}
                      </div>
