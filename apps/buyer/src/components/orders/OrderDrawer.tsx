@@ -22,6 +22,33 @@ function formatImageUrl(url: any): string | undefined {
   return `${cleanBase}${path.startsWith('/') ? '' : '/'}${path}`;
 }
 
+/**
+ * Stand-in for a product with no picture.
+ *
+ * This used to be a placehold.co URL with a green background, and an order
+ * with no pictures at all fell back to a stock photo of medicine blister packs
+ * left over from the pharma fork — neither belongs on this store. Drawn here
+ * instead of fetched, so it costs no request and carries the site's own purple.
+ */
+function ProductInitials({ name, className = '' }: { name?: string; className?: string }) {
+  const words = (name || '').trim().split(/\s+/).filter(Boolean);
+  const initials = words.length
+    ? (words.length === 1
+        ? words[0].slice(0, 2)
+        : words[0][0] + words[words.length - 1][0]
+      ).toUpperCase()
+    : 'YK';
+
+  return (
+    <div
+      aria-hidden="true"
+      className={`flex items-center justify-center rounded-xl bg-[#7B2FBE]/10 font-bold tracking-wide text-[#593696] ${className}`}
+    >
+      {initials}
+    </div>
+  );
+}
+
 interface OrderDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -126,12 +153,12 @@ export function OrderDrawer({ isOpen, onClose, orderId, onLoginClick }: OrderDra
   return (
     <>
       {/* Full Page View */}
-      <div 
-        className={`fixed inset-0 w-full h-full bg-[#fcfcfc] z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'} overflow-y-auto`}
+      <div
+        className={`fixed inset-0 w-full h-full glass-overlay z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'} overflow-y-auto`}
       >
-        <div className="w-full min-h-screen bg-[#fcfcfc] relative flex flex-col px-4 sm:px-6 md:px-8 py-6">
+        <div className="w-full min-h-screen relative flex flex-col px-4 sm:px-6 md:px-8 py-6">
           {/* Close Button */}
-          <button onClick={onClose} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-full z-50 transition-colors border border-gray-200 shadow-sm">
+          <button onClick={onClose} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 bg-white/80 hover:bg-white rounded-full z-50 transition-colors">
             <X className="w-6 h-6" />
           </button>
 
@@ -147,7 +174,7 @@ export function OrderDrawer({ isOpen, onClose, orderId, onLoginClick }: OrderDra
                 onClose();
                 onLoginClick?.();
               }}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm uppercase tracking-wider px-8 py-4 rounded-xl shadow-sm transition-colors"
+              className="bg-[#7B2FBE] hover:bg-[#6a28a6] text-white font-bold text-sm uppercase tracking-wider px-8 py-4 rounded-full shadow-sm transition-colors"
             >
               Sign In
             </button>
@@ -168,7 +195,7 @@ export function OrderDrawer({ isOpen, onClose, orderId, onLoginClick }: OrderDra
         ) : (
           <>
             {/* Header */}
-            <div className="pr-6 pl-14 py-6 border-b border-gray-100 relative">
+            <div className="pr-6 pl-14 py-6 border-b border-white/50 relative">
               {/* Back Button on Left */}
               <button onClick={onClose} className="absolute left-4 top-6 text-gray-400 hover:text-gray-800 transition-colors p-1.5 z-[80]">
                 <ChevronLeft className="w-8 h-8" />
@@ -177,17 +204,17 @@ export function OrderDrawer({ isOpen, onClose, orderId, onLoginClick }: OrderDra
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <h2 className="text-4xl font-bold text-gray-800 mr-2">Orders</h2>
-                  {filters.paymentStatus !== 'All' && <span className="bg-purple-600 text-white text-sm px-4 py-2 rounded shadow-sm font-bold uppercase">{filters.paymentStatus}</span>}
-                  {filters.orderStatus !== 'All orders' && <span className="bg-purple-600 text-white text-sm px-4 py-2 rounded shadow-sm font-bold capitalize">Status : {filters.orderStatus.toLowerCase()}</span>}
-                  {filters.month !== 'All' && <span className="bg-purple-600 text-white text-sm px-4 py-2 rounded shadow-sm font-bold uppercase">{filters.month}</span>}
-                  {filters.year !== 'All' && <span className="bg-purple-600 text-white text-sm px-4 py-2 rounded shadow-sm font-bold">{filters.year}</span>}
+                  {filters.paymentStatus !== 'All' && <span className="bg-[#7B2FBE] text-white text-sm px-4 py-2 rounded-full shadow-sm font-bold uppercase">{filters.paymentStatus}</span>}
+                  {filters.orderStatus !== 'All orders' && <span className="bg-[#7B2FBE] text-white text-sm px-4 py-2 rounded-full shadow-sm font-bold capitalize">Status : {filters.orderStatus.toLowerCase()}</span>}
+                  {filters.month !== 'All' && <span className="bg-[#7B2FBE] text-white text-sm px-4 py-2 rounded-full shadow-sm font-bold uppercase">{filters.month}</span>}
+                  {filters.year !== 'All' && <span className="bg-[#7B2FBE] text-white text-sm px-4 py-2 rounded-full shadow-sm font-bold">{filters.year}</span>}
                 </div>
-                
+
                 <div className="flex items-center gap-3.5 mr-12">
-                  <span className="bg-purple-600 text-white text-sm px-4 py-2 rounded shadow-sm font-bold">All orders</span>
-                  <button 
+                  <span className="bg-[#7B2FBE] text-white text-sm px-4 py-2 rounded-full shadow-sm font-bold">All orders</span>
+                  <button
                     onClick={() => setIsFilterOpen(true)}
-                    className="text-gray-400 hover:text-purple-600 transition-colors p-2"
+                    className="text-gray-400 hover:text-[#7B2FBE] transition-colors p-2"
                   >
                     <Filter className="w-7 h-7" />
                   </button>
@@ -201,7 +228,7 @@ export function OrderDrawer({ isOpen, onClose, orderId, onLoginClick }: OrderDra
               <div className="px-6 pt-4">
                 <Link
                   href={`/orders/${effectiveOrderId}/invoice`}
-                  className="flex items-center justify-center gap-2 w-full rounded-full border border-[#e2e8f0] bg-white py-3 text-sm font-bold text-[#593696] hover:bg-[#f5f3fa] transition-colors"
+                  className="glass-panel flex items-center justify-center gap-2 w-full rounded-full py-3 text-sm font-bold text-[#593696] transition-colors hover:bg-white/70"
                 >
                   <FileText className="w-4 h-4" />
                   View tax invoice
@@ -222,29 +249,32 @@ export function OrderDrawer({ isOpen, onClose, orderId, onLoginClick }: OrderDra
                 {items.map((item: any, index: number) => {
                   const product = item.sellerOffer || item.product || {};
                   const name = product.name || product.variant?.catalogProduct?.name || 'Unknown Product';
-                  const fallbackImage = `https://placehold.co/400x400/10b981/ffffff?text=${encodeURIComponent((name || 'PR').trim().split(/\s+/).length === 1 ? (name || 'PR').trim().substring(0,2).toUpperCase() : ((name || 'PR').trim().split(/\\s+/)[0][0] + (name || 'PR').trim().split(/\\s+/)[(name || 'PR').trim().split(/\\s+/).length - 1][0]).toUpperCase())}`;
-                  const imageUrl = formatImageUrl(product.variant?.catalogProduct?.images?.[0]) || product?.images?.[0]?.url || product?.images?.[0] || product?.image || fallbackImage;
-                  
+                  const imageUrl = formatImageUrl(product.variant?.catalogProduct?.images?.[0]) || product?.images?.[0]?.url || product?.images?.[0] || product?.image || null;
+
                   const currentProductId = product?.id || item?.productId || `prod-${index}`;
                   const isSaved = wishlistData?.items?.some(
                     (wItem: any) => wItem.productId === currentProductId || wItem.product?.id === currentProductId || wItem.id === currentProductId
                   );
                   
                   return (
-                    <div key={item.id || index} onClick={() => { setSelectedOrderId(item.order?.id || item.orderId || null); setIsOrderedProductsOpen(true); }} className="min-w-[150px] border border-gray-100 rounded-xl p-3 relative shadow-sm hover:shadow-md transition-shadow bg-white snap-center cursor-pointer">
+                    <div key={item.id || index} onClick={() => { setSelectedOrderId(item.order?.id || item.orderId || null); setIsOrderedProductsOpen(true); }} className="glass-panel min-w-[150px] rounded-[18px] p-3 relative transition-shadow hover:shadow-lg snap-center cursor-pointer">
                       <div className="flex justify-end items-start mb-2">
-                        <button className="text-black hover:text-black/80" onClick={(e) => e.stopPropagation()}>
+                        <button className="text-gray-500 hover:text-[#7B2FBE] transition-colors" onClick={(e) => e.stopPropagation()}>
                           <Plus className="w-4 h-4" />
                         </button>
                       </div>
                       <div className="h-28 flex items-center justify-center mb-2 overflow-hidden">
-                         <img
-                            src={imageUrl}
-                            className="h-full object-contain"
-                            alt={name}
-                            loading="lazy"
-                            decoding="async"
-                         />
+                         {imageUrl ? (
+                           <img
+                              src={imageUrl}
+                              className="h-full object-contain"
+                              alt={name}
+                              loading="lazy"
+                              decoding="async"
+                           />
+                         ) : (
+                           <ProductInitials name={name} className="h-full w-full text-lg" />
+                         )}
                       </div>
                       <div
                         onPointerDown={(e) => e.stopPropagation()}
@@ -266,7 +296,7 @@ export function OrderDrawer({ isOpen, onClose, orderId, onLoginClick }: OrderDra
                           className={`w-[24px] h-[18px] text-[#7B2FBE] ${isSaved ? 'fill-[#7B2FBE]' : 'fill-none'}`} 
                         />
                       </div>
-                      <div className="flex justify-between items-center mt-2 border-t border-gray-50 pt-2">
+                      <div className="flex justify-between items-center mt-2 border-t border-white/60 pt-2">
                          <span className="text-xs text-gray-500 font-medium truncate w-20">{name}</span>
                           <button className="flex items-center justify-center hover:scale-110 transition-transform" title="Quick view">
                             <Eye className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
@@ -302,9 +332,7 @@ export function OrderDrawer({ isOpen, onClose, orderId, onLoginClick }: OrderDra
                     const oItems = o.items || o.orderItems || [];
                     const itemImages = oItems.map((item: any) => {
                       const product = item.sellerOffer || item.product || {};
-                      const name = product.name || product.variant?.catalogProduct?.name || 'Unknown Product';
-                      const fallbackImage = `https://placehold.co/400x400/10b981/ffffff?text=${encodeURIComponent((name || 'PR').trim().split(/\\s+/).length === 1 ? (name || 'PR').trim().substring(0,2).toUpperCase() : ((name || 'PR').trim().split(/\\s+/)[0][0] + (name || 'PR').trim().split(/\\s+/)[(name || 'PR').trim().split(/\\s+/).length - 1][0]).toUpperCase())}`;
-                      return formatImageUrl(product.variant?.catalogProduct?.images?.[0]) || product?.images?.[0]?.url || product?.images?.[0] || product?.image || fallbackImage;
+                      return formatImageUrl(product.variant?.catalogProduct?.images?.[0]) || product?.images?.[0]?.url || product?.images?.[0] || product?.image;
                     }).filter(Boolean);
                     groups[dateString].images.push(...itemImages);
                   });
@@ -313,62 +341,67 @@ export function OrderDrawer({ isOpen, onClose, orderId, onLoginClick }: OrderDra
 
                   return groupedOrders.map((group, idx) => {
                     const images = [...group.images];
-                    
-                    if (images.length === 0) {
-                      images.push("https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?q=80&w=150&auto=format&fit=crop");
-                    }
-
                     const isSelected = group.orderIds.includes(effectiveOrderId);
 
                     return (
-                      <div key={group.dateString + idx} onClick={() => { setSelectedOrderId(group.orderIds[0]); setIsOrderedProductsOpen(true); }} className={`min-w-[220px] max-w-[220px] border ${isSelected ? 'border-purple-600 ring-2 ring-purple-600 shadow-md' : 'border-gray-200'} rounded-xl p-3 shadow-sm bg-white snap-center cursor-pointer hover:shadow-md transition-all`}>
+                      <div key={group.dateString + idx} onClick={() => { setSelectedOrderId(group.orderIds[0]); setIsOrderedProductsOpen(true); }} className={`glass-panel min-w-[220px] max-w-[220px] rounded-[18px] p-3 snap-center cursor-pointer transition-all hover:shadow-lg ${isSelected ? 'ring-2 ring-[#7B2FBE]' : ''}`}>
                         <div className="flex justify-between items-center mb-3">
-                           <span className={`text-base font-bold ${isSelected ? 'text-purple-600' : 'text-gray-500'}`}>{group.dateString}</span>
+                           <span className={`text-base font-bold ${isSelected ? 'text-[#7B2FBE]' : 'text-gray-500'}`}>{group.dateString}</span>
                            <ChevronRight className="w-5 h-5 text-gray-400" />
                         </div>
                         <div className="h-[160px] w-full">
-                          {images.length === 1 ? (
-                            <div className="bg-gray-50 rounded w-full h-full relative flex items-center justify-center overflow-hidden">
+                          {images.length === 0 ? (
+                            // An order whose products have no pictures. Used to
+                            // be a stock photo of pill packets from the pharma
+                            // fork, on an anime store.
+                            <div className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl bg-[#7B2FBE]/10 text-[#593696]">
+                              <Package className="h-8 w-8 opacity-70" />
+                              <span className="text-xs font-semibold">
+                                {group.orderIds.length} order{group.orderIds.length > 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          ) : images.length === 1 ? (
+                            <div className="bg-white/45 rounded-xl w-full h-full relative flex items-center justify-center overflow-hidden">
                               <img src={images[0]} className="absolute inset-0 w-full h-full object-contain p-1" alt="" aria-hidden="true" loading="lazy" decoding="async" />
                             </div>
                           ) : images.length === 2 ? (
                             <div className="grid grid-cols-2 gap-1.5 h-full">
-                              <div className="bg-gray-50 rounded relative flex items-center justify-center overflow-hidden">
+                              <div className="bg-white/45 rounded-xl relative flex items-center justify-center overflow-hidden">
                                 <img src={images[0]} className="absolute inset-0 w-full h-full object-contain p-1" alt="" aria-hidden="true" loading="lazy" decoding="async" />
                               </div>
-                              <div className="bg-gray-50 rounded relative flex items-center justify-center overflow-hidden">
+                              <div className="bg-white/45 rounded-xl relative flex items-center justify-center overflow-hidden">
                                 <img src={images[1]} className="absolute inset-0 w-full h-full object-contain p-1" alt="" aria-hidden="true" loading="lazy" decoding="async" />
                               </div>
                             </div>
                           ) : images.length === 3 ? (
                             <div className="grid grid-cols-2 gap-1.5 h-full">
                               <div className="flex flex-col gap-1.5 h-full min-h-0">
-                                <div className="bg-gray-50 rounded flex-1 relative flex items-center justify-center overflow-hidden">
+                                <div className="bg-white/45 rounded-xl flex-1 relative flex items-center justify-center overflow-hidden">
                                   <img src={images[0]} className="absolute inset-0 w-full h-full object-contain p-1" alt="" aria-hidden="true" loading="lazy" decoding="async" />
                                 </div>
-                                <div className="bg-gray-50 rounded flex-1 relative flex items-center justify-center overflow-hidden">
+                                <div className="bg-white/45 rounded-xl flex-1 relative flex items-center justify-center overflow-hidden">
                                   <img src={images[1]} className="absolute inset-0 w-full h-full object-contain p-1" alt="" aria-hidden="true" loading="lazy" decoding="async" />
                                 </div>
                               </div>
-                              <div className="bg-gray-50 rounded relative flex items-center justify-center overflow-hidden">
+                              <div className="bg-white/45 rounded-xl relative flex items-center justify-center overflow-hidden">
                                 <img src={images[2]} className="absolute inset-0 w-full h-full object-contain p-1" alt="" aria-hidden="true" loading="lazy" decoding="async" />
                               </div>
                             </div>
                           ) : (
                             <div className="grid grid-cols-2 gap-1.5 h-full">
                               <div className="flex flex-col gap-1.5 h-full min-h-0">
-                                <div className="bg-gray-50 rounded flex-1 relative flex items-center justify-center overflow-hidden">
+                                <div className="bg-white/45 rounded-xl flex-1 relative flex items-center justify-center overflow-hidden">
                                   <img src={images[0]} className="absolute inset-0 w-full h-full object-contain p-1" alt="" aria-hidden="true" loading="lazy" decoding="async" />
                                 </div>
-                                <div className="bg-gray-50 rounded flex-1 relative flex items-center justify-center overflow-hidden">
+                                <div className="bg-white/45 rounded-xl flex-1 relative flex items-center justify-center overflow-hidden">
                                   <img src={images[1]} className="absolute inset-0 w-full h-full object-contain p-1" alt="" aria-hidden="true" loading="lazy" decoding="async" />
                                 </div>
                               </div>
                               <div className="flex flex-col gap-1.5 h-full min-h-0">
-                                <div className="bg-gray-50 rounded flex-[2] relative flex items-center justify-center overflow-hidden">
+                                <div className="bg-white/45 rounded-xl flex-[2] relative flex items-center justify-center overflow-hidden">
                                   <img src={images[2]} className="absolute inset-0 w-full h-full object-contain p-1" alt="" aria-hidden="true" loading="lazy" decoding="async" />
                                 </div>
-                                <div className="bg-gray-50 rounded flex-1 relative flex items-center justify-center overflow-hidden">
+                                <div className="bg-white/45 rounded-xl flex-1 relative flex items-center justify-center overflow-hidden">
                                   <img src={images[3]} className="absolute inset-0 w-full h-full object-contain p-1" alt="" aria-hidden="true" loading="lazy" decoding="async" />
                                 </div>
                               </div>

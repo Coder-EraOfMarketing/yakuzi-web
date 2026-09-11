@@ -108,15 +108,15 @@ export function OrderedProductsDrawer({ isOpen, onClose, orderId }: OrderedProdu
   return (
     <>
       {/* Full Page View */}
-      <div className={`fixed inset-0 w-full h-full bg-[#fcfcfc] z-[110] transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'} overflow-y-auto`}>
-        <div className="w-full min-h-screen bg-[#fcfcfc] relative flex flex-col px-4 sm:px-6 md:px-8 py-6">
+      <div className={`fixed inset-0 w-full h-full glass-overlay z-[110] transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'} overflow-y-auto`}>
+        <div className="w-full min-h-screen relative flex flex-col px-4 sm:px-6 md:px-8 py-6">
           {/* Close Button */}
-          <button onClick={onClose} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-full z-[80] transition-colors border border-gray-200 shadow-sm">
+          <button onClick={onClose} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 bg-white/80 hover:bg-white rounded-full z-[80] transition-colors">
             <X className="w-6 h-6" />
           </button>
         
         {/* Header */}
-        <div className="pr-6 pl-14 py-6 border-b border-gray-100 relative shrink-0">
+        <div className="pr-6 pl-14 py-6 border-b border-white/50 relative shrink-0">
           <button onClick={onClose} className="absolute left-4 top-6 text-gray-400 hover:text-gray-800 transition-colors p-1.5 z-[80]">
              <ChevronLeft className="w-8 h-8" />
           </button>
@@ -187,7 +187,7 @@ export function OrderedProductsDrawer({ isOpen, onClose, orderId }: OrderedProdu
         </div>
 
         {/* List Content */}
-        <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 bg-[#fcfcfc]">
+        <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4">
           <div className="flex flex-col gap-3 pb-24">
             
             {items.map((item: any, index: number) => {
@@ -223,7 +223,7 @@ export function OrderedProductsDrawer({ isOpen, onClose, orderId }: OrderedProdu
                return (
                  <div 
                    key={item.id || index} 
-                   className={`relative bg-white rounded-xl shadow-sm border ${isYukiziChoice ? 'border-purple-200 shadow-purple-100' : 'border-gray-100'} p-3 flex flex-col gap-3 transition-all hover:shadow-md`}
+                   className={`glass-panel relative rounded-[18px] p-3 ${isYukiziChoice ? 'ring-1 ring-[#7B2FBE]/30' : ''} flex flex-col gap-3 transition-all hover:shadow-md`}
                  >
                    <div className="flex gap-3">
                    
@@ -234,7 +234,7 @@ export function OrderedProductsDrawer({ isOpen, onClose, orderId }: OrderedProdu
                    )}
  
                    {/* Left: Image */}
-                   <div className="relative w-[100px] h-[115px] sm:w-[110px] sm:h-[125px] shrink-0 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center">
+                   <div className="relative w-[100px] h-[115px] sm:w-[110px] sm:h-[125px] shrink-0 bg-white/45 rounded-xl overflow-hidden flex items-center justify-center">
                      <img
                        src={imageUrl}
                        className="w-full h-full object-cover"
