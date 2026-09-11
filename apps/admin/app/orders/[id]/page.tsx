@@ -73,8 +73,11 @@ export default function OrderDetailPage() {
       await cancelOrder.mutateAsync({ orderId: id, reason: cancelReason });
       toast.success("Order cancelled");
       setShowCancelModal(false);
-    } catch {
-      toast.error("Failed to cancel order");
+    } catch (err: any) {
+      // The API refuses an order with a confirmed payment and says so — that
+      // message tells an admin to arrange a refund instead. A generic failure
+      // would hide the only useful part.
+      toast.error(err?.response?.data?.message || "Failed to cancel order");
     }
   };
 
@@ -1014,10 +1017,11 @@ export default function OrderDetailPage() {
       <Modal open={showCancelModal} onClose={() => setShowCancelModal(false)} title="Cancel Order">
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">Are you sure you want to cancel this order? This action cannot be undone.</p>
-          <Input label="Reason (optional)" value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="e.g. Customer requested cancellation" />
+          <p className="text-sm text-muted-foreground">The buyer is told the order is cancelled, and is shown the reason you give below.</p>
+          <Input label="Reason — shown to the buyer" value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="e.g. Customer requested cancellation" />
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setShowCancelModal(false)}>Keep Order</Button>
-            <Button variant="danger" onClick={handleCancel} loading={cancelOrder.isPending}>Cancel Order</Button>
+            <Button variant="danger" onClick={handleCancel} loading={cancelOrder.isPending} disabled={cancelReason.trim().length < 3}>Cancel Order</Button>
           </div>
         </div>
       </Modal>

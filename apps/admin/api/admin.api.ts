@@ -384,8 +384,15 @@ export async function getAdminOrdersFiltered(params: { page?: number; limit?: nu
   return data?.data ?? { data: [], total: 0 };
 }
 
+/**
+ * Cancels an order and tells the buyer why.
+ *
+ * Hits `/orders/:id/cancel`, NOT `/admin/orders/...` — there has never been an
+ * admin mirror of this route, so every cancel from this panel 404'd and showed
+ * "Failed to cancel order". The real route already allows ADMIN.
+ */
 export async function cancelOrder(orderId: string, reason?: string) {
-  const { data } = await apiClient.patch<{ data: any }>(`/admin/orders/${orderId}/cancel`, { reason });
+  const { data } = await apiClient.patch<{ data: any }>(`/orders/${orderId}/cancel`, { reason });
   return data.data;
 }
 
