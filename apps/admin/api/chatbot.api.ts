@@ -74,6 +74,79 @@ export async function reorderChatbotRules(
   return data.data;
 }
 
+// ─── Studio: everything about how the assistant behaves ──────────────────
+
+export interface ChatbotConfig {
+  assistantName: string;
+  greeting: string;
+  tagline: string;
+  /** 0-100 dials. The API compiles these into instructions; see the preview. */
+  formality: number;
+  warmth: number;
+  detail: number;
+  emoji: number;
+  salesiness: number;
+  languages: string[];
+  neverSay: string[];
+  alwaysDo: string[];
+  blockedTopics: string[];
+  canSearchProducts: boolean;
+  canReadReviews: boolean;
+  canReadBlogs: boolean;
+  canCheckOrders: boolean;
+  canAnswerOffTopic: boolean;
+  canQuotePrices: boolean;
+  maxMessagesPerVisitorPerDay: number;
+  maxMessagesPerDay: number;
+  maxMessageLength: number;
+  maxHistoryTurns: number;
+  thinkingBudgetCap: number;
+  thinkingEnabled: boolean;
+  limitReachedMessage: string;
+  unavailableMessage: string;
+  isEnabled: boolean;
+  extraInstructions: string;
+  updatedAt?: string;
+  updatedBy?: string | null;
+}
+
+export interface ChatbotUsage {
+  day: string;
+  messagesToday: number;
+  visitorsToday: number;
+  dailyCap: number;
+  perVisitorCap: number;
+  capUsedPercent: number;
+  busiestVisitors: { visitor: string; messages: number }[];
+}
+
+export async function getChatbotConfig(): Promise<ChatbotConfig> {
+  const { data } = await apiClient.get<{ data: ChatbotConfig }>("/admin/chatbot/config");
+  return data.data;
+}
+
+export async function updateChatbotConfig(
+  payload: Partial<ChatbotConfig>,
+): Promise<ChatbotConfig> {
+  const { data } = await apiClient.patch<{ data: ChatbotConfig }>("/admin/chatbot/config", payload);
+  return data.data;
+}
+
+/** The exact instructions these settings produce — without saving them. */
+export async function previewChatbotConfig(
+  payload: Partial<ChatbotConfig>,
+): Promise<{ systemInstruction: string; tools: string[]; instructionWords: number }> {
+  const { data } = await apiClient.post<{
+    data: { systemInstruction: string; tools: string[]; instructionWords: number };
+  }>("/admin/chatbot/config/preview", payload);
+  return data.data;
+}
+
+export async function getChatbotUsage(): Promise<ChatbotUsage> {
+  const { data } = await apiClient.get<{ data: ChatbotUsage }>("/admin/chatbot/usage");
+  return data.data;
+}
+
 export interface ExtractedRuleDraft {
   trigger: string;
   instruction: string;
