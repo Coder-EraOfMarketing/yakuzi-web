@@ -6,6 +6,7 @@ import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Badge, Input, Modal } from "@/components/ui";
 import toast from "react-hot-toast";
 import { useBanners, useCreateBanner, useUpdateBanner, useDeleteBanner } from "@/hooks/useAdmin";
+import { BANNER_ACCEPT, isVideoFile, isVideoUrl } from "@yukizi/utils";
 
 export default function BannersPage() {
   const { data: bannersData, isLoading } = useBanners();
@@ -84,7 +85,7 @@ export default function BannersPage() {
         await updateBanner.mutateAsync({ id: editingBanner.id, payload: formData });
         toast.success("Banner updated");
       } else {
-        if (!file) { toast.error("Please select an image"); return; }
+        if (!file) { toast.error("Please select an image or video"); return; }
         await createBanner.mutateAsync(formData);
         toast.success("Banner created");
       }
@@ -139,7 +140,11 @@ export default function BannersPage() {
               <motion.div key={banner.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                 className="glass-card rounded-2xl overflow-hidden group">
                 <div className="aspect-[16/7] bg-muted/30 relative">
-                  {banner.imageUrl ? (
+                  {banner.imageUrl && isVideoUrl(banner.imageUrl) ? (
+                    // Muted, looping, no controls: the card is a thumbnail of
+                    // what shoppers will see, not something to play in here.
+                    <video src={banner.imageUrl} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+                  ) : banner.imageUrl ? (
                     <img src={banner.imageUrl} alt={banner.title ?? "Banner"} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -174,36 +179,47 @@ export default function BannersPage() {
           <Input label="Title (optional)" value={title} onChange={e => setTitle(e.target.value)} placeholder="Banner title" />
           <Input label="Link (optional)" value={link} onChange={e => setLink(e.target.value)} placeholder="https://..." />
           <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">Image (desktop)</label>
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+            <label className="text-sm font-medium text-foreground mb-2 block">Image or video (desktop)</label>
+            <input ref={fileRef} type="file" accept={BANNER_ACCEPT} onChange={handleFileChange} className="hidden" />
             <button onClick={() => fileRef.current?.click()}
               className="w-full border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors">
               {preview ? (
-                <img src={preview} alt="Preview" className="max-h-32 mx-auto rounded-lg" />
+                isVideoUrl(preview) || isVideoFile(file) ? (
+                  // Muted and looping so the preview behaves the way the
+                  // storefront will, not like a media player.
+                  <video src={preview} className="max-h-32 mx-auto rounded-lg" muted loop autoPlay playsInline />
+                ) : (
+                  <img src={preview} alt="Preview" className="max-h-32 mx-auto rounded-lg" />
+                )
               ) : (
                 <div>
                   <Image className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                  <p className="text-sm text-muted-foreground">Click to select image</p>
+                  <p className="text-sm text-muted-foreground">Click to select an image or video</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">JPG, PNG, WebP up to 5MB · MP4, WebM up to 40MB</p>
                 </div>
               )}
             </button>
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-foreground block">Mobile image (optional)</label>
+              <label className="text-sm font-medium text-foreground block">Mobile image or video (optional)</label>
               {mobilePreview && (
                 <button onClick={clearMobileImage} className="text-xs text-muted-foreground hover:text-destructive transition-colors">
                   Remove
                 </button>
               )}
             </div>
-            <input ref={mobileFileRef} type="file" accept="image/*" onChange={handleMobileFileChange} className="hidden" />
+            <input ref={mobileFileRef} type="file" accept={BANNER_ACCEPT} onChange={handleMobileFileChange} className="hidden" />
             <button onClick={() => mobileFileRef.current?.click()}
               className="w-full border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-primary/50 transition-colors">
               {mobilePreview ? (
-                <img src={mobilePreview} alt="Mobile preview" className="max-h-24 mx-auto rounded-lg" />
+                isVideoUrl(mobilePreview) || isVideoFile(mobileFile) ? (
+                  <video src={mobilePreview} className="max-h-24 mx-auto rounded-lg" muted loop autoPlay playsInline />
+                ) : (
+                  <img src={mobilePreview} alt="Mobile preview" className="max-h-24 mx-auto rounded-lg" />
+                )
               ) : (
-                <p className="text-xs text-muted-foreground">Shown on phones instead of the desktop image. Leave empty to reuse it.</p>
+                <p className="text-xs text-muted-foreground">Shown on phones instead of the desktop file. A still image here with a video above is a good combination — phones get the lighter file. Leave empty to reuse the desktop one.</p>
               )}
             </button>
           </div>

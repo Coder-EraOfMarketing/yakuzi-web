@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { isVideoUrl } from '@yukizi/utils';
+import { BannerVideo } from '@/components/shared/BannerVideo';
 
 export interface CategoryBannerSlide {
   id?: string;
@@ -69,18 +71,35 @@ export default function CategoryBanner({ title, banners }: CategoryBannerProps) 
               }`}
               aria-hidden={!isCurrent}
             >
-              {/* Two layers rather than a <picture>: the artwork is a background
-                  so it can be cropped to the band height at every width. Only
-                  one is ever visible, and the hidden one is display:none so it
-                  is not fetched. */}
-              <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 sm:hidden"
-                style={{ backgroundImage: `url(${mobileImage})` }}
-              />
-              <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 hidden sm:block"
-                style={{ backgroundImage: `url(${desktopImage})` }}
-              />
+              {isVideoUrl(desktopImage) || isVideoUrl(mobileImage) ? (
+                // A video cannot be a CSS background, so it replaces both
+                // layers and picks its own source by viewport. Only the slide
+                // on screen plays.
+                <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105">
+                  <BannerVideo
+                    desktop={desktopImage}
+                    mobile={mobileImage}
+                    active={isCurrent}
+                    fit="cover"
+                    title={title}
+                  />
+                </div>
+              ) : (
+                <>
+                  {/* Two layers rather than a <picture>: the artwork is a
+                      background so it can be cropped to the band height at
+                      every width. Only one is ever visible, and the hidden one
+                      is display:none so it is not fetched. */}
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 sm:hidden"
+                    style={{ backgroundImage: `url(${mobileImage})` }}
+                  />
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 hidden sm:block"
+                    style={{ backgroundImage: `url(${desktopImage})` }}
+                  />
+                </>
+              )}
             </div>
           );
         })}

@@ -29,6 +29,7 @@ import {
   useReplaceCategoryBanners, useReplaceSubCategoryBanners,
 } from "@/hooks/useAdmin";
 import { uploadImage } from "@/api/admin.api";
+import { BANNER_ACCEPT, isVideoUrl } from "@yukizi/utils";
 
 const MAX_SLIDES = 10;
 
@@ -276,7 +277,7 @@ export default function AdminCollectionsPage() {
     e.preventDefault();
     try {
       if (slides.some((s) => !s.file && !s.image)) {
-        return toast.error("Every banner needs a desktop image (or remove the empty slide)");
+        return toast.error("Every banner needs a desktop image or video (or remove the empty slide)");
       }
 
       // Upload any newly picked files, then send the whole ordered list.
@@ -545,7 +546,7 @@ export default function AdminCollectionsPage() {
                         Add banner
                       </Button>
                     </div>
-                    <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                    <input ref={fileRef} type="file" accept={BANNER_ACCEPT} onChange={handleFileChange} className="hidden" />
 
                     {slides.length === 0 ? (
                       <button type="button" onClick={addSlide}
@@ -554,7 +555,7 @@ export default function AdminCollectionsPage() {
                           <Plus className="h-5 w-5" />
                         </div>
                         <div className="text-sm font-medium text-foreground">Add your first banner</div>
-                        <div className="text-xs text-muted-foreground">Recommend 1200x400px. Add more for a slideshow.</div>
+                        <div className="text-xs text-muted-foreground">Images or videos. Recommend 1200x400px; MP4 or WebM up to 40MB. Add more for a slideshow.</div>
                       </button>
                     ) : (
                       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSlideDragEnd}>
@@ -575,7 +576,11 @@ export default function AdminCollectionsPage() {
                                     <div className="flex-1 min-w-0">
                                       {slide.preview ? (
                                         <div className="relative aspect-[16/6] w-full rounded-lg overflow-hidden group/img">
-                                          <img src={slide.preview} alt={`Banner ${index + 1} desktop`} className="w-full h-full object-cover" />
+                                          {isVideoUrl(slide.preview) ? (
+                                            <video src={slide.preview} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+                                          ) : (
+                                            <img src={slide.preview} alt={`Banner ${index + 1} desktop`} className="w-full h-full object-cover" />
+                                          )}
                                           <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
                                             <Button type="button" variant="ghost" size="sm" className="text-white hover:bg-white/20" onClick={() => pickFile(slide.key, "desktop")}>
                                               Change
@@ -586,7 +591,7 @@ export default function AdminCollectionsPage() {
                                         <button type="button" onClick={() => pickFile(slide.key, "desktop")}
                                           className="w-full aspect-[16/6] border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 hover:bg-muted/50 hover:border-primary/50 transition-colors">
                                           <Plus className="h-4 w-4 text-primary" />
-                                          <span className="text-xs font-medium text-foreground">Desktop image</span>
+                                          <span className="text-xs font-medium text-foreground">Desktop image or video</span>
                                         </button>
                                       )}
                                     </div>
@@ -594,7 +599,11 @@ export default function AdminCollectionsPage() {
                                     <div className="w-24 shrink-0">
                                       {slide.mobilePreview ? (
                                         <div className="relative aspect-[3/4] w-full rounded-lg overflow-hidden group/img">
-                                          <img src={slide.mobilePreview} alt={`Banner ${index + 1} mobile`} className="w-full h-full object-cover" />
+                                          {isVideoUrl(slide.mobilePreview) ? (
+                                            <video src={slide.mobilePreview} className="w-full h-full object-cover" muted loop autoPlay playsInline />
+                                          ) : (
+                                            <img src={slide.mobilePreview} alt={`Banner ${index + 1} mobile`} className="w-full h-full object-cover" />
+                                          )}
                                           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
                                             <button type="button" className="text-[11px] font-medium text-white hover:underline" onClick={() => pickFile(slide.key, "mobile")}>Change</button>
                                             <button type="button" className="text-[11px] font-medium text-white hover:underline" onClick={() => clearSlideMobile(slide.key)}>Remove</button>
