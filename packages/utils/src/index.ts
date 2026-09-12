@@ -70,3 +70,6 @@ export {
 export type { ProductFormValues } from './validators';
 // Slugs
 export { generateProductSlug, parseProductIdFromSlug } from './slugs';
+
+// Banner media — whether a banner slot holds a picture or a video
+export { isVideoUrl, isVideoFile, BANNER_ACCEPT } from './media';

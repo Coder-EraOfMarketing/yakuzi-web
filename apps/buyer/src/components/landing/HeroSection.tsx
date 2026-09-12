@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBrands, useBanners } from '@/hooks/useProducts';
+import { isVideoUrl } from '@yukizi/utils';
+import { BannerVideo } from '@/components/shared/BannerVideo';
 
 // Routes a remote image through /_next/image so the browser downloads a
 // resized AVIF/WebP variant instead of the original upload (banner uploads
@@ -151,7 +153,18 @@ export default function HeroSection({ initialBanners }: { initialBanners?: any[]
               // Admins can upload a separate narrow-viewport crop; without
               // one, phones simply get the desktop art as before.
               const mobileImage = banner?.mobileImageUrl || desktopImage;
-              const slide = (
+              // A banner slot can hold a video now. Only the slide on screen
+              // plays; see BannerVideo for why that matters with a stack of
+              // absolutely-positioned slides.
+              const slide = isVideoUrl(desktopImage) || isVideoUrl(mobileImage) ? (
+                <BannerVideo
+                  desktop={desktopImage}
+                  mobile={mobileImage}
+                  active={isCurrent}
+                  fit="contain"
+                  title={banner?.title ?? undefined}
+                />
+              ) : (
                 <picture className="block h-full w-full">
                   <source
                     media="(min-width: 1024px)"
