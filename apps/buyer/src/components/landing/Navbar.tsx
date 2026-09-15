@@ -45,15 +45,23 @@ import {
 
 
 
-import CategoryMegaMenu from "@/components/landing/CategoryMegaMenu";
-import EditProfileDrawer from "@/components/profile/EditProfileDrawer";
-import CartDrawer from "@/components/cart/CartDrawer";
-import WishlistDrawer from "@/components/wishlist/WishlistDrawer";
-import SupportDrawer from "@/components/shared/SupportDrawer";
+import nextDynamic from "next/dynamic";
 import { useToast } from "@/components/shared/Toast";
-import NotificationDrawer from "@/components/notifications/NotificationDrawer";
-import SearchBar from "@/components/shared/SearchBar";
-import { SidebarSheet, type SidebarView } from "@/components/landing/SidebarSheet";
+import { type SidebarView } from "@/components/landing/SidebarSheet";
+
+// Every one of these is an overlay that renders nothing until opened, so
+// their code is loaded on demand instead of riding in the shared bundle that
+// every page pays for at hydration. `ssr: false` costs nothing here — closed
+// drawers contribute zero server HTML anyway — and `loading: null` matches
+// what a closed drawer renders. Visible chrome (icons, badges, logo) is NOT
+// lazy: it must paint with the page.
+const CategoryMegaMenu = nextDynamic(() => import("@/components/landing/CategoryMegaMenu"), { ssr: false, loading: () => null });
+const EditProfileDrawer = nextDynamic(() => import("@/components/profile/EditProfileDrawer"), { ssr: false, loading: () => null });
+const CartDrawer = nextDynamic(() => import("@/components/cart/CartDrawer"), { ssr: false, loading: () => null });
+const WishlistDrawer = nextDynamic(() => import("@/components/wishlist/WishlistDrawer"), { ssr: false, loading: () => null });
+const SupportDrawer = nextDynamic(() => import("@/components/shared/SupportDrawer"), { ssr: false, loading: () => null });
+const NotificationDrawer = nextDynamic(() => import("@/components/notifications/NotificationDrawer"), { ssr: false, loading: () => null });
+const SidebarSheet = nextDynamic(() => import("@/components/landing/SidebarSheet").then((m) => m.SidebarSheet), { ssr: false, loading: () => null });
 import WishlistIcon from "@/components/shared/WishlistIcon";
 import ThemeToggle from "@/components/shared/ThemeToggle";
 
