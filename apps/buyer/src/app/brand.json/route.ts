@@ -88,7 +88,7 @@ export async function GET(): Promise<Response> {
       '@type': 'MerchantReturnPolicy',
       applicableCountry: 'IN',
       returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-      merchandiseReturnDays: 3,
+      merchantReturnDays: 3,
       url: `${SITE_URL}/returns`,
     },
     mainEntityOfPage: `${SITE_URL}/about`,
