@@ -143,7 +143,7 @@ export function productSchema(p: {
               '@type': 'MerchantReturnPolicy',
               applicableCountry: 'IN',
               returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-              merchandiseReturnDays: 3,
+              merchantReturnDays: 3,
               url: absoluteUrl('/returns'),
             },
             // Only when the payload carries a real per-listing shipping price;
