@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import HomeNavbar from '@/components/landing/HomeNavbar';
 import CategoryBanner from '@/components/landing/CategoryBanner';
 import ProductCarousel from '@/components/landing/ProductCarousel';
-import { getCategories, getProducts } from '@yukizi/api-client';
+import { getCategoriesCachedShared, getProductsCached } from '@/lib/server-cache';
 import { absoluteUrl, metaTruncate, SITE_NAME } from '@/lib/seo/site';
 import { applySeoOverride, fetchSeoOverride, validFaqs } from '@/lib/seo/overrides';
 import { breadcrumbSchema, faqPageSchema, collectionPageSchema } from '@/lib/seo/schema';
@@ -13,13 +13,15 @@ import JsonLd from '@/components/seo/JsonLd';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import SeoFaq from '@/components/seo/SeoFaq';
 
-export const dynamic = 'force-dynamic';
+// No `force-dynamic` needed: the listing filters (`?sub=`, sort, price)
+// come from `searchParams`, which already makes every render dynamic. The
+// API data is TTL-cached in @/lib/server-cache instead.
 
 // Shared across generateMetadata + the page body so both consume the same
 // getCategories() fetch (deduped per-request by React's cache()).
 const getCategoriesCached = cache(async (): Promise<any[]> => {
   try {
-    const categories = await getCategories();
+    const categories = await getCategoriesCachedShared();
     return Array.isArray(categories) ? categories : [];
   } catch (error) {
     console.error("Failed to fetch categories on server", error);
@@ -109,7 +111,7 @@ async function CategoryProducts({
   // silently did nothing.
   const str = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined);
   try {
-    const res = await getProducts({
+    const res = await getProductsCached({
       categoryId,
       subCategoryId,
       limit: 100,

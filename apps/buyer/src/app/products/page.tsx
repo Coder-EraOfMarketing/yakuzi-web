@@ -6,7 +6,7 @@ import CategoryBanner from '@/components/landing/CategoryBanner';
 import ProductCarousel from '@/components/landing/ProductCarousel';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import JsonLd from '@/components/seo/JsonLd';
-import { getBanners, getProducts } from '@yukizi/api-client';
+import { getBannersCached, getProductsCached } from '@/lib/server-cache';
 import { absoluteUrl, metaTruncate, SITE_NAME } from '@/lib/seo/site';
 import { applySeoOverride, fetchSeoOverride } from '@/lib/seo/overrides';
 import { breadcrumbSchema, collectionPageSchema } from '@/lib/seo/schema';
@@ -24,7 +24,9 @@ import { breadcrumbSchema, collectionPageSchema } from '@/lib/seo/schema';
  * and until now no page lived there.
  */
 
-export const dynamic = 'force-dynamic';
+// No `force-dynamic` needed: the listing filters/sort come from
+// `searchParams`, which already makes every render dynamic. The API data is
+// TTL-cached in @/lib/server-cache instead.
 
 export async function generateMetadata(): Promise<Metadata> {
   const title = 'All Products';
@@ -47,7 +49,7 @@ async function AllProducts({ searchParams }: { searchParams?: Record<string, any
   let products: any[] = [];
   const str = (v: string | string[] | undefined) => (typeof v === 'string' ? v : undefined);
   try {
-    const res = await getProducts({
+    const res = await getProductsCached({
       limit: 100,
       sortBy: str(searchParams?.sortBy),
       sortOrder: str(searchParams?.sortOrder) === 'asc' || str(searchParams?.sortOrder) === 'desc'
@@ -96,7 +98,7 @@ export default async function AllProductsPage({ searchParams }: { searchParams?:
   // between the two pages showing the same artwork.
   let bannerSlides: { id?: string; image: string; mobileImage?: string | null }[] = [];
   try {
-    const banners = await getBanners();
+    const banners = await getBannersCached();
     bannerSlides = (Array.isArray(banners) ? banners : [])
       .filter((b: any) => b?.isActive !== false && b?.imageUrl)
       .sort((a: any, b: any) => {

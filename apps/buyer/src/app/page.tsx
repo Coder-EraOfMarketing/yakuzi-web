@@ -8,7 +8,13 @@ import CategoryScrollRow from '@/components/landing/CategoryScrollRow';
 import ComingSoon from '@/components/landing/ComingSoon';
 import InstagramFeed from '@/components/landing/InstagramFeed';
 import dynamicComponent from 'next/dynamic';
-import { getProducts, getComingSoonStatus, getBanners, getHomepageSections, type HomepageSection } from '@yukizi/api-client';
+import { type HomepageSection } from '@yukizi/api-client';
+import {
+  getProductsCached,
+  getComingSoonStatusCached,
+  getBannersCached,
+  getHomepageSectionsCached,
+} from '@/lib/server-cache';
 import type { Metadata } from 'next';
 import JsonLd from '@/components/seo/JsonLd';
 import { organizationSchema, webSiteSchema, graph } from '@/lib/seo/schema';
@@ -17,7 +23,9 @@ import { fetchSupportContact } from '@/lib/seo/support-contact';
 import { absoluteUrl } from '@/lib/seo/site';
 import { applySeoOverride, fetchSeoOverride } from '@/lib/seo/overrides';
 
-export const dynamic = 'force-dynamic';
+// No `force-dynamic` needed: this page reads `searchParams` (the navbar
+// search lands on `/?search=`), which already makes every render dynamic.
+// The API data it renders from is TTL-cached in @/lib/server-cache instead.
 
 // Was a static `metadata` export; generateMetadata lets the admin SEO
 // override for the homepage (entity "/") merge over the same defaults.
@@ -76,7 +84,7 @@ async function CarouselSection({
   let initialProducts: any[] = [];
   let total = 0;
   try {
-    const res = await getProducts({
+    const res = await getProductsCached({
       limit: 100,
       ...buildProductQueryParams(searchParams),
     });
@@ -128,9 +136,9 @@ export default async function HomePage({
   let sections: HomepageSection[] = [];
   try {
     const [comingSoon, banners, homepageSections] = await Promise.all([
-      getComingSoonStatus(),
-      getBanners().catch(() => undefined),
-      showCuratedSections ? getHomepageSections().catch(() => []) : Promise.resolve([]),
+      getComingSoonStatusCached(),
+      getBannersCached().catch(() => undefined),
+      showCuratedSections ? getHomepageSectionsCached().catch(() => []) : Promise.resolve([]),
     ]);
     isComingSoon = comingSoon;
     initialBanners = banners;
