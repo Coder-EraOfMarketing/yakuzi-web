@@ -8,6 +8,8 @@ import { productSchema, breadcrumbSchema, faqPageSchema, graph, organizationSche
 import { applySeoOverride, fetchSeoOverride, mergeStructuredData, validFaqs } from '@/lib/seo/overrides';
 import JsonLd from '@/components/seo/JsonLd';
 import ProductPageClient from './ProductPageClient';
+import Link from 'next/link';
+import { collectionsForProduct } from '@/data/collections';
 
 // Was force-dynamic, which sets `private, no-store` and made every product
 // page a cache miss on every request. This page reads no search params, so it
@@ -181,6 +183,14 @@ export default async function ProductPage({ params }: { params: { productSlug: s
       initialRelated = undefined;
     }
   }
+  // Which series/brand hubs this product belongs to — drives the "Explore"
+  // chips after the product body.
+  const productCollections = collectionsForProduct({
+    name: p.name,
+    slug: p.slug ?? params.productSlug,
+    description: p.description,
+  });
+
   // ONE @graph rather than separate blocks — see graph() for why.
   const jsonLd: object[] = [
     graph(
@@ -205,6 +215,28 @@ export default async function ProductPage({ params }: { params: { productSlug: s
           server-rendered into the HTML, so the FAQPage JSON-LD below keeps
           describing text that is really on the page. */}
       <ProductPageClient productSlug={params.productSlug} initialProduct={product} initialRelated={initialRelated} imageAltOverrides={override?.imageAltOverrides ?? undefined} faqs={faqs} />
+      {/* Collection chips: server-rendered links to the series/brand hub
+          pages this product belongs to. NOT a product strip (see the note
+          below about the removed "More from <category>" row) — these link to
+          landing pages, and they double as the hubs' inbound links from
+          every matching PDP. */}
+      {productCollections.length > 0 && (
+        <nav aria-label="Collections" className="mx-auto w-full max-w-4xl px-4 pb-6">
+          <ul className="flex flex-wrap items-center gap-2">
+            <li className="text-sm text-gray-500">Explore:</li>
+            {productCollections.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  href={`/collections/${c.slug}`}
+                  className="inline-block rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-700 transition-colors hover:border-[#854cbc] hover:text-[#854cbc]"
+                >
+                  {c.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
       {/* "More from <category>" removed at Rishi's request — it duplicated the
           Related Products strip above it.
 

@@ -3,6 +3,7 @@ import { getCategories, getBlogs } from '@yukizi/api-client';
 import { authorSlug } from '@/lib/seo/schema';
 import { absoluteUrl } from '@/lib/seo/site';
 import { fetchAllProducts, isBuildPhase } from '@/lib/seo/product-fetch';
+import { COLLECTIONS } from '@/data/collections';
 
 export const revalidate = 3600; // rebuild at most hourly
 
@@ -88,6 +89,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: p === '/' ? 'daily' : 'weekly',
     priority: p === '/' ? 1 : 0.5,
   }));
+
+  // Collection hubs are defined statically, so they never depend on the API
+  // and can go straight into the sitemap. The hub pages themselves noindex
+  // when they thin out below MIN_PRODUCTS.
+  entries.push(
+    { url: absoluteUrl('/collections'), changeFrequency: 'weekly', priority: 0.6 },
+    ...COLLECTIONS.map((c) => ({
+      url: absoluteUrl(`/collections/${c.slug}`),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    })),
+  );
 
   // Run independently of each other so one slow/timed-out call doesn't push
   // the others past Vercel's 60s static-generation budget — previously these
