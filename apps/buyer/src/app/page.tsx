@@ -93,7 +93,15 @@ async function CarouselSection({
       total = res.total ?? res.data.length;
     }
   } catch (error) {
+    // Rethrow, don't swallow: swallowing rendered a 200 "No products
+    // available." shell whenever the API blinked — a soft-404 that reads to
+    // Google as "this shop is empty". The error boundary (error.tsx) shows a
+    // retry UI instead, and Next marks streamed error output noindex, so a
+    // crawl during an outage is told to come back rather than told the
+    // catalogue is gone. A GENUINELY empty result (fulfilled, zero rows)
+    // still renders normally below.
     console.error("[HomePage] Failed to load initial products:", error);
+    throw error;
   }
 
   const shown = capped ? initialProducts.slice(0, HOMEPAGE_GRID_LIMIT) : initialProducts;

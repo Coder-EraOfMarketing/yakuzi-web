@@ -67,7 +67,12 @@ async function AllProducts({ searchParams }: { searchParams?: Record<string, any
     });
     if (Array.isArray(res?.data)) products = res.data;
   } catch (error) {
+    // Rethrow — same soft-404 rule as the homepage grid: an API failure must
+    // surface as an error (noindexed, retried by crawlers), never as a thin
+    // 200 "no products" page. The banner fetch below stays fail-open; a
+    // banner is decoration, the catalogue is the page.
     console.error('[AllProducts] Failed to load products:', error);
+    throw error;
   }
 
   return (

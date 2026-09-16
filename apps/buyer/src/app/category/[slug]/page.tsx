@@ -130,7 +130,11 @@ async function CategoryProducts({
       initialProducts = res.data;
     }
   } catch (error) {
+    // Rethrow — same soft-404 rule as the homepage and /products grids: an
+    // API failure is an error state, never a 200 shell with an empty
+    // CollectionPage ItemList. A genuinely empty category still renders.
     console.error("Failed to load category products:", error);
+    throw error;
   }
   return (
     <>
