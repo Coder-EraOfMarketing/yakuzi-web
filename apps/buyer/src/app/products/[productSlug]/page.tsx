@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getProductById, getProducts } from '@yukizi/api-client';
+import { getProductById, getProducts, getProductReviews } from '@yukizi/api-client';
 import { parseProductIdFromSlug } from '@yukizi/utils';
 import { absoluteUrl, metaTruncate, SITE_NAME } from '@/lib/seo/site';
 import { productSchema, breadcrumbSchema, faqPageSchema, graph, organizationSchema, webSiteSchema } from '@/lib/seo/schema';
@@ -166,6 +166,23 @@ export default async function ProductPage({ params }: { params: { productSlug: s
   const override = await fetchProductOverride(overrideKey(p));
   const faqs = validFaqs(override?.faq);
 
+  // Review summary for the Product schema's aggregateRating. The payload's
+  // own reviewSummary field has no producer (formatMasterDetail never sets
+  // it), which is why no PDP ever emitted stars despite visibly showing
+  // ratings — so it is fetched here, server-side, from the same public
+  // endpoint the review panel uses. Reviews key on the CATALOG id, like the
+  // SEO overrides. Fail-open: a rating is an enhancement, never worth a 500,
+  // and an absent aggregateRating is the correct output for zero reviews.
+  let reviewSummary: { average: number; count: number } | undefined;
+  try {
+    const rev = await getProductReviews(overrideKey(p), { page: 1, limit: 1 });
+    if (rev.total > 0 && Number.isFinite(rev.averageRating) && rev.averageRating > 0) {
+      reviewSummary = { average: rev.averageRating, count: rev.total };
+    }
+  } catch {
+    reviewSummary = undefined;
+  }
+
   // Related products, fetched HERE rather than in the browser, so the strip
   // renders with real links in the served HTML instead of empty markup.
   //
@@ -194,7 +211,7 @@ export default async function ProductPage({ params }: { params: { productSlug: s
   // ONE @graph rather than separate blocks — see graph() for why.
   const jsonLd: object[] = [
     graph(
-      mergeStructuredData(productSchema(buildSchemaInput(p)), override?.structuredDataOverride),
+      mergeStructuredData(productSchema(buildSchemaInput({ ...p, reviewSummary })), override?.structuredDataOverride),
       breadcrumbSchema(crumbs),
       faqs.length ? faqPageSchema(faqs) : null,
       // The site's entity travels with every product page. Google does not
