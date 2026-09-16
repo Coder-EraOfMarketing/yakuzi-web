@@ -1,9 +1,8 @@
-import { Suspense } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import HomeNavbar from '@/components/landing/HomeNavbar';
-import ProductCarousel from '@/components/landing/ProductCarousel';
+import CollectionGrid from '@/components/collections/CollectionGrid';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import JsonLd from '@/components/seo/JsonLd';
 import SeoFaq from '@/components/seo/SeoFaq';
@@ -38,6 +37,12 @@ async function fetchCollectionProducts(def: (typeof COLLECTIONS)[number]) {
   // Errors intentionally NOT swallowed: an API outage must surface as a 500
   // (crawlers retry those), never as a thin 200 "empty collection" soft-404.
   const res = await getProducts({ limit: 100 });
+  // getProducts NEVER throws — it swallows errors and returns
+  // { data: [], failed: true }. Without this check a fetch failure renders
+  // as a calm empty collection (the soft-404 this page must never be).
+  if ((res as any)?.failed) {
+    throw new Error('[collections] products fetch failed');
+  }
   const all = res && Array.isArray(res.data) ? res.data : [];
   return matchProducts(def, all);
 }
@@ -115,9 +120,7 @@ export default async function CollectionPage({ params }: { params: { slug: strin
 
         <section aria-label={`${def.name} products`} className="mt-2">
           {products.length > 0 ? (
-            <Suspense fallback={null}>
-              <ProductCarousel initialProducts={products} />
-            </Suspense>
+            <CollectionGrid products={products} />
           ) : (
             <p className="px-4 py-10 text-center text-gray-500">
               No {def.name} products are listed right now — new arrivals appear here automatically.{' '}

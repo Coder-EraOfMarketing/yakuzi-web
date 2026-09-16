@@ -34,6 +34,9 @@ export default async function CollectionsIndexPage() {
   // "every collection is empty" soft-404. Direct fetch, not unstable_cache —
   // this page is ISR; see the hub page's note on the build-poisoned cache.
   const res = await getProducts({ limit: 100 });
+  if ((res as any)?.failed) {
+    throw new Error('[collections] products fetch failed');
+  }
   const all = res && Array.isArray(res.data) ? res.data : [];
   const withCounts = COLLECTIONS.map((def) => ({ def, count: matchProducts(def, all).length }));
 

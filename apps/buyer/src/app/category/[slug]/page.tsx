@@ -126,11 +126,17 @@ async function CategoryProducts({
       location: str(searchParams?.location) && searchParams?.location !== 'All' ? str(searchParams?.location) : undefined,
       manufacturer: str(searchParams?.manufacturer) && searchParams?.manufacturer !== 'All' ? str(searchParams?.manufacturer) : undefined,
     });
+    // Same soft-404 rule as the homepage and /products grids: getProducts
+    // reports failure via the `failed` flag rather than throwing.
+    if ((res as any)?.failed) {
+      throw new Error('[CategoryProducts] products fetch failed');
+    }
     if (res && res.data && Array.isArray(res.data)) {
       initialProducts = res.data;
     }
   } catch (error) {
     console.error("Failed to load category products:", error);
+    throw error;
   }
   return (
     <>
