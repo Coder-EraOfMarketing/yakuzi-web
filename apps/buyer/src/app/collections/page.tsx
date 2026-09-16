@@ -11,7 +11,7 @@ import {
   type BreadcrumbItem,
 } from '@/lib/seo/schema';
 import { absoluteUrl, SITE_URL } from '@/lib/seo/site';
-import { getProductsCached } from '@/lib/server-cache';
+import { getProducts } from '@yukizi/api-client';
 import { COLLECTIONS, matchProducts } from '@/data/collections';
 
 export const revalidate = 300;
@@ -31,8 +31,9 @@ const KIND_LABEL: Record<string, string> = {
 
 export default async function CollectionsIndexPage() {
   // Same hard-fail rule as the hub pages: an API outage is a 500, not an
-  // "every collection is empty" soft-404.
-  const res = await getProductsCached({ limit: 100 });
+  // "every collection is empty" soft-404. Direct fetch, not unstable_cache —
+  // this page is ISR; see the hub page's note on the build-poisoned cache.
+  const res = await getProducts({ limit: 100 });
   const all = res && Array.isArray(res.data) ? res.data : [];
   const withCounts = COLLECTIONS.map((def) => ({ def, count: matchProducts(def, all).length }));
 

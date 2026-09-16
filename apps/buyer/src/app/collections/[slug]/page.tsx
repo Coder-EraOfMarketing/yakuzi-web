@@ -17,7 +17,7 @@ import {
   type BreadcrumbItem,
 } from '@/lib/seo/schema';
 import { absoluteUrl } from '@/lib/seo/site';
-import { getProductsCached } from '@/lib/server-cache';
+import { getProducts } from '@yukizi/api-client';
 import { COLLECTIONS, MIN_PRODUCTS, collectionBySlug, matchProducts } from '@/data/collections';
 
 // No searchParams here, so unlike /products and /category this page is real
@@ -30,9 +30,14 @@ export function generateStaticParams() {
 }
 
 async function fetchCollectionProducts(def: (typeof COLLECTIONS)[number]) {
+  // Direct fetch, NOT getProductsCached: this page is already ISR, so the
+  // fetch runs at most once per revalidation window per page — an extra
+  // unstable_cache layer adds nothing, and on Next 14.2.0 an empty result
+  // cached during the BUILD was never refreshed at runtime, shipping every
+  // hub with a permanently empty grid (observed live on 2026-09-16).
   // Errors intentionally NOT swallowed: an API outage must surface as a 500
   // (crawlers retry those), never as a thin 200 "empty collection" soft-404.
-  const res = await getProductsCached({ limit: 100 });
+  const res = await getProducts({ limit: 100 });
   const all = res && Array.isArray(res.data) ? res.data : [];
   return matchProducts(def, all);
 }
