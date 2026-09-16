@@ -61,11 +61,11 @@ export const COMPANY = {
    * Grievance Officer. Publishing a named officer with contact details is required
    * of Indian e-commerce intermediaries under the Consumer Protection
    * (E-Commerce) Rules, 2020 and the IT Rules, 2021.
-   * TO CONFIRM: name and direct contact.
+   * Confirmed by the owner on 2026-09-16.
    */
   grievanceOfficer: {
-    name: '[Grievance Officer name — to be provided]',
-    email: 'grievance@yukizi.com',
+    name: 'Rupali Salvekar',
+    email: 'support@yukizi.in',
   },
 
   /** TO CONFIRM: courts of which city have jurisdiction under the Terms. */
