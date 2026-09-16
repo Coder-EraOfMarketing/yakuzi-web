@@ -143,6 +143,13 @@ export function DateRangePicker({
                   onSelect={setRange}
                   numberOfMonths={2}
                   className="p-0 border-none m-0"
+                  style={{
+                    '--rdp-accent-color': 'hsl(var(--primary))',
+                    '--rdp-accent-background-color': 'hsl(var(--primary) / 0.15)',
+                    '--rdp-range_start-color': 'hsl(var(--primary-foreground))',
+                    '--rdp-range_end-color': 'hsl(var(--primary-foreground))',
+                    '--rdp-selected-border': 'none',
+                  } as React.CSSProperties}
                   classNames={{
                     months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 relative",
                     month: "space-y-4",
@@ -168,15 +175,14 @@ export function DateRangePicker({
                     day: cn(
                       "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-md hover:bg-gray-100 transition-colors"
                     ),
-                    day_button: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-md",
-                    range_end: "day-range-end",
-                    selected:
-                      "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                    today: "bg-accent text-accent-foreground font-bold",
-                    outside: "day-outside text-muted-foreground opacity-50",
+                    day_button: "h-9 w-9 p-0 font-normal rounded-md",
+                    // v9's stylesheet bolds AND enlarges selected days
+                    // (font-size: large) - keep the weight, kill the size
+                    // jump so selected dates stay aligned with the grid.
+                    selected: "!text-sm",
+                    today: "font-bold",
+                    outside: "text-muted-foreground opacity-50",
                     disabled: "text-muted-foreground opacity-50",
-                    range_middle:
-                      "aria-selected:bg-accent aria-selected:text-accent-foreground",
                     hidden: "invisible",
                   }}
                   components={{
@@ -194,20 +200,6 @@ export function DateRangePicker({
         )}
       </AnimatePresence>
 
-      <style jsx global>{`
-        .rdp-day_selected:not(.rdp-day_outside) {
-          background-color: hsl(var(--primary)) !important;
-          color: white !important;
-        }
-        .rdp-day_selected:hover:not(.rdp-day_outside) {
-          background-color: hsl(var(--primary)) !important;
-          opacity: 0.9;
-        }
-        .rdp-day_range_middle:not(.rdp-day_outside) {
-          background-color: rgba(var(--primary-rgb), 0.1) !important;
-          color: hsl(var(--primary)) !important;
-        }
-      `}</style>
     </div>
   );
 }
