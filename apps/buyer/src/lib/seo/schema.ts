@@ -164,12 +164,19 @@ export function productSchema(p: {
           },
         }
       : {}),
-    ...(p.reviewSummary?.count
+    // Both fields guarded: gating on count alone once risked emitting
+    // ratingValue:"undefined" when a caller set count without average.
+    ...(p.reviewSummary?.count &&
+    typeof p.reviewSummary.average === 'number' &&
+    Number.isFinite(p.reviewSummary.average) &&
+    p.reviewSummary.average > 0
       ? {
           aggregateRating: {
             '@type': 'AggregateRating',
-            ratingValue: String(p.reviewSummary.average),
+            ratingValue: String(Math.round(p.reviewSummary.average * 10) / 10),
             reviewCount: p.reviewSummary.count,
+            bestRating: '5',
+            worstRating: '1',
           },
         }
       : {}),
