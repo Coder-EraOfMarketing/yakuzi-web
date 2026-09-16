@@ -65,6 +65,11 @@ async function AllProducts({ searchParams }: { searchParams?: Record<string, any
       manufacturer: str(searchParams?.manufacturer) && searchParams?.manufacturer !== 'All' ? str(searchParams?.manufacturer) : undefined,
       search: str(searchParams?.search),
     });
+    // Same soft-404 rule as the homepage: getProducts reports failure via
+    // the `failed` flag rather than throwing, so check it and throw.
+    if ((res as any)?.failed) {
+      throw new Error('[AllProducts] products fetch failed');
+    }
     if (Array.isArray(res?.data)) products = res.data;
   } catch (error) {
     // Rethrow — same soft-404 rule as the homepage grid: an API failure must
