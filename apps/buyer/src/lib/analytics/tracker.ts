@@ -5,7 +5,8 @@
  *  - ZERO impact on the storefront: every call is fire-and-forget, every
  *    failure is swallowed, nothing here may throw into app code.
  *  - Privacy: random UUID visitor id (no fingerprinting), no PII in events,
- *    tracking fully disabled when the browser sends DNT=1.
+ *    tracking fully disabled when the browser sends DNT=1, and OPT-IN:
+ *    nothing runs until the cookie-consent bar records an analytics yes.
  *  - Session rule: a session ends after 30 minutes of inactivity; arriving
  *    with a NEW utm_* set also starts a new session (campaign re-entry).
  *  - Batching: events queue in memory and flush every 5s / 20 events /
@@ -60,6 +61,22 @@ let maxScrollPct = 0;
 
 function hasWindow(): boolean {
   return typeof window !== 'undefined';
+}
+
+/**
+ * Opt-in consent gate. Reads the consent record the CookieConsent bar
+ * writes (lib/cookie-consent.ts) straight from localStorage rather than
+ * importing it -- that module imports this one, and the cycle would be a
+ * footgun. No record yet = no consent = no tracking.
+ */
+function analyticsConsentGranted(): boolean {
+  try {
+    const raw = window.localStorage.getItem('yz_cookie_consent');
+    if (!raw) return false;
+    return JSON.parse(raw)?.analytics === true;
+  } catch {
+    return false;
+  }
 }
 
 function dntEnabled(): boolean {
@@ -358,15 +375,27 @@ export function disable(): void {
   } catch { /* ignore */ }
 }
 
-/** Idempotent boot, called once by AnalyticsProvider. */
+/**
+ * Idempotent boot. Called by AnalyticsProvider on mount and again by the
+ * consent bar when the visitor accepts analytics -- so it must be safely
+ * re-callable. Without stored consent it parks itself disabled WITHOUT
+ * latching `started`, so the post-Accept call can bring it up mid-pageload.
+ */
 export function startTracker(): void {
-  if (!hasWindow() || started) return;
-  started = true;
+  if (!hasWindow()) return;
   if (dntEnabled()) {
+    started = true;
     disabled = true;
     return;
   }
+  if (!analyticsConsentGranted()) {
+    disabled = true;
+    return;
+  }
+  if (started && !disabled) return;
+  started = true;
+  disabled = false;
   getVisitorId();
   getSessionId();
-  flushTimer = setInterval(() => flush(), FLUSH_INTERVAL_MS);
+  if (!flushTimer) flushTimer = setInterval(() => flush(), FLUSH_INTERVAL_MS);
 }

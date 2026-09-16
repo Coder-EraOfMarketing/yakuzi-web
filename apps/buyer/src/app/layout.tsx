@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import '../styles/globals.css';
 import { Providers } from './providers';
 import SiteFooter from '@/components/shared/SiteFooter';
+import CookieConsent from '@/components/shared/CookieConsent';
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, DEFAULT_OG_IMAGE } from '@/lib/seo/site';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -147,6 +148,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
             <SiteFooter />
           </div>
+          {/* Fixed top overlay; renders nothing once a choice is stored. */}
+          <CookieConsent />
         </Providers>
       </body>
     </html>
