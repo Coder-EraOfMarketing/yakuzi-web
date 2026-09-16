@@ -13,6 +13,9 @@ export interface CategoryBannerSlide {
 
 interface CategoryBannerProps {
   title: string;
+  /** Set when the page renders its own visible <h1> — skips the sr-only one
+      here so the page never carries two h1s. /products keeps the default. */
+  hideHeading?: boolean;
   /** Ordered slideshow. One slide renders statically; 2+ auto-advance. */
   banners?: CategoryBannerSlide[];
 }
@@ -20,7 +23,7 @@ interface CategoryBannerProps {
 const PLACEHOLDER =
   'https://placehold.co/1920x1080/f3f4f6/9ca3af?text=Category+Banner';
 
-export default function CategoryBanner({ title, banners }: CategoryBannerProps) {
+export default function CategoryBanner({ title, banners, hideHeading }: CategoryBannerProps) {
   const slides: CategoryBannerSlide[] =
     banners && banners.length > 0 ? banners : [{ image: PLACEHOLDER }];
   const hasSlideshow = slides.length > 1;
@@ -108,7 +111,7 @@ export default function CategoryBanner({ title, banners }: CategoryBannerProps) 
             not painted over it - stamping "Collectables" across a banner that
             already says "Shop Manga, Comics & Collectables" read as a glitch.
             The h1 stays for screen readers and search engines. */}
-        <h1 className="sr-only">{title}</h1>
+        {!hideHeading && <h1 className="sr-only">{title}</h1>}
       </div>
 
       {hasSlideshow && (
