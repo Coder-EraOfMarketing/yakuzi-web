@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Instagram, Facebook, Youtube, Linkedin, MessageCircle, Twitter, MessageSquare } from 'lucide-react';
 import { COMPANY } from '@/config/company';
 import { fetchSocialLinks } from '@/lib/seo/social';
+import { COLLECTIONS } from '@/data/collections';
 
 const footerLinks = [
   { label: 'About', href: '/about' },
@@ -31,6 +32,39 @@ export default async function SiteFooter() {
   return (
     <footer className="border-t border-gray-100 bg-white">
       <div className="mx-auto max-w-6xl px-6 py-10">
+        {/* Sitewide internal links to the collection hubs — these landing
+            pages need inbound links from every page to rank, and the footer
+            is the one server-rendered surface that appears everywhere. */}
+        <nav aria-label="Collections">
+          <ul className="mb-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-3 text-sm text-gray-600">
+            {COLLECTIONS.map((c, index) => (
+              <li key={c.slug} className="flex items-center gap-2">
+                {index > 0 && (
+                  <span aria-hidden="true" className="text-gray-300">
+                    &bull;
+                  </span>
+                )}
+                <Link
+                  href={`/collections/${c.slug}`}
+                  className="transition-colors hover:text-[#562996] hover:underline underline-offset-4"
+                >
+                  {c.name}
+                </Link>
+              </li>
+            ))}
+            <li className="flex items-center gap-2">
+              <span aria-hidden="true" className="text-gray-300">
+                &bull;
+              </span>
+              <Link
+                href="/collections"
+                className="transition-colors hover:text-[#562996] hover:underline underline-offset-4"
+              >
+                All collections
+              </Link>
+            </li>
+          </ul>
+        </nav>
         <nav aria-label="Footer">
           <ul className="flex flex-wrap items-center justify-center gap-x-2 gap-y-3 text-sm text-gray-600">
             {footerLinks.map((link, index) => (
