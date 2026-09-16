@@ -12,6 +12,10 @@ import { breadcrumbSchema, faqPageSchema, collectionPageSchema } from '@/lib/seo
 import JsonLd from '@/components/seo/JsonLd';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import SeoFaq from '@/components/seo/SeoFaq';
+import Link from 'next/link';
+import { categoryContentBySlug } from '@/data/category-content';
+import { collectionBySlug } from '@/data/collections';
+import { organizationSchema, webSiteSchema } from '@/lib/seo/schema';
 
 // No `force-dynamic` needed: the listing filters (`?sub=`, sort, price)
 // come from `searchParams`, which already makes every render dynamic. The
@@ -55,10 +59,24 @@ export async function generateMetadata({
   const matchedSub = subParam && Array.isArray(cat.subCategories)
     ? cat.subCategories.find((sc: any) => sc.id === subParam || sc.slug === subParam)
     : undefined;
-  const title = `${cat.name} — Buy Online`;
+  // Curated per-category copy (data/category-content.ts) beats the raw DB
+  // description — the SEO-panel override still beats both via
+  // applySeoOverride below, so the admin keeps the last word.
+  const curated = categoryContentBySlug(slug);
+  const title = curated?.title ?? `${cat.name} — Buy Online`;
   const description = metaTruncate(
-    cat.description || `Shop ${cat.name} on ${SITE_NAME}: authentic products from verified sellers with fast shipping across India.`,
+    curated?.metaDescription ||
+      cat.description ||
+      `Shop ${cat.name} on ${SITE_NAME}: authentic products from verified sellers with fast shipping across India.`,
   );
+  // An empty category noindexes (follow stays on) instead of ranking as a
+  // bare shell — same rule the collection hubs use. Fail-open: if the count
+  // probe errors, keep default indexability; the page render handles errors.
+  let emptyCategory = false;
+  try {
+    const probe = await getProductsCached({ categoryId: cat.id, limit: 1 });
+    if (!(probe as any)?.failed) emptyCategory = (probe?.total ?? 0) === 0;
+  } catch {}
   // Category pages previously shipped NO og:image at all (the site logo isn't
   // even inherited here) — use the category's own banner artwork, matching the
   // fallback order the page body uses for the visible banner.
@@ -77,6 +95,7 @@ export async function generateMetadata({
       url: absoluteUrl(`/category/${slug}`),
       ...(ogImage ? { images: [{ url: ogImage }] } : {}),
     },
+    ...(emptyCategory ? { robots: { index: false, follow: true } } : {}),
   };
   // Sub-collection pages: admin-set meta title/description apply, but the
   // canonical DEFAULTS to the parent URL (duplicate-content protection) —
@@ -241,6 +260,10 @@ export default async function CategoryPage({
   // The mobile header's big title: the sub-collection when there is one,
   // otherwise the collection itself.
   const displayCategoryName = matchedSubName ?? categoryName;
+  const curated = categoryContentBySlug(slug);
+  const relatedCollections = (curated?.collections ?? [])
+    .map((cs) => collectionBySlug(cs))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
 
   // Admin-authored category FAQs (SEO dashboard → CATEGORY override), same
   // pattern the PDP uses: visible <SeoFaq> + FAQPage JSON-LD from the SAME
@@ -258,6 +281,11 @@ export default async function CategoryPage({
     if (faqs.length === 0) {
       faqs = validFaqs((await fetchSeoOverride('CATEGORY', categoryData.id))?.faq);
     }
+    // Curated fallback (data/category-content.ts) when no admin has written
+    // FAQs for this category — same visible-SeoFaq + FAQPage JSON-LD pairing.
+    if (faqs.length === 0 && !subCategoryId) {
+      faqs = curated?.faqs ?? [];
+    }
   }
   // One array for the JSON-LD and the one visible trail, so the two can never
   // describe different navigation. A sub-collection page adds its own step and
@@ -272,6 +300,11 @@ export default async function CategoryPage({
 
   const jsonLd: object[] = [
     breadcrumbSchema(crumbs),
+    // CategoryProducts' CollectionPage declares isPartOf #website — define
+    // the WebSite (and its publisher Organization) on-page so the reference
+    // doesn't dangle. Google merges all JSON-LD blocks on a page.
+    organizationSchema(),
+    webSiteSchema(),
   ];
   if (faqs.length) jsonLd.push(faqPageSchema(faqs));
 
@@ -288,23 +321,57 @@ export default async function CategoryPage({
               separate mobile upload. Sub-category pages show the sub's own
               slides when it has any, else the parent category's. */}
           <div className="w-full flex-shrink-0 flex flex-col">
-            <CategoryBanner title={categoryName} banners={bannerSlides} />
+            <CategoryBanner title={categoryName} banners={bannerSlides} hideHeading />
           </div>
           {/* Under the banner, not above it. Above, it needed enough top
               padding to clear the fixed nav, which opened a band of empty
               white across the top of the page before the artwork. */}
           <Breadcrumbs items={crumbs} className="px-4 sm:px-6 pt-3 sm:pt-4" />
 
-          {/* Admin-authored intro copy (Collections modal -> Description).
-              Server-rendered, so crawlers finally get real words on what was
-              previously a name + product grid. Feeds the meta description via
-              generateMetadata's existing cat.description read. */}
-          {categoryData?.description && (
-            <div className="px-4 sm:px-6 pt-3 sm:pt-4 max-w-3xl">
-              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                {categoryData.description}
-              </p>
+          {/* The page's single h1 — real, visible text at every viewport.
+              It used to be CategoryBanner's sr-only h1 over artwork with the
+              name baked into the pixels, i.e. invisible to Google. The
+              banner's heading is suppressed via hideHeading so there is
+              still exactly one h1. */}
+          <h1 className="px-4 sm:px-6 pt-3 sm:pt-4 text-2xl sm:text-4xl font-bold text-gray-900 tracking-tight">
+            {displayCategoryName}
+          </h1>
+
+          {/* Intro copy. Curated (data/category-content.ts) wins over the DB
+              description — the funko-pop DB text was an internal brief that
+              leaked verbatim onto the live page. Admin still controls the
+              SERP snippet via the SEO panel, which beats both. */}
+          {(curated?.intro?.length || categoryData?.description) && (
+            <div className="flex flex-col gap-2 px-4 sm:px-6 pt-3 sm:pt-4 max-w-3xl">
+              {(curated?.intro?.length
+                ? curated.intro
+                : [categoryData.description as string]
+              ).map((para, i) => (
+                <p key={i} className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                  {para}
+                </p>
+              ))}
             </div>
+          )}
+
+          {/* Server-rendered chips to the related series/brand hub pages —
+              contextual internal links, not a product strip. */}
+          {relatedCollections.length > 0 && (
+            <nav aria-label="Related collections" className="px-4 sm:px-6 pt-3">
+              <ul className="flex flex-wrap items-center gap-2">
+                <li className="text-sm text-gray-500">Shop by series:</li>
+                {relatedCollections.map((c) => (
+                  <li key={c.slug}>
+                    <Link
+                      href={`/collections/${c.slug}`}
+                      className="inline-block rounded-full border border-gray-300 bg-white px-4 py-1.5 text-sm text-gray-700 transition-colors hover:border-[#854cbc] hover:text-[#854cbc]"
+                    >
+                      {c.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           )}
 
           {/* Mobile header: the collection name only. It used to carry a second
@@ -317,11 +384,8 @@ export default async function CategoryPage({
               and this block stays in the DOM at every viewport (sm:hidden only
               hides it visually), so an h1 here made every category page carry
               TWO h1s. */}
-          <div className="flex flex-col px-4 sm:hidden pt-4 pb-2">
-            <p aria-hidden="true" className="text-3xl xs:text-3xl font-bold text-gray-500 tracking-tight leading-none">
-              {displayCategoryName}
-            </p>
-          </div>
+          {/* The old mobile-only duplicate of the category name was removed:
+              the visible h1 above now serves every viewport. */}
 
           <div className="flex-1 min-h-[300px] overflow-hidden bg-transparent mt-4 sm:mt-6">
             <Suspense
