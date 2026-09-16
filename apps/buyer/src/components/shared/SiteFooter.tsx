@@ -6,6 +6,7 @@ import { COLLECTIONS } from '@/data/collections';
 
 const footerLinks = [
   { label: 'About', href: '/about' },
+  { label: 'The Store', href: '/collectibles-store-india' },
   { label: 'Contact', href: '/contact' },
   { label: 'Shipping', href: '/shipping' },
   { label: 'Returns & Refunds', href: '/returns' },

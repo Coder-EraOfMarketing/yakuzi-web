@@ -27,6 +27,9 @@ const KIND_LABEL: Record<string, string> = {
   series: 'Anime series',
   brand: 'Brand',
   theme: 'Theme',
+  character: 'Character',
+  price: 'By budget',
+  gift: 'Gifting',
 };
 
 export default async function CollectionsIndexPage() {

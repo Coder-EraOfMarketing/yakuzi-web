@@ -25,7 +25,7 @@ export const MIN_PRODUCTS = 3;
 
 export interface CollectionDef {
   slug: string;
-  kind: 'brand' | 'series' | 'theme';
+  kind: 'brand' | 'series' | 'theme' | 'character' | 'price' | 'gift';
   /** Short display name — chips, footer, breadcrumbs. */
   name: string;
   /** SERP title (without the site suffix). */
@@ -35,9 +35,16 @@ export interface CollectionDef {
   /** 2–3 paragraphs, plain text. Unique voice per hub. */
   intro: string[];
   faqs: Array<{ question: string; answer: string }>;
-  /** Case-insensitive regex SOURCE with word boundaries. */
-  match: string;
+  /** Case-insensitive regex SOURCE with word boundaries. Optional: a hub
+      may instead be defined purely by includeSlugs and/or price bounds. */
+  match?: string;
   exclude?: string[];
+  /** Curated members, unioned with the matcher's results. */
+  includeSlugs?: string[];
+  /** Price bounds (inclusive, INR) applied AFTER matching. A hub with no
+      match and no includeSlugs starts from the whole catalogue. */
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 export const COLLECTIONS: CollectionDef[] = [
@@ -298,6 +305,167 @@ export const COLLECTIONS: CollectionDef[] = [
     ],
     match: '\\b(death note|light yagami|yagami|ryuk|shinigami)\\b',
   },
+  {
+    slug: 'goku',
+    kind: 'character',
+    name: 'Goku',
+    title: 'Buy Goku Figures Online in India',
+    metaDescription:
+      'Goku figures in India — kid Goku, Super Saiyan, Ultra Instinct and Funko Pop versions of the Dragon Ball legend, from verified sellers on Yukizi.',
+    h1: 'Goku Figures — Every Form, One Page',
+    intro: [
+      'No character earns a shelf of his own like Son Goku. This page gathers every Goku piece on the marketplace across his eras: kid Goku with the Power Pole, the classic golden Super Saiyan, Ultra Instinct with its silver-white aura, a Goku-versus-Vegeta clash piece with a glowing energy sphere, and Funko takes on Super Saiyan God for collectors who want him in a smaller footprint.',
+      'Collectors tend to build Goku shelves chronologically — Dragon Ball to Z to Super reads like a biography in sculpt. Whichever era is yours, each listing shows the exact form, pose and base in photos, with the seller and delivery estimate up front.',
+      'New Goku figures join this page automatically the moment sellers list them, so it is worth saving if he is your collecting lane.',
+    ],
+    faqs: [
+      {
+        question: 'Which Goku versions are available as figures on Yukizi?',
+        answer:
+          'The lineup typically spans kid Goku (including a lamp-style piece), classic Super Saiyan, Ultra Instinct with aura effects, a Goku vs Vegeta battle diorama, and Funko Pop renditions. Each listing photo shows the exact form and pose that ships.',
+      },
+      {
+        question: 'What is the difference between Super Saiyan and Ultra Instinct figures?',
+        answer:
+          'Super Saiyan sculpts carry the iconic golden spiked hair and are usually posed mid-power-up; Ultra Instinct pieces render the silver-haired form with calmer, combat-ready poses and white-blue aura effects. Both display well; the choice is era preference.',
+      },
+      {
+        question: 'How fast do Goku figure orders ship in India?',
+        answer:
+          'Orders process within 24-48 hours of payment and typically deliver 4-7 business days from dispatch anywhere in India, with tracking sent to your email or phone. Eligible orders ship free.',
+      },
+    ],
+    match: '\\b(goku|kakarot)\\b',
+  },
+  {
+    slug: 'under-2000',
+    kind: 'price',
+    name: 'Under \u20b92,000',
+    title: 'Anime Figures Under \u20b92,000 \u2014 Buy Online in India',
+    metaDescription:
+      'Anime figures and collectibles under \u20b92,000 in India \u2014 Funko Pops, mini figures and desk pieces from verified sellers on Yukizi. Free shipping on eligible orders.',
+    h1: 'Anime Figures Under \u20b92,000',
+    intro: [
+      'Collecting does not have to start at four figures. Everything on this page lands under \u20b92,000 \u2014 the zone where Funko Pops, chibi and noodle-stopper figures, miniature sets and desk-scale pieces live. It is the honest answer to \u201cwhat is a good first figure\u201d and the safest zone for gifting when you are not sure how deep the recipient\u2019s collecting habit goes.',
+      'Budget does not mean bootleg: every listing here is from a seller onboarded on the marketplace, with real photos, taxes shown before checkout and the same 3-day damage-return protection as the premium shelf. Prices update live, so the lineup below always reflects what is actually under \u20b92,000 today.',
+    ],
+    faqs: [
+      {
+        question: 'What kind of anime figures can I get under \u20b92,000 in India?',
+        answer:
+          'Mostly Funko Pops, chibi and noodle-stopper formats, miniature figure sets and small desk pieces. Larger sculpted statues with effect bases usually sit above this range \u2014 see the premium statues page for those.',
+      },
+      {
+        question: 'Are budget figures on Yukizi genuine?',
+        answer:
+          'Every listing comes from a seller onboarded and vetted on the marketplace, with real product photos and the same damage-return protection as premium pieces: report issues within 3 days of delivery with photos for a replacement or refund.',
+      },
+    ],
+    maxPrice: 2000,
+  },
+  {
+    slug: 'premium-statues',
+    kind: 'price',
+    name: 'Premium Statues',
+    title: 'Premium Anime Statues in India \u2014 Collector Grade',
+    metaDescription:
+      'Premium anime statues and dioramas above \u20b95,000 in India \u2014 large-format collector pieces with effect bases, from verified sellers on Yukizi.',
+    h1: 'Premium Anime Statues & Dioramas',
+    intro: [
+      'This is the centrepiece shelf: large-format statues and dioramas above \u20b95,000, where sculpt complexity, paintwork and effect bases justify the space they demand. Pieces at this level are bought one or two a year, displayed at eye level, and usually anchor the whole collection around them.',
+      'Buying advice at this range is simple: study every gallery photo before ordering \u2014 base diameter, effect parts, paint finish \u2014 because at collector grade the details are the product. Each listing shows the seller, the exact sculpt photographed, and a delivery estimate before you commit; couriered pieces are packed for transit and covered by the 3-day damage-return window.',
+    ],
+    faqs: [
+      {
+        question: 'What makes a premium anime statue worth the price?',
+        answer:
+          'Scale, sculpt complexity and paintwork: multi-part dioramas, translucent effect pieces, textured bases and hand-finished gradients that small-format figures cannot carry. These are display centrepieces rather than shelf-fillers.',
+      },
+      {
+        question: 'How are expensive statues protected during delivery?',
+        answer:
+          'Sellers pack large pieces for courier transit across India, and transit damage is covered: report it within 3 days of delivery with clear photos of the piece and packaging for a replacement or a refund to your original payment method.',
+      },
+    ],
+    minPrice: 5000,
+  },
+  {
+    slug: 'anime-gifts',
+    kind: 'gift',
+    name: 'Anime Gifts',
+    title: 'Anime Gifts for Fans \u2014 Buy Online in India',
+    metaDescription:
+      'Anime gifts in India \u2014 hand-picked figures and collectibles for Naruto, One Piece, Demon Slayer and Dragon Ball fans. Free shipping on eligible orders.',
+    h1: 'Anime Gifts That Actually Land',
+    intro: [
+      'Gifting a fan is easy to get wrong \u2014 generic merch reads as generic. What lands is their character: a Nezuko for the Demon Slayer devotee, Luffy for the One Piece loyalist, Kakashi for the Naruto generation. This page is a hand-picked shortlist across series and budgets, chosen because each piece reads instantly as its character even to a non-fan buyer.',
+      'Two practical rules from the gifting trenches: match the series before the size (a small figure of the right character beats a big one of the wrong one), and check the listing photos for the pose \u2014 fans usually love a specific era of their character. Every order is trackable, and delivery runs 4-7 business days from dispatch across India, so order a week ahead of the occasion.',
+    ],
+    faqs: [
+      {
+        question: 'What is a safe anime gift if I do not know the person\u2019s favourite character?',
+        answer:
+          'Ask one question \u2014 \u201cwhich anime are you watching right now?\u201d \u2014 and pick that series\u2019 lead. Failing that, protagonists from Naruto, One Piece, Dragon Ball and Demon Slayer are the highest-recognition picks in India.',
+      },
+      {
+        question: 'Can I get an anime gift delivered before a specific date?',
+        answer:
+          'Orders process in 24-48 hours and deliver 4-7 business days from dispatch, so order at least a week before the occasion. Tracking details arrive by email or phone the moment it ships.',
+      },
+    ],
+    includeSlugs: [
+      'nezuko-yukizi',
+      'akaza-yukizi',
+      'luffy-yukizi',
+      'goku-yukizi',
+      'rengoku-yukizi',
+      'kakashi-yukizi',
+      'zenitsu-figurine-yukizi',
+      'light-yukizi',
+      'shenron-yukizi',
+      'funko-one-piece-moments-unknown',
+      'vegeta-yukizi',
+      'gaara-yukizi',
+    ],
+  },
+  {
+    slug: 'desk-collectibles',
+    kind: 'gift',
+    name: 'Desk Collectibles',
+    title: 'Desk Collectibles & Small Figures \u2014 Buy Online in India',
+    metaDescription:
+      'Small anime figures and desk collectibles in India \u2014 Funko Pops, noodle stoppers, mini sets and lamp figures that fit a workspace. From verified sellers on Yukizi.',
+    h1: 'Collectibles That Fit on a Desk',
+    intro: [
+      'Not every collection lives in a display cabinet \u2014 plenty lives beside a keyboard. This page collects the small-format pieces built for a workspace: Funko Pops, noodle-stopper figures that perch on a shelf edge, miniature sets, and a kid Goku lamp that earns its desk space twice over.',
+      'The desk test is simple: under roughly 15 cm, stable base, reads clearly from an arm\u2019s length away. Everything here passes it. These are also the office-safe gifting zone \u2014 personal enough to mean something, small enough not to demand a shrine.',
+    ],
+    faqs: [
+      {
+        question: 'What is the best type of figure for an office desk?',
+        answer:
+          'Small-format pieces with stable bases: Funko Pops, chibi and noodle-stopper figures, and miniature sets. They survive desk bumps, fit beside a monitor, and read clearly without needing cabinet lighting.',
+      },
+      {
+        question: 'How do I keep desk figures clean?',
+        answer:
+          'Dust weekly with a soft dry brush rather than a cloth (cloth snags on small sculpted parts), and keep pieces out of direct window sunlight \u2014 UV dulls paint and yellows Funko boxes over time.',
+      },
+    ],
+    includeSlugs: [
+      'funko-death-note-l-on-chain-unknown',
+      'funko-johnny-bravo-unknown',
+      'funko-godzilla-1954-unknown',
+      'funko-wwe-john-cena-unknown',
+      'demon-slayer-tengen-uzui-noodle-stopper-figure-with-bunny-plush-unknown',
+      'elden-ring-ranni-the-witch-noodle-stopper-figure-unknown',
+      'kid-goku-lamp-pending-yukizi',
+      'naruto-miniature-akatsuki-figure-set-of-6-unknown',
+      'demon-slayer-mitsuri-kanroji-cute-miniature-figure-with-parasol-unknown',
+      'frieren-walking-pose-figure-with-staff-unknown',
+      'funko-jungle-book-baloo-unknown',
+    ],
+  },
 ];
 
 /** Text a product is matched against: name + slug words + description. */
@@ -315,13 +483,28 @@ export function collectionBySlug(slug: string): CollectionDef | undefined {
   return COLLECTIONS.find((c) => c.slug === slug);
 }
 
-export function matchProducts<T extends { name?: string; slug?: string; description?: string | null }>(
-  def: CollectionDef,
-  products: T[],
-): T[] {
-  const rx = new RegExp(def.match, 'i');
+export function matchProducts<
+  T extends { name?: string; slug?: string; description?: string | null; price?: number | null },
+>(def: CollectionDef, products: T[]): T[] {
+  const rx = def.match ? new RegExp(def.match, 'i') : null;
+  const included = new Set(def.includeSlugs ?? []);
   const excluded = new Set(def.exclude ?? []);
-  return products.filter((p) => !excluded.has(p.slug ?? '') && rx.test(productMatchText(p)));
+  return products.filter((p) => {
+    const slug = p.slug ?? '';
+    if (excluded.has(slug)) return false;
+    // Membership: curated list OR matcher; with neither, the whole
+    // catalogue (price hubs slice it by the bounds below).
+    const member =
+      included.has(slug) || (rx ? rx.test(productMatchText(p)) : included.size === 0);
+    if (!member) return false;
+    if (def.minPrice != null || def.maxPrice != null) {
+      const price = typeof p.price === 'number' ? p.price : null;
+      if (price == null) return false;
+      if (def.minPrice != null && price < def.minPrice) return false;
+      if (def.maxPrice != null && price > def.maxPrice) return false;
+    }
+    return true;
+  });
 }
 
 /** Hubs a single product belongs to — used for the PDP's collection chips. */
@@ -329,10 +512,13 @@ export function collectionsForProduct(p: {
   name?: string;
   slug?: string;
   description?: string | null;
+  price?: number | null;
 }): CollectionDef[] {
-  const text = productMatchText(p);
   return COLLECTIONS.filter((def) => {
-    if ((def.exclude ?? []).includes(p.slug ?? '')) return false;
-    return new RegExp(def.match, 'i').test(text);
+    // Price and gift hubs are browsing surfaces, not identities — a chip
+    // saying "Under Rs 2,000" on a PDP reads as clutter, so chips only
+    // come from matcher/curated membership hubs.
+    if (def.kind === 'price') return false;
+    return matchProducts(def, [p]).length === 1;
   });
 }
