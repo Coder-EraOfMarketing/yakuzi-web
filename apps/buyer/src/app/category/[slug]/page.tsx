@@ -12,6 +12,7 @@ import { breadcrumbSchema, faqPageSchema, collectionPageSchema } from '@/lib/seo
 import JsonLd from '@/components/seo/JsonLd';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import SeoFaq from '@/components/seo/SeoFaq';
+import ProductSectionBoundary from '@/components/shared/ProductSectionBoundary';
 import Link from 'next/link';
 import { categoryContentBySlug } from '@/data/category-content';
 import { collectionBySlug } from '@/data/collections';
@@ -388,15 +389,19 @@ export default async function CategoryPage({
               the visible h1 above now serves every viewport. */}
 
           <div className="flex-1 min-h-[300px] overflow-hidden bg-transparent mt-4 sm:mt-6">
-            <Suspense
-              fallback={
-                <div className="h-40 flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#854cbc]" />
-                </div>
-              }
-            >
-              <CategoryProducts categoryId={categoryId} subCategoryId={subCategoryId} categoryName={categoryName} categorySlug={slug} searchParams={resolvedSearchParams} />
-            </Suspense>
+            {/* Scoped so a products failure costs the grid, not the banner,
+                the category copy and the FAQ with it. */}
+            <ProductSectionBoundary>
+              <Suspense
+                fallback={
+                  <div className="h-40 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#854cbc]" />
+                  </div>
+                }
+              >
+                <CategoryProducts categoryId={categoryId} subCategoryId={subCategoryId} categoryName={categoryName} categorySlug={slug} searchParams={resolvedSearchParams} />
+              </Suspense>
+            </ProductSectionBoundary>
           </div>
 
           <SeoFaq faqs={faqs} />

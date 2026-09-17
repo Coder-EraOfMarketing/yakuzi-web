@@ -5,6 +5,7 @@ import HomeNavbar from '@/components/landing/HomeNavbar';
 import CategoryBanner from '@/components/landing/CategoryBanner';
 import ProductCarousel from '@/components/landing/ProductCarousel';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
+import ProductSectionBoundary from '@/components/shared/ProductSectionBoundary';
 import JsonLd from '@/components/seo/JsonLd';
 import { getBannersCached, getProductsCached } from '@/lib/server-cache';
 import { absoluteUrl, metaTruncate, SITE_NAME } from '@/lib/seo/site';
@@ -162,15 +163,19 @@ export default async function AllProductsPage({ searchParams }: { searchParams?:
             </p>
           </div>
           <div className="flex-1 min-h-[300px] overflow-hidden bg-transparent">
-            <Suspense
-              fallback={
-                <div className="h-40 flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#854cbc]" />
-                </div>
-              }
-            >
-              <AllProducts searchParams={resolved} />
-            </Suspense>
+            {/* Scoped so a products failure costs the grid, not the header,
+                the banners and the footer with it. */}
+            <ProductSectionBoundary>
+              <Suspense
+                fallback={
+                  <div className="h-40 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#854cbc]" />
+                  </div>
+                }
+              >
+                <AllProducts searchParams={resolved} />
+              </Suspense>
+            </ProductSectionBoundary>
           </div>
         </section>
       </div>

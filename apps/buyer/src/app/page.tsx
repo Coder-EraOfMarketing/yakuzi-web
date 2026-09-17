@@ -6,6 +6,7 @@ import HeroSection from '@/components/landing/HeroSection';
 import ProductCarousel from '@/components/landing/ProductCarousel';
 import CategoryScrollRow from '@/components/landing/CategoryScrollRow';
 import ComingSoon from '@/components/landing/ComingSoon';
+import ProductSectionBoundary from '@/components/shared/ProductSectionBoundary';
 import InstagramFeed from '@/components/landing/InstagramFeed';
 import dynamicComponent from 'next/dynamic';
 import { type HomepageSection } from '@yukizi/api-client';
@@ -193,15 +194,19 @@ export default async function HomePage({
             </div>
           )}
           <div className="flex-1 min-h-[300px] overflow-hidden bg-transparent mt-0">
-            <Suspense
-              fallback={
-                <div className="h-40 flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-[#854cbc]" />
-                </div>
-              }
-            >
-              <CarouselSection searchParams={searchParams} capped={showCuratedSections} />
-            </Suspense>
+            {/* Scoped so a products failure costs the grid, not the hero,
+                the category rows and the footer with it. */}
+            <ProductSectionBoundary>
+              <Suspense
+                fallback={
+                  <div className="h-40 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#854cbc]" />
+                  </div>
+                }
+              >
+                <CarouselSection searchParams={searchParams} capped={showCuratedSections} />
+              </Suspense>
+            </ProductSectionBoundary>
           </div>
           {/* Below the products, and only on the browse view — the same rule
               the curated rows follow. Someone who arrived searching wants
