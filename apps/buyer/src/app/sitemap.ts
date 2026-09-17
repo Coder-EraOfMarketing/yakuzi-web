@@ -7,7 +7,7 @@ import { COLLECTIONS } from '@/data/collections';
 
 export const revalidate = 3600; // rebuild at most hourly
 
-const STATIC_PATHS = ['/', '/products', '/blogs', '/about', '/contact', '/privacy', '/terms', '/returns', '/shipping', '/cookie-policy'];
+const STATIC_PATHS = ['/', '/products', '/blogs', '/about', '/contact', '/privacy', '/terms', '/returns', '/shipping', '/cookie-policy', '/collectibles-store-india'];
 
 async function fetchProductEntries(): Promise<{ entries: MetadataRoute.Sitemap; failed: boolean }> {
   const { products, failed } = await fetchAllProducts('sitemap');
