@@ -2,6 +2,17 @@ import { getCategories, getProducts } from '@yukizi/api-client';
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, ORG_LEGAL_NAME } from '@/lib/seo/site';
 import { COMPANY } from '@/config/company';
 import { fetchSupportContact } from '@/lib/seo/support-contact';
+import { getCatalog, listable } from '@/lib/seo/catalog';
+import { routes } from '@/lib/seo/url';
+import {
+  countSeries,
+  countCharacters,
+  countTypes,
+  countPriceBands,
+} from '@/lib/seo/hub';
+import { MIN_PRODUCTS_SERIES } from '@/lib/seo/data/series';
+import { MIN_PRODUCTS_CHARACTER } from '@/lib/seo/data/characters';
+import { MIN_PRODUCTS_TYPE } from '@/lib/seo/data/product-types';
 
 /**
  * llms.txt — the plain-text brief AI assistants read to understand this site.
@@ -67,6 +78,55 @@ export async function GET() {
     /* fail-open */
   }
 
+  // Facet hubs, with live counts.
+  //
+  // An assistant asked "where can I buy a Nezuko figure in India" should be
+  // able to answer from ONE fetch of this file, with a URL it can cite. That
+  // needs the entity-level index — series, character, format, budget — not
+  // just the flat product list, because the product list is sorted by nothing
+  // an assistant can reason about. Counts come from the same catalogue the
+  // hub pages read, so this can never advertise a hub that renders empty.
+  let facetSections = '';
+  try {
+    const catalog = listable(await getCatalog());
+
+    const seriesLines = countSeries(catalog)
+      .filter((c) => c.count >= MIN_PRODUCTS_SERIES)
+      .sort((a, b) => b.count - a.count)
+      .map((c) => `- [${c.def.name}](${SITE_URL}${routes.series(c.def.slug)}) — ${c.count} listed`)
+      .join('\n');
+
+    const characterLines = countCharacters(catalog)
+      .filter((c) => c.count >= MIN_PRODUCTS_CHARACTER)
+      .sort((a, b) => b.count - a.count)
+      .map(
+        (c) =>
+          `- [${c.def.name}](${SITE_URL}${routes.character(c.def.slug)}) — ${c.def.seriesSlug.replace(/-/g, ' ')}, ${c.count} listed`,
+      )
+      .join('\n');
+
+    const typeLines = countTypes(catalog)
+      .filter((c) => c.count >= MIN_PRODUCTS_TYPE)
+      .sort((a, b) => b.count - a.count)
+      .map((c) => `- [${c.def.name}](${SITE_URL}${routes.type(c.def.slug)}) — ${c.count} listed`)
+      .join('\n');
+
+    const priceLines = countPriceBands(catalog)
+      .map((c) => `- [${c.def.name}](${SITE_URL}${routes.price(c.def.slug)}) — ${c.count} listed`)
+      .join('\n');
+
+    facetSections = [
+      seriesLines && `## Series (anime, game and comic franchises)\n${seriesLines}`,
+      characterLines && `## Characters\n${characterLines}`,
+      typeLines && `## Formats\n${typeLines}`,
+      priceLines && `## Price bands\n${priceLines}`,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+  } catch {
+    /* fail-open: a catalogue blip costs detail here, never the file */
+  }
+
   const body = `# ${SITE_NAME}
 
 > ${SITE_DESCRIPTION}
@@ -84,11 +144,18 @@ ${SITE_NAME} (${ORG_LEGAL_NAME}) is an online marketplace for anime, manga and p
 ## Categories
 ${catLines}
 
+${facetSections}
+
 ## Products${productCount ? ` (${productCount} listed, live prices)` : ''}
 ${productLines}
 
 ## Key pages
 - [All products](${SITE_URL}/)
+- [Browse by series](${SITE_URL}${routes.seriesIndex()})
+- [Browse by character](${SITE_URL}${routes.charactersIndex()})
+- [Browse by format](${SITE_URL}${routes.typesIndex()})
+- [Browse by budget](${SITE_URL}${routes.pricesIndex()})
+- [Delivery across India](${SITE_URL}${routes.storesIndex()})
 - [About](${SITE_URL}/about)
 - [Blog](${SITE_URL}/blogs)
 - [Shipping policy](${SITE_URL}/shipping)
