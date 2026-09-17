@@ -515,7 +515,11 @@
 .dark {
   --ink: #f2eefa;          /* primary text */
   --ink-soft: #bcb2cf;     /* secondary text */
-  --ink-faint: #8d84a0;    /* tertiary / placeholder */
+  /* Tertiary / placeholder. #8d84a0 measured 4.34:1 on the PDP's upload tile
+     and 4.40:1 on the blogs intro — both just under the 4.5:1 floor. This is
+     the smallest lift that clears it (4.78 / 4.85) so tertiary text still
+     reads as tertiary. */
+  --ink-faint: #948bab;
   --surface: rgba(255, 255, 255, 0.055);
   --surface-strong: rgba(30, 20, 48, 0.88);
   --edge: rgba(255, 255, 255, 0.10);
