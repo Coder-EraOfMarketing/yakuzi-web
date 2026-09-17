@@ -74,8 +74,11 @@ export async function generateMetadata({
   // probe errors, keep default indexability; the page render handles errors.
   let emptyCategory = false;
   try {
+    // Unchanged behaviour, new mechanism: a failed probe rejects into the
+    // catch instead of arriving as a fulfilled `failed` flag, so "could not
+    // ask" still never counts as "this category is empty".
     const probe = await getProductsCached({ categoryId: cat.id, limit: 1 });
-    if (!(probe as any)?.failed) emptyCategory = (probe?.total ?? 0) === 0;
+    emptyCategory = (probe?.total ?? 0) === 0;
   } catch {}
   // Category pages previously shipped NO og:image at all (the site logo isn't
   // even inherited here) — use the category's own banner artwork, matching the
@@ -145,11 +148,8 @@ async function CategoryProducts({
       location: str(searchParams?.location) && searchParams?.location !== 'All' ? str(searchParams?.location) : undefined,
       manufacturer: str(searchParams?.manufacturer) && searchParams?.manufacturer !== 'All' ? str(searchParams?.manufacturer) : undefined,
     });
-    // Same soft-404 rule as the homepage and /products grids: getProducts
-    // reports failure via the `failed` flag rather than throwing.
-    if ((res as any)?.failed) {
-      throw new Error('[CategoryProducts] products fetch failed');
-    }
+    // Same soft-404 rule as the homepage and /products grids: getProductsCached
+    // retries and then rejects, so the catch handles it and nothing is cached.
     if (res && res.data && Array.isArray(res.data)) {
       initialProducts = res.data;
     }

@@ -88,15 +88,12 @@ async function CarouselSection({
       limit: 100,
       ...buildProductQueryParams(searchParams),
     });
-    // getProducts NEVER throws — it swallows errors into
-    // { data: [], failed: true }, so a plain catch here can never fire for
-    // an API failure. Check the flag and throw: a failure must surface as
-    // an error (error.tsx retry UI, noindexed by Next), never as a 200
+    // getProductsCached retries, then REJECTS on a failure (see
+    // fetchProductsOrThrow) — so the catch below now does fire for an API
+    // failure, and the failure is never cached. A failure must surface as an
+    // error (error.tsx retry UI, noindexed by Next), never as a 200
     // "No products available." shell — the soft-404 that reads to Google
     // as an empty shop. A GENUINELY empty fulfilled result renders as before.
-    if ((res as any)?.failed) {
-      throw new Error('[HomePage] products fetch failed');
-    }
     if (res && res.data && Array.isArray(res.data)) {
       initialProducts = res.data;
       total = res.total ?? res.data.length;
