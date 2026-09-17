@@ -143,6 +143,12 @@ export function DateRangePicker({
                   onSelect={setRange}
                   numberOfMonths={2}
                   className="p-0 border-none m-0"
+                  // v9 theming variables. Correct, but NOT sufficient on
+                  // their own: they only do anything where the library's
+                  // stylesheet rules are present to consume them, and those
+                  // rules compete with Tailwind's preflight on the same
+                  // button. The explicit block at the bottom of this file is
+                  // what actually guarantees the paint.
                   style={{
                     '--rdp-accent-color': 'hsl(var(--primary))',
                     '--rdp-accent-background-color': 'hsl(var(--primary) / 0.15)',
@@ -199,6 +205,59 @@ export function DateRangePicker({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/*
+        Selected-day painting, stated explicitly.
+
+        v9 paints selection on the inner day BUTTON via its own stylesheet,
+        Tailwind's preflight resets that same button's background, and the
+        component's utility classes land on the td - three layers fighting
+        over one element, which is how a selected date ended up as a pale
+        half-box with a white-on-white digit. These rules end the argument:
+        they target v9's real class names (v8's .rdp-day_selected does not
+        exist), sit at the outermost layer, and are verified against a
+        harness carrying both the library stylesheet and the preflight.
+
+        Colours come from the admin theme, so light/dark both follow.
+      */}
+      <style jsx global>{`
+        .rdp-selected .rdp-day_button,
+        .rdp-range_start .rdp-day_button,
+        .rdp-range_end .rdp-day_button {
+          background-color: hsl(var(--primary)) !important;
+          color: hsl(var(--primary-foreground)) !important;
+          border: none !important;
+          border-radius: 0.375rem !important;
+          font-size: 0.875rem !important;
+          font-weight: 600 !important;
+          opacity: 1 !important;
+        }
+        /* v9 puts a half-height gradient on the range ends and bumps the
+           selected font-size to large; both are what made the highlight
+           look offset from the number. */
+        .rdp-selected,
+        .rdp-range_start,
+        .rdp-range_end {
+          background: transparent !important;
+          font-size: inherit !important;
+        }
+        .rdp-range_middle {
+          background-color: hsl(var(--primary) / 0.15) !important;
+          border-radius: 0 !important;
+        }
+        .rdp-range_middle .rdp-day_button {
+          background-color: transparent !important;
+          color: hsl(var(--foreground)) !important;
+          border: none !important;
+        }
+        .rdp-today:not(.rdp-selected) .rdp-day_button {
+          color: hsl(var(--primary)) !important;
+          font-weight: 700 !important;
+        }
+        .rdp-outside .rdp-day_button {
+          opacity: 0.5 !important;
+        }
+      `}</style>
 
     </div>
   );
