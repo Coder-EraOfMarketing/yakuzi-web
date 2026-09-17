@@ -14,7 +14,23 @@ import {
   useCloseTicket,
 } from '@/hooks/useTickets';
 
-const outfit = Outfit({ subsets: ['latin'] });
+/**
+ * `preload: false` because this drawer is closed on virtually every page view.
+ *
+ * `next/font/google` preloads by default, which emits a `<link rel="preload">`
+ * for the Outfit woff2 into the document head of every page that could mount
+ * this component — and the drawer is reached from the navbar, so that means
+ * every page. The browser then fetches ~47KB of a font that styles one panel
+ * nobody has opened, competing for bandwidth with the images and the Inter
+ * file that ARE needed for first paint.
+ *
+ * With preload off the font is fetched the first time the drawer actually
+ * renders. `display: 'swap'` (already the default) means the panel paints
+ * immediately in the fallback and reflows to Outfit a moment later, so the
+ * drawer is never blocked on it. Nothing changes while the drawer is closed,
+ * which is the state it is in for the page loads this is optimising.
+ */
+const outfit = Outfit({ subsets: ['latin'], preload: false, display: 'swap' });
 
 interface SupportDrawerProps {
   isOpen: boolean;

@@ -25,6 +25,7 @@ import { isVideoUrl } from '@yukizi/utils';
 export function BannerVideo({
   desktop,
   mobile,
+  poster,
   active = true,
   fit = 'contain',
   title,
@@ -32,6 +33,17 @@ export function BannerVideo({
 }: {
   desktop: string;
   mobile?: string;
+  /**
+   * A still shown until the first video frame is decoded.
+   *
+   * Without one a `<video>` paints NOTHING before it has data, so whatever is
+   * behind it shows through — and in the hero that is a white container. The
+   * banner therefore went white every time the carousel reached a video slide
+   * and stayed white until enough of the file had arrived. Pass any non-video
+   * image from the same banner record; if the admin has uploaded none, the
+   * `preload` change below is what closes the gap instead.
+   */
+  poster?: string;
   /** Is this the slide currently shown? Off-screen slides stay paused. */
   active?: boolean;
   fit?: 'contain' | 'cover';
@@ -75,7 +87,8 @@ export function BannerVideo({
   const objectFit = fit === 'cover' ? 'object-cover' : 'object-contain';
 
   if (narrowStill || failed) {
-    const still = narrowStill ?? (isVideoUrl(desktop) ? null : desktop);
+    const still =
+      narrowStill ?? (isVideoUrl(desktop) ? null : desktop) ?? poster ?? null;
     return still ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={still} alt={title || 'Yukizi banner'} className={`h-full w-full ${objectFit} ${className}`} />
@@ -95,7 +108,16 @@ export function BannerVideo({
       loop
       playsInline
       autoPlay={active}
-      preload={active ? 'auto' : 'none'}
+      {...(poster ? { poster } : {})}
+      // 'metadata' rather than 'none' for the slides waiting their turn.
+      //
+      // 'none' meant a video slide started downloading only at the instant it
+      // became visible, so the first thing the viewer saw was the empty
+      // element over a white background. 'metadata' asks for just the header
+      // and enough of the stream to establish the first frame, which is a few
+      // KB rather than the whole file — cheap enough to do for every slide,
+      // and it means the frame is ready before the slide arrives.
+      preload={active ? 'auto' : 'metadata'}
       // A banner is decoration: it carries no controls and no sound, and its
       // meaning is in the title next to it.
       controls={false}
