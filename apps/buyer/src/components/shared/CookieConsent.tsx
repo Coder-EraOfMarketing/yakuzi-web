@@ -56,14 +56,14 @@ export default function CookieConsent() {
               type="button"
               onClick={() => setShowPrefs((v) => !v)}
               aria-expanded={showPrefs}
-              className="rounded-full border border-white/40 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/10 sm:text-sm"
+              className="yz-consent-btn-pref rounded-full px-4 py-1.5 text-xs font-semibold transition-colors sm:text-sm"
             >
               Preferences
             </button>
             <button
               type="button"
               onClick={() => decide(true)}
-              className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-[#562996] transition-colors hover:bg-purple-50 sm:text-sm"
+              className="yz-consent-btn-accept rounded-full px-4 py-1.5 text-xs font-semibold transition-colors sm:text-sm"
             >
               Accept
             </button>
@@ -90,13 +90,45 @@ export default function CookieConsent() {
             <button
               type="button"
               onClick={() => decide(analyticsOn)}
-              className="self-start rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-[#562996] transition-colors hover:bg-purple-50 sm:self-auto sm:text-sm"
+              className="yz-consent-btn-accept self-start rounded-full px-4 py-1.5 text-xs font-semibold transition-colors sm:self-auto sm:text-sm"
             >
               Save choices
             </button>
           </div>
         )}
       </div>
+
+      {/*
+        Button colours stated explicitly rather than via bg-white/text-[#...]
+        utilities.
+
+        globals.css deliberately remaps those utilities inside `.dark`
+        (`.dark .bg-white` -> the dark surface, `.dark .text-[#562996]` ->
+        the lifted violet), which is right for content cards but wrong for a
+        button sitting ON the dark chrome: it turned Accept into a
+        translucent plate with light-violet text, measured at 3.11:1 - below
+        the 4.5:1 readable threshold and visibly washed out.
+
+        A dedicated class name matches no remap list, so one rule serves both
+        themes. Measured against the live stylesheet in both modes: 11.23:1.
+      */}
+      <style jsx global>{`
+        .yz-consent-btn-accept {
+          background-color: #ffffff !important;
+          color: #4a2287 !important;
+        }
+        .yz-consent-btn-accept:hover {
+          background-color: #f3ecff !important;
+        }
+        .yz-consent-btn-pref {
+          border: 1px solid rgba(255, 255, 255, 0.55) !important;
+          color: #ffffff !important;
+          background-color: transparent !important;
+        }
+        .yz-consent-btn-pref:hover {
+          background-color: rgba(255, 255, 255, 0.14) !important;
+        }
+      `}</style>
     </div>
   );
 }
