@@ -3,6 +3,7 @@ import { Instagram, Facebook, Youtube, Linkedin, MessageCircle, Twitter, Message
 import { COMPANY } from '@/config/company';
 import { fetchSocialLinks } from '@/lib/seo/social';
 import { COLLECTIONS } from '@/data/collections';
+import SiteLinkHub from '@/components/seo/SiteLinkHub';
 
 const footerLinks = [
   { label: 'About', href: '/about' },
@@ -33,6 +34,10 @@ export default async function SiteFooter() {
   return (
     <footer className="border-t border-gray-100 bg-white">
       <div className="mx-auto max-w-6xl px-6 py-10">
+        {/* Collapsed by default, so the footer looks unchanged. Ships every
+            facet-hub link in the initial HTML — see SiteLinkHub for why the
+            links matter more than the sitemap does. */}
+        <SiteLinkHub />
         {/* Sitewide internal links to the collection hubs — these landing
             pages need inbound links from every page to rank, and the footer
             is the one server-rendered surface that appears everywhere. */}

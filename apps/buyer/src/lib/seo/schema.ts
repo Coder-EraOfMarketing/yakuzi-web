@@ -278,6 +278,33 @@ export function itemListSchema(
   };
 }
 
+/**
+ * An ItemList of PAGES rather than of products.
+ *
+ * `itemListSchema` above builds product URLs by gluing a slug onto a base
+ * path, which is right for a grid and wrong for a directory: the entries on
+ * `/anime` are hub pages whose paths are already complete. Passing them
+ * through the product builder produced `https://anime/naruto` — a different
+ * host, not a different path. This takes the finished path instead.
+ */
+export function pageListSchema(
+  name: string,
+  items: Array<{ name: string; path: string }>,
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name,
+    numberOfItems: items.length,
+    itemListElement: items.map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: it.name,
+      url: absoluteUrl(it.path),
+    })),
+  };
+}
+
 export function faqPageSchema(faqs: Array<{ question: string; answer: string }>) {
   return {
     '@context': 'https://schema.org',
@@ -325,6 +352,71 @@ export function collectionPageSchema(opts: {
         ...(p.name ? { name: p.name } : {}),
       })),
     },
+  };
+}
+
+/**
+ * The delivery-area node for a place page.
+ *
+ * Deliberately `OnlineStore` and NOT `LocalBusiness`. LocalBusiness asserts a
+ * physical establishment at an address, and Yukizi has exactly one of those —
+ * in Thane. Emitting LocalBusiness on `/anime-store/karnataka/bengaluru`
+ * would tell Google there is a shop in Bengaluru to send people to, which is
+ * false, and false location markup is both a structured-data violation and
+ * the kind of claim a buyer can disprove by turning up.
+ *
+ * `OnlineStore` with `areaServed` says the true thing instead: one business,
+ * trading online, that serves this place. The Organization node it points at
+ * carries the single real address.
+ */
+export function onlineStoreServingSchema(opts: {
+  placeName: string;
+  /** "City" for a city page, "State" for a state page. */
+  placeType: 'City' | 'State';
+  containedIn?: string | null;
+  path: string;
+}) {
+  const url = absoluteUrl(opts.path);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'OnlineStore',
+    '@id': `${url}#store`,
+    name: SITE_NAME,
+    url,
+    parentOrganization: { '@id': `${SITE_URL}/#organization` },
+    areaServed: {
+      '@type': opts.placeType,
+      name: opts.placeName,
+      ...(opts.containedIn
+        ? { containedInPlace: { '@type': 'State', name: opts.containedIn } }
+        : {}),
+    },
+    currenciesAccepted: 'INR',
+  };
+}
+
+/**
+ * A franchise/licence as a named entity.
+ *
+ * Series hubs emit this so "Demon Slayer" on the page resolves to a thing
+ * rather than to a string, which is what lets an entity-based index connect
+ * the hub to everything else it knows about the franchise.
+ */
+export function brandEntitySchema(opts: {
+  name: string;
+  description: string;
+  path: string;
+  alternateNames?: string[];
+}) {
+  const url = absoluteUrl(opts.path);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Brand',
+    '@id': `${url}#brand`,
+    name: opts.name,
+    description: opts.description,
+    url,
+    ...(opts.alternateNames?.length ? { alternateName: opts.alternateNames } : {}),
   };
 }
 
