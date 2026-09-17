@@ -107,15 +107,49 @@ export const getCatalog = cache(async (): Promise<CatalogProduct[]> => {
 });
 
 /**
+ * Placeholder products left in the live catalogue.
+ *
+ * There are currently two, priced at ₹10.05 and ₹20.05, one of them named
+ * "Testing" and the other "Testing - Iron man" with `manufacturer: "Testing"`.
+ *
+ * They matter here far more than they do on the storefront. Every SEO surface
+ * computes real numbers from this data — "priced from ₹10", a median dragged
+ * below anything purchasable, an entry in the under-₹1,000 band — and those
+ * numbers are then stated on the page and quoted by answer engines. A test
+ * row does not make a hub slightly untidy; it makes the site publish a price
+ * claim that is false and checkable.
+ *
+ * The match is deliberately narrow: a name that IS "test"/"testing", or one
+ * that begins "testing" followed by a separator. It will not catch a real
+ * product whose name merely contains the word, which matters because
+ * "Attack on Titan Test Subject" is the kind of name that exists.
+ */
+const TEST_NAME = /^\s*test(ing)?\s*($|[-–—:|])/i;
+
+function isPlaceholder(p: CatalogProduct): boolean {
+  if (TEST_NAME.test(p.name ?? '')) return true;
+  if ((p.manufacturer ?? '').trim().toLowerCase() === 'testing') return true;
+  return false;
+}
+
+/**
  * Products that belong in a public listing.
  *
  * `isActive === false` is a seller deactivating a listing. `undefined` means
  * the grid endpoint did not send the field, which is not the same as false —
  * treating it as false silently emptied every hub the first time this was
  * written the other way round.
+ *
+ * Placeholder rows are dropped here rather than at each call site, so the
+ * hubs, the sitemaps, the price tables and llms.txt all agree about what the
+ * catalogue contains. Note this also removes them from the product sitemap,
+ * which is correct: a test listing should never have been offered for
+ * indexing in the first place.
  */
 export function listable(products: CatalogProduct[]): CatalogProduct[] {
-  return products.filter((p) => p.isActive !== false && !!(p.slug || p.id));
+  return products.filter(
+    (p) => p.isActive !== false && !!(p.slug || p.id) && !isPlaceholder(p),
+  );
 }
 
 /** Newest `updatedAt` in a set — a hub page's own freshness for JSON-LD. */

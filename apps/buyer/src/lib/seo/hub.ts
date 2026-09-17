@@ -8,6 +8,13 @@ import {
 } from './data/characters';
 import { PRODUCT_TYPES, type ProductTypeDef } from './data/product-types';
 import { PRICE_BANDS, type PriceBandDef } from './data/price-bands';
+import { GIFT_OCCASIONS, type GiftOccasionDef } from './data/gift-occasions';
+import {
+  MANUFACTURERS,
+  manufacturerPattern,
+  manufacturerFieldNames,
+  type ManufacturerDef,
+} from './data/manufacturers';
 
 /**
  * The matching engine every facet hub shares.
@@ -45,6 +52,21 @@ export interface HubMatcher {
   pattern?: string;
   /** A second pattern that must ALSO match — used by series x type crosses. */
   andPattern?: string;
+  /**
+   * A pattern that must NOT match. Vetoes membership outright.
+   *
+   * Needed because the sub-category signal is sometimes wrong in a way the
+   * text signal can see. A 1:1 Iron Man helmet filed by its seller under a
+   * sub-category called "Comics" satisfies the manga-comics predicate through
+   * no fault of the predicate — the platform really does say it is in Comics.
+   * Rather than override the platform taxonomy wholesale, a type can declare
+   * the formats it is definitionally not, and the veto resolves the conflict.
+   *
+   * Use sparingly and only where the two signals genuinely contradict. This
+   * is not a general-purpose exclusion list — `exclude` handles known bad
+   * slugs, and a seller re-filing the product is the real fix.
+   */
+  notPattern?: string;
   /** Product slugs the patterns catch wrongly. */
   exclude?: string[];
   /** Inclusive lower price bound in rupees. */
@@ -55,6 +77,17 @@ export interface HubMatcher {
   categorySlug?: string;
   /** Any one of these platform sub-category slugs satisfies membership. */
   subCategorySlugs?: string[];
+  /**
+   * Values that satisfy membership when found in the product's `manufacturer`
+   * FIELD, lowercased.
+   *
+   * A set test rather than a regex, because the field is a form value and not
+   * prose: "Bandai" must not match a product whose manufacturer reads
+   * "Bandai Namco Filmworks" only by accident of substring, and equally must
+   * not need a word-boundary dance to match "bandai". Membership is exact
+   * after trim-and-lowercase, with aliases listed explicitly.
+   */
+  manufacturerFieldNames?: string[];
 }
 
 /**
@@ -115,9 +148,13 @@ export function selectProducts(
 ): CatalogProduct[] {
   const rx = matcher.pattern ? new RegExp(matcher.pattern, 'i') : null;
   const andRx = matcher.andPattern ? new RegExp(matcher.andPattern, 'i') : null;
+  const notRx = matcher.notPattern ? new RegExp(matcher.notPattern, 'i') : null;
   const excluded = new Set(matcher.exclude ?? []);
   const subs = matcher.subCategorySlugs?.length
     ? new Set(matcher.subCategorySlugs)
+    : null;
+  const makers = matcher.manufacturerFieldNames?.length
+    ? new Set(matcher.manufacturerFieldNames)
     : null;
 
   const hits = products.filter((p) => {
@@ -129,17 +166,25 @@ export function selectProducts(
     }
 
     // Text membership: the pattern, OR a platform sub-category that means the
-    // same thing. Either alone is sufficient — sellers file products
-    // inconsistently, so requiring both would drop real members.
-    if (rx || subs) {
+    // same thing, OR an exact manufacturer-field value. Any one alone is
+    // sufficient — sellers file products inconsistently, so requiring more
+    // than one signal would drop real members.
+    if (rx || subs || makers) {
       const byText = rx ? rx.test(matchText(p)) : false;
       const bySub = subs ? subs.has(p.subCategory?.slug ?? '') : false;
-      if (!byText && !bySub) return false;
+      const byMaker = makers
+        ? makers.has((p.manufacturer ?? '').trim().toLowerCase())
+        : false;
+      if (!byText && !bySub && !byMaker) return false;
     }
 
     // The cross predicate is a genuine AND: /anime/demon-slayer/funko-pop
     // must be Demon Slayer *and* a Funko, never either.
     if (andRx && !andRx.test(matchText(p))) return false;
+
+    // The veto runs last and beats every positive signal above, including a
+    // sub-category match — which is the whole point of it.
+    if (notRx && notRx.test(matchText(p))) return false;
 
     if (matcher.minPrice != null || matcher.maxPrice != null) {
       const price = priceOf(p);
@@ -185,6 +230,7 @@ export function typeMatcher(def: ProductTypeDef): HubMatcher {
     pattern: def.match,
     subCategorySlugs: def.subCategorySlugs,
     exclude: def.exclude,
+    notPattern: def.notMatch,
   };
 }
 
@@ -203,6 +249,35 @@ export function seriesTypeMatcher(
 
 export function priceMatcher(def: PriceBandDef): HubMatcher {
   return { minPrice: def.min, maxPrice: def.max };
+}
+
+/**
+ * A gift occasion is a price band and nothing else.
+ *
+ * Worth being explicit about, because it is the honest shape of the family:
+ * the Diwali page and the Rakhi page draw on one catalogue, and what
+ * distinguishes them is the budget bound plus the hand-written criteria on
+ * the page. Inventing a per-occasion product filter would fabricate a
+ * distinction that does not exist — see data/gift-occasions.ts.
+ */
+export function giftMatcher(def: GiftOccasionDef): HubMatcher {
+  return { minPrice: def.minPrice, maxPrice: def.maxPrice };
+}
+
+/**
+ * A manufacturer matches its `manufacturer` FIELD value or its name in text.
+ *
+ * The field is the signal that should carry this family and currently carries
+ * almost nothing — see the module comment in data/manufacturers.ts. The text
+ * signal is what makes the Funko page work today, because "Funko" is in the
+ * product title even when the field says "Unknown".
+ */
+export function manufacturerMatcher(def: ManufacturerDef): HubMatcher {
+  return {
+    pattern: manufacturerPattern(def),
+    manufacturerFieldNames: manufacturerFieldNames(def),
+    exclude: def.exclude,
+  };
 }
 
 export function subCategoryMatcher(
@@ -237,6 +312,10 @@ export const countTypes = (p: CatalogProduct[]) =>
   countBy(PRODUCT_TYPES, p, typeMatcher);
 export const countPriceBands = (p: CatalogProduct[]) =>
   countBy(PRICE_BANDS, p, priceMatcher);
+export const countManufacturers = (p: CatalogProduct[]) =>
+  countBy(MANUFACTURERS, p, manufacturerMatcher);
+export const countGiftOccasions = (p: CatalogProduct[]) =>
+  countBy(GIFT_OCCASIONS, p, giftMatcher);
 
 /**
  * Which hubs a single product belongs to.
@@ -252,6 +331,7 @@ export function hubsForProduct(p: CatalogProduct): {
   series: SeriesDef[];
   characters: CharacterDef[];
   types: ProductTypeDef[];
+  manufacturers: ManufacturerDef[];
 } {
   const one = [p];
   return {
@@ -261,6 +341,9 @@ export function hubsForProduct(p: CatalogProduct): {
     ),
     types: PRODUCT_TYPES.filter(
       (d) => selectProducts(one, typeMatcher(d)).length === 1,
+    ),
+    manufacturers: MANUFACTURERS.filter(
+      (d) => selectProducts(one, manufacturerMatcher(d)).length === 1,
     ),
   };
 }

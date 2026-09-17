@@ -183,6 +183,56 @@ export function productSchema(p: {
   };
 }
 
+/**
+ * A guide, as an Article authored by the organisation.
+ *
+ * Deliberately `Article` and not `BlogPosting`: a BlogPosting belongs to a
+ * Blog and `articleSchema` below correctly points its `isPartOf` at
+ * `/blogs#blog`. Guides are reference pages, not dated posts, and claiming
+ * they are part of a blog they are not in would be a structural lie about the
+ * site — the sort of mismatch that gives Google a reason to discount the
+ * markup entirely.
+ *
+ * Also deliberately NOT `HowTo`, even for the guides that are step-shaped.
+ * Google retired HowTo rich results, so the type buys nothing, and several of
+ * these guides are decision aids rather than procedures — typing them as
+ * instructions would misdescribe them.
+ *
+ * `author` is the Organization rather than a Person. That is the honest
+ * answer: there is no named byline to point at, and inventing one to satisfy
+ * an E-E-A-T checklist would be fabricating a person.
+ */
+export function guideArticleSchema(guide: {
+  title: string;
+  slug: string;
+  description: string;
+  updated: string;
+  /** Word count of the rendered body, for `wordCount`. */
+  wordCount?: number;
+  /** Category label, emitted as articleSection. */
+  section?: string;
+}) {
+  const url = absoluteUrl(`/guides/${guide.slug}`);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    '@id': `${url}#article`,
+    headline: guide.title,
+    description: guide.description,
+    url,
+    mainEntityOfPage: url,
+    inLanguage: 'en-IN',
+    // Both dates are the review date. There is no separate authored date to
+    // report, and guessing one would be worse than stating the truth twice.
+    datePublished: guide.updated,
+    dateModified: guide.updated,
+    author: { '@id': `${SITE_URL}/#organization` },
+    publisher: { '@id': `${SITE_URL}/#organization` },
+    ...(guide.section ? { articleSection: guide.section } : {}),
+    ...(guide.wordCount && guide.wordCount > 0 ? { wordCount: guide.wordCount } : {}),
+  };
+}
+
 /** "/blogs/author/jane-doe" — authors have no slug of their own. */
 export function authorSlug(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

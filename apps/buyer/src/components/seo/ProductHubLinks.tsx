@@ -7,6 +7,40 @@ import { seriesBySlug } from '@/lib/seo/data/series';
 import { collectionsForProduct } from '@/data/collections';
 
 /**
+ * The guide most worth reading before buying each format.
+ *
+ * Hand-mapped rather than derived: the useful guide for a Funko buyer is the
+ * fake-spotting one, and for a prize figure it is the one explaining why it
+ * costs so little. A generic "buying guide" link would be ignored.
+ */
+const GUIDE_FOR_TYPE: Record<string, string> = {
+  'funko-pop': 'how-to-spot-a-fake-funko-pop',
+  'collectible-statues': 'how-to-spot-a-bootleg-anime-figure',
+  'action-figures': 'action-figure-vs-statue',
+  'noodle-stopper-figures': 'what-is-a-noodle-stopper-figure',
+  'miniature-figures': 'prize-figure-vs-scale-figure',
+  'diorama-figures': 'how-to-display-anime-figures',
+  'prop-replicas': 'shipping-large-statues-in-india',
+  'figure-sets': 'prize-figure-vs-scale-figure',
+  'led-figures': 'how-to-stop-figures-yellowing',
+  'manga-comics': 'where-to-buy-authentic-anime-figures-in-india',
+  'trading-cards': 'where-to-buy-authentic-anime-figures-in-india',
+  keychains: 'prize-figure-vs-scale-figure',
+};
+
+const GUIDE_LABELS: Record<string, string> = {
+  'how-to-spot-a-fake-funko-pop': 'How to spot a fake Funko',
+  'how-to-spot-a-bootleg-anime-figure': 'How to spot a bootleg figure',
+  'action-figure-vs-statue': 'Action figure vs statue',
+  'what-is-a-noodle-stopper-figure': 'What is a noodle stopper?',
+  'prize-figure-vs-scale-figure': 'Prize vs scale figure',
+  'how-to-display-anime-figures': 'How to display figures',
+  'shipping-large-statues-in-india': 'Shipping large statues',
+  'how-to-stop-figures-yellowing': 'Stopping yellowing',
+  'where-to-buy-authentic-anime-figures-in-india': 'Buying authentic figures',
+};
+
+/**
  * The product page's links into every hub family.
  *
  * This replaces a chip row that pointed only at `/collections`. The
@@ -38,7 +72,9 @@ export interface ProductHubLinksProps {
 }
 
 export default function ProductHubLinks({ product }: ProductHubLinksProps) {
-  const { series, characters, types } = hubsForProduct(product as CatalogProduct);
+  const { series, characters, types, manufacturers } = hubsForProduct(
+    product as CatalogProduct,
+  );
 
   const price =
     typeof product.price === 'number'
@@ -87,8 +123,29 @@ export default function ProductHubLinks({ product }: ProductHubLinksProps) {
       ),
     },
     {
+      label: 'Maker',
+      links: manufacturers.map((m) => ({
+        label: m.name,
+        href: routes.manufacturer(m.slug),
+      })),
+    },
+    {
       label: 'Budget',
       links: band ? [{ label: band.name, href: routes.price(band.slug) }] : [],
+    },
+    {
+      // One contextual guide per format present on this product. The guide
+      // family otherwise has no inbound links from the product pages, which
+      // are the site's largest source of them.
+      label: 'Read first',
+      links: types
+        .map((t) => GUIDE_FOR_TYPE[t.slug])
+        .filter((slug): slug is string => !!slug)
+        .filter((slug, i, arr) => arr.indexOf(slug) === i)
+        .map((slug) => ({
+          label: GUIDE_LABELS[slug] ?? 'Buying guide',
+          href: routes.guide(slug),
+        })),
     },
     {
       label: 'Collections',
