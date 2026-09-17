@@ -427,7 +427,9 @@ export function GridProductCard({ product, index, onOpenReview, showFullTitle }:
               // #2f1b4d is a near-black purple — correct on a light card,
               // invisible on a dark one. The hover tint moves too: #854cbc is
               // a mid purple that barely separates from the dark surface.
-              className="flex h-7 w-7 items-center justify-center rounded-full text-[#2f1b4d] transition-all hover:bg-[#854cbc]/12 hover:text-[#854cbc] active:scale-90 focus:outline-none dark:text-white dark:hover:bg-white/10 dark:hover:text-[#c9a6f0]"
+              // The `!` keeps this deliberate #c9a6f0 ahead of the generic
+              // dark hover remap in globals.css, which is !important.
+              className="flex h-7 w-7 items-center justify-center rounded-full text-[#2f1b4d] transition-all hover:bg-[#854cbc]/12 hover:text-[#854cbc] active:scale-90 focus:outline-none dark:text-white dark:hover:bg-white/10 dark:hover:!text-[#c9a6f0]"
               onClick={handlePlusClick}
             >
               <Plus className="w-5 h-5" strokeWidth={3} />

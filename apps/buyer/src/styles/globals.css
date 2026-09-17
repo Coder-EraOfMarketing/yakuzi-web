@@ -518,8 +518,10 @@
   --ink-faint: #8d84a0;    /* tertiary / placeholder */
   --surface: rgba(255, 255, 255, 0.055);
   --surface-strong: rgba(30, 20, 48, 0.88);
+  --surface-hover: rgba(255, 255, 255, 0.12);  /* interaction lift off --surface */
   --edge: rgba(255, 255, 255, 0.10);
   --edge-soft: rgba(255, 255, 255, 0.06);
+  --edge-strong: rgba(255, 255, 255, 0.24);    /* hovered/focused edge */
   --violet: #a877ff;
 }
 
@@ -710,6 +712,59 @@
 .dark .text-\[\#8e44ad\],
 .dark .text-\[\#b165f1\] {
   color: var(--violet) !important;
+}
+
+/* ── Interaction states ──────────────────────────────────────────────────
+   Everything above matches BASE classes only, but Tailwind compiles each
+   variant to a DIFFERENT class: `hover:text-[#562996]` becomes
+   `.hover\:text-\[\#562996\]:hover`, which none of the rules above can see.
+   So the remap held at rest and was dropped the moment you hovered — the
+   footer links went from 8.88:1 at rest to 1.84:1 hovered, painting raw
+   #562996 onto the dark ground.
+
+   Note the roles are INVERTED, not copied: in light mode these utilities
+   darken text to signal emphasis, so on a dark ground the same intent means
+   lightening it. Keep this list in sync with the base remap above.
+   ────────────────────────────────────────────────────────────────────── */
+
+/* Emphasis hover: light mode goes to near-black, dark mode goes to white. */
+.dark .hover\:text-gray-900:hover,
+.dark .hover\:text-gray-800:hover,
+.dark .hover\:text-black:hover,
+.dark .group:hover .group-hover\:text-gray-900,
+.dark .group:hover .group-hover\:text-gray-800 {
+  color: #ffffff !important;
+}
+
+/* Secondary text lifting toward primary on hover. */
+.dark .hover\:text-gray-700:hover,
+.dark .hover\:text-gray-600:hover,
+.dark .group:hover .group-hover\:text-gray-600 {
+  color: var(--ink) !important;
+}
+
+/* Brand purple hover — the same lift the base remap already applies. */
+.dark .hover\:text-\[\#562996\]:hover,
+.dark .hover\:text-\[\#854cbc\]:hover,
+.dark .hover\:text-\[\#7B2FBE\]:hover,
+.dark .hover\:text-purple-600:hover,
+.dark .hover\:text-purple-700:hover,
+.dark .group:hover .group-hover\:text-\[\#854cbc\] {
+  color: var(--violet) !important;
+}
+
+/* Hover/focus plates: light mode settles onto a grey tint, dark mode lifts
+   off the surface instead. */
+.dark .hover\:bg-white:hover,
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover,
+.dark .focus\:bg-white:focus {
+  background-color: var(--surface-hover) !important;
+}
+
+.dark .hover\:border-gray-200:hover,
+.dark .hover\:border-white\/60:hover {
+  border-color: var(--edge-strong) !important;
 }
 
 /* Form fields default to a white background in every browser, so they stay
