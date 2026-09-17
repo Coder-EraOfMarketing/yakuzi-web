@@ -30,6 +30,15 @@ export interface ProductTypeDef {
   match: string;
   /** Product slugs the pattern catches wrongly. */
   exclude?: string[];
+  /**
+   * A regex that vetoes membership even when `match` or `subCategorySlugs`
+   * would accept it.
+   *
+   * For types whose sub-category signal is unreliable — see `manga-comics`
+   * below for the concrete case. Use sparingly: `exclude` handles known bad
+   * slugs, and a seller re-filing the product is the real fix.
+   */
+  notMatch?: string;
   /** Platform sub-category slugs that mean the same thing, when any do. */
   subCategorySlugs?: string[];
   /**
@@ -130,6 +139,13 @@ export const PRODUCT_TYPES: ProductTypeDef[] = [
     note: 'Printed volumes: manga tankobon, graphic novels, single-issue comics and box sets.',
     match: '\\bmanga\\b|\\bcomic\\b|\\bissue \\d+\\b|\\bvolume \\d+\\b|\\bvol\\.? ?\\d+\\b|graphic novel|box set',
     subCategorySlugs: ['manga', 'comics', 'books-comics', 'box-sets', 'art-books'],
+    // Physical collectibles that sellers have filed under a sub-category
+    // called "Comics" — the Marvel and DC statues and a 1:1 helmet all are on
+    // this catalogue — otherwise land on a page about printed volumes, which
+    // made the price range read ₹250 to ₹15,395. The veto sends them to their
+    // real format pages instead. The proper fix is the seller re-filing them.
+    notMatch:
+      '\\bhelmet\\b|\\bstatue\\b|\\bfigurine\\b|action figure|\\bfunko\\b|\\breplica\\b|noodle ?stopper|1:1',
     crossWithSeries: true,
   },
   {

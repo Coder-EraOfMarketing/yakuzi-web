@@ -3,6 +3,7 @@ import { inStock, priceRange, priceOf, selectProducts, typeMatcher, characterMat
 import { PRODUCT_TYPES, type ProductTypeDef } from './data/product-types';
 import { charactersOfSeries, type CharacterDef } from './data/characters';
 import { type SeriesDef } from './data/series';
+import { type ManufacturerDef } from './data/manufacturers';
 import { SITE_NAME } from './site';
 
 /**
@@ -499,6 +500,108 @@ export function seriesTypeSummary(
     );
   }
   return sentences.join(' ');
+}
+
+// ─── Manufacturer ────────────────────────────────────────────────────
+
+export function manufacturerTitle(def: ManufacturerDef): string {
+  return `${def.name} Figures — Buy Official ${def.name} Collectibles in India`;
+}
+
+export function manufacturerDescription(
+  def: ManufacturerDef,
+  products: CatalogProduct[],
+): string {
+  const range = priceRange(products);
+  return squash(
+    `Buy ${def.name} figures and collectibles in India on ${SITE_NAME}. ${products.length} ${plural(
+      products.length,
+      'listing',
+      'listings',
+    )}${range ? ` from ${inr(range.min)}` : ''}, from verified sellers with tracked all-India delivery.`,
+  );
+}
+
+export function manufacturerSummary(
+  def: ManufacturerDef,
+  products: CatalogProduct[],
+  seriesNames: string[],
+): string {
+  const sentences: string[] = [];
+  const range = priceRange(products);
+  const formats = typesPresent(products);
+
+  sentences.push(
+    `${def.name} is a collectibles manufacturer based in ${def.country}. ${def.note}`,
+  );
+  sentences.push(`${def.name} is best known for ${lowerFirst(def.knownFor)}`);
+  sentences.push(
+    `${SITE_NAME} lists ${products.length} ${def.name} ${plural(
+      products.length,
+      'product',
+      'products',
+    )}${range ? `, priced ${range.min === range.max ? `at ${inr(range.min)}` : `from ${inr(range.min)} to ${inr(range.max)}`}` : ''}, sold by verified sellers and shipped across India.`,
+  );
+  if (formats.length) {
+    sentences.push(
+      `Formats available include ${listSentence(
+        formats.map((f) => f.def.name.toLowerCase()),
+        4,
+      )}.`,
+    );
+  }
+  if (seriesNames.length) {
+    sentences.push(
+      `${def.name} pieces on ${SITE_NAME} cover ${listSentence(seriesNames, 6)}.`,
+    );
+  }
+  return sentences.join(' ');
+}
+
+/** "Pop! vinyl figures — …" reads wrong mid-sentence after "known for". */
+function lowerFirst(text: string): string {
+  const t = text.trim();
+  // Only lowercase a word that is capitalised by sentence position, never one
+  // that is a proper noun in its own right ("Pop!", "S.H.Figuarts", "DC").
+  if (/^[A-Z][a-z]/.test(t) && !/^[A-Z][a-z]+[A-Z]/.test(t)) {
+    return t.charAt(0).toLowerCase() + t.slice(1);
+  }
+  return t;
+}
+
+export function manufacturerFaqs(
+  def: ManufacturerDef,
+  products: CatalogProduct[],
+): Array<{ question: string; answer: string }> {
+  const faqs: Array<{ question: string; answer: string }> = [];
+  const range = priceRange(products);
+
+  faqs.push({
+    question: `Who is ${def.name}?`,
+    answer: `${def.note} ${def.name} is best known for ${lowerFirst(def.knownFor)}`,
+  });
+
+  if (range) {
+    faqs.push({
+      question: `How much do ${def.name} figures cost in India?`,
+      answer:
+        range.min === range.max
+          ? `${def.name} products on ${SITE_NAME} are listed at ${inr(range.min)}.`
+          : `${def.name} products on ${SITE_NAME} are listed from ${inr(range.min)} to ${inr(range.max)}. Prices are set by individual verified sellers and move with the size and the line the piece belongs to.`,
+    });
+  }
+
+  faqs.push({
+    question: `Are ${def.name} figures on ${SITE_NAME} official?`,
+    answer: `Every seller on ${SITE_NAME} is verified before they are allowed to list, and each listing carries photographs of the actual item and its packaging, so the box and any manufacturer markings are visible before you order. ${SITE_NAME} is a marketplace, so more than one verified seller may list the same ${def.name} piece and the price shown is the best current offer.`,
+  });
+
+  faqs.push({
+    question: `Does ${SITE_NAME} ship ${def.name} figures across India?`,
+    answer: `Yes. Orders are processed within 24–48 hours of payment and typically deliver in 4–7 business days from dispatch anywhere in India, tracked throughout. Damaged or incorrect deliveries are covered when reported within 3 days with photographs; change-of-mind returns are not accepted.`,
+  });
+
+  return faqs;
 }
 
 // ─── Place ───────────────────────────────────────────────────────────

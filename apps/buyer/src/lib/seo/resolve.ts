@@ -8,11 +8,15 @@ import {
   seriesTypeMatcher,
   priceMatcher,
   subCategoryMatcher,
+  manufacturerMatcher,
+  giftMatcher,
 } from './hub';
 import { seriesBySlug, type SeriesDef } from './data/series';
 import { characterBySlug, type CharacterDef } from './data/characters';
 import { productTypeBySlug, type ProductTypeDef } from './data/product-types';
 import { priceBandBySlug, type PriceBandDef } from './data/price-bands';
+import { manufacturerBySlug, type ManufacturerDef } from './data/manufacturers';
+import { giftOccasionBySlug, type GiftOccasionDef } from './data/gift-occasions';
 import { cityBySlug, stateBySlug, type CityRef, type State } from './data/locations';
 
 /**
@@ -93,6 +97,24 @@ export const resolveSeriesType = cache(
       all,
       products: selectProducts(all, seriesTypeMatcher(series, type)),
     };
+  },
+);
+
+export const resolveManufacturer = cache(
+  async (slug: string): Promise<Resolved<ManufacturerDef> | null> => {
+    const def = manufacturerBySlug(slug);
+    if (!def) return null;
+    const all = await catalogue();
+    return { def, all, products: selectProducts(all, manufacturerMatcher(def)) };
+  },
+);
+
+export const resolveGift = cache(
+  async (slug: string): Promise<Resolved<GiftOccasionDef> | null> => {
+    const def = giftOccasionBySlug(slug);
+    if (!def) return null;
+    const all = await catalogue();
+    return { def, all, products: selectProducts(all, giftMatcher(def)) };
   },
 );
 

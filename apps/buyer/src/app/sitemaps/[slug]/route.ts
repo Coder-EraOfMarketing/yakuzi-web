@@ -22,6 +22,12 @@ import {
 import { PRICE_BANDS, MIN_PRODUCTS_PRICE } from '@/lib/seo/data/price-bands';
 import { STATES, ALL_CITIES, placeIsIndexable } from '@/lib/seo/data/locations';
 import {
+  MANUFACTURERS,
+  MIN_PRODUCTS_MANUFACTURER,
+} from '@/lib/seo/data/manufacturers';
+import { GUIDES } from '@/lib/seo/data/guides';
+import { GIFT_OCCASIONS, MIN_PRODUCTS_GIFT } from '@/lib/seo/data/gift-occasions';
+import {
   selectProducts,
   seriesMatcher,
   characterMatcher,
@@ -29,6 +35,8 @@ import {
   seriesTypeMatcher,
   priceMatcher,
   subCategoryMatcher,
+  manufacturerMatcher,
+  giftMatcher,
 } from '@/lib/seo/hub';
 
 /**
@@ -74,6 +82,12 @@ export async function GET(
       return handlePrices();
     case 'locations':
       return handleLocations();
+    case 'manufacturers':
+      return handleManufacturers();
+    case 'guides':
+      return handleGuides();
+    case 'gifts':
+      return handleGifts();
     case 'collections':
       return handleCollections();
     case 'categories':
@@ -135,6 +149,9 @@ function handleStatic(): Response {
     { path: routes.typesIndex(), changeFrequency: 'weekly', priority: 0.8, lastModified: now },
     { path: routes.pricesIndex(), changeFrequency: 'weekly', priority: 0.8, lastModified: now },
     { path: routes.storesIndex(), changeFrequency: 'weekly', priority: 0.8, lastModified: now },
+    { path: routes.guidesIndex(), changeFrequency: 'weekly', priority: 0.9, lastModified: now },
+    { path: routes.giftsIndex(), changeFrequency: 'weekly', priority: 0.8, lastModified: now },
+    { path: routes.manufacturersIndex(), changeFrequency: 'weekly', priority: 0.7, lastModified: now },
     { path: routes.collections(), changeFrequency: 'weekly', priority: 0.8, lastModified: now },
     { path: routes.storeIndia(), changeFrequency: 'weekly', priority: 0.7, lastModified: now },
     { path: routes.blogs(), changeFrequency: 'daily', priority: 0.6, lastModified: now },
@@ -223,6 +240,54 @@ async function handlePrices(): Promise<Response> {
     priority: 0.7,
   }));
   guardEmpty(urls, 'prices');
+  return xmlResponse(renderUrlSet(urls));
+}
+
+async function handleManufacturers(): Promise<Response> {
+  const all = listable(await getCatalog());
+  const urls: SitemapUrl[] = MANUFACTURERS.filter(
+    (m) =>
+      selectProducts(all, manufacturerMatcher(m)).length >=
+      MIN_PRODUCTS_MANUFACTURER,
+  ).map((m) => ({
+    path: routes.manufacturer(m.slug),
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  }));
+  // NOT guarded. Almost this whole family is legitimately below the bar
+  // because the `manufacturer` column is unpopulated, and an empty urlset is
+  // the honest report of that. Throwing would turn "nobody has filled in the
+  // maker yet" into a permanent sitemap fetch error in Search Console.
+  return xmlResponse(renderUrlSet(urls));
+}
+
+/**
+ * Guides are static content, so this shard needs no catalogue read and
+ * cannot be empty — every guide in the data files is publishable by
+ * definition. Highest priority of any non-product family: these are the URLs
+ * with no catalogue ceiling on them.
+ */
+function handleGuides(): Response {
+  const urls: SitemapUrl[] = GUIDES.map((g) => ({
+    path: routes.guide(g.slug),
+    lastModified: g.updated,
+    changeFrequency: 'monthly',
+    priority: 0.8,
+  }));
+  guardEmpty(urls, 'guides');
+  return xmlResponse(renderUrlSet(urls));
+}
+
+async function handleGifts(): Promise<Response> {
+  const all = listable(await getCatalog());
+  const urls: SitemapUrl[] = GIFT_OCCASIONS.filter(
+    (o) => selectProducts(all, giftMatcher(o)).length >= MIN_PRODUCTS_GIFT,
+  ).map((o) => ({
+    path: routes.gift(o.slug),
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  }));
+  guardEmpty(urls, 'gifts');
   return xmlResponse(renderUrlSet(urls));
 }
 

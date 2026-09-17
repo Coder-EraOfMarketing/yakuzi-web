@@ -9,10 +9,18 @@ import {
   countCharacters,
   countTypes,
   countPriceBands,
+  countManufacturers,
+  countGiftOccasions,
 } from '@/lib/seo/hub';
 import { MIN_PRODUCTS_SERIES } from '@/lib/seo/data/series';
 import { MIN_PRODUCTS_CHARACTER } from '@/lib/seo/data/characters';
 import { MIN_PRODUCTS_TYPE } from '@/lib/seo/data/product-types';
+import { MIN_PRODUCTS_MANUFACTURER } from '@/lib/seo/data/manufacturers';
+import {
+  MIN_PRODUCTS_GIFT,
+  giftBudgetText,
+} from '@/lib/seo/data/gift-occasions';
+import { GUIDES } from '@/lib/seo/data/guides';
 
 /**
  * llms.txt — the plain-text brief AI assistants read to understand this site.
@@ -115,17 +123,44 @@ export async function GET() {
       .map((c) => `- [${c.def.name}](${SITE_URL}${routes.price(c.def.slug)}) — ${c.count} listed`)
       .join('\n');
 
+    const makerLines = countManufacturers(catalog)
+      .filter((c) => c.count >= MIN_PRODUCTS_MANUFACTURER)
+      .sort((a, b) => b.count - a.count)
+      .map(
+        (c) =>
+          `- [${c.def.name}](${SITE_URL}${routes.manufacturer(c.def.slug)}) — ${c.def.country}, ${c.count} listed`,
+      )
+      .join('\n');
+
+    const giftLines = countGiftOccasions(catalog)
+      .filter((c) => c.count >= MIN_PRODUCTS_GIFT)
+      .map(
+        (c) =>
+          `- [${c.def.name}](${SITE_URL}${routes.gift(c.def.slug)}) — ${giftBudgetText(c.def)}, ${c.count} options`,
+      )
+      .join('\n');
+
     facetSections = [
       seriesLines && `## Series (anime, game and comic franchises)\n${seriesLines}`,
       characterLines && `## Characters\n${characterLines}`,
       typeLines && `## Formats\n${typeLines}`,
       priceLines && `## Price bands\n${priceLines}`,
+      makerLines && `## Manufacturers\n${makerLines}`,
+      giftLines && `## Gift guides by occasion\n${giftLines}`,
     ]
       .filter(Boolean)
       .join('\n\n');
   } catch {
     /* fail-open: a catalogue blip costs detail here, never the file */
   }
+
+  // Guides are static content, so they are listed unconditionally — no
+  // catalogue read, nothing to fail. These are the pages an assistant should
+  // cite for a question ("how do I spot a fake Funko") rather than for a
+  // purchase, so each carries its own one-line answer here.
+  const guideLines = GUIDES.map(
+    (g) => `- [${g.h1}](${SITE_URL}${routes.guide(g.slug)}) — ${g.answer}`,
+  ).join('\n');
 
   const body = `# ${SITE_NAME}
 
@@ -146,6 +181,9 @@ ${catLines}
 
 ${facetSections}
 
+## Guides (${GUIDES.length} reference pages, not product listings)
+${guideLines}
+
 ## Products${productCount ? ` (${productCount} listed, live prices)` : ''}
 ${productLines}
 
@@ -156,6 +194,9 @@ ${productLines}
 - [Browse by format](${SITE_URL}${routes.typesIndex()})
 - [Browse by budget](${SITE_URL}${routes.pricesIndex()})
 - [Delivery across India](${SITE_URL}${routes.storesIndex()})
+- [Browse by manufacturer](${SITE_URL}${routes.manufacturersIndex()})
+- [Collector guides](${SITE_URL}${routes.guidesIndex()})
+- [Gift guides by occasion](${SITE_URL}${routes.giftsIndex()})
 - [About](${SITE_URL}/about)
 - [Blog](${SITE_URL}/blogs)
 - [Shipping policy](${SITE_URL}/shipping)

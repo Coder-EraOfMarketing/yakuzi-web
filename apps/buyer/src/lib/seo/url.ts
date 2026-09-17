@@ -37,6 +37,18 @@ export const routes = {
   type: (slug: string) => `/figures/${slug}`,
   pricesIndex: () => '/price',
   price: (slug: string) => `/price/${slug}`,
+  /**
+   * NOT `/brands/*`. The platform already has a "brands" concept — the
+   * franchise hero tiles from `GET /brands` — and giving manufacturers that
+   * namespace would mean two meanings of "brand" fighting over one URL space
+   * the moment those tiles become clickable. See data/manufacturers.ts.
+   */
+  manufacturersIndex: () => '/manufacturers',
+  manufacturer: (slug: string) => `/manufacturers/${slug}`,
+  guidesIndex: () => '/guides',
+  guide: (slug: string) => `/guides/${slug}`,
+  giftsIndex: () => '/gifts',
+  gift: (slug: string) => `/gifts/${slug}`,
   storesIndex: () => '/anime-store',
   state: (slug: string) => `/anime-store/${slug}`,
   city: (stateSlug: string, citySlug: string) =>

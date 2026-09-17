@@ -4,6 +4,9 @@ import { CHARACTERS } from '@/lib/seo/data/characters';
 import { PRODUCT_TYPES } from '@/lib/seo/data/product-types';
 import { PRICE_BANDS } from '@/lib/seo/data/price-bands';
 import { TIER_1_CITIES } from '@/lib/seo/data/locations';
+import { MANUFACTURERS } from '@/lib/seo/data/manufacturers';
+import { GIFT_OCCASIONS } from '@/lib/seo/data/gift-occasions';
+import { GUIDES } from '@/lib/seo/data/guides';
 import { routes } from '@/lib/seo/url';
 
 /**
@@ -75,6 +78,35 @@ const columns: Array<{ title: string; links: Array<{ label: string; href: string
     ],
   },
   {
+    title: 'Gift guides',
+    links: [
+      ...GIFT_OCCASIONS.map((o) => ({ label: o.name, href: routes.gift(o.slug) })),
+      { label: 'All occasions', href: routes.giftsIndex() },
+    ],
+  },
+  {
+    // Guides are the one family with no catalogue ceiling on it, so they get
+    // a sitewide column of their own rather than sharing one.
+    title: 'Collector guides',
+    links: [
+      ...GUIDES.slice(0, PER_COLUMN).map((g) => ({
+        label: g.h1,
+        href: routes.guide(g.slug),
+      })),
+      { label: 'All guides', href: routes.guidesIndex() },
+    ],
+  },
+  {
+    title: 'By manufacturer',
+    links: [
+      ...MANUFACTURERS.slice(0, PER_COLUMN).map((m) => ({
+        label: m.name,
+        href: routes.manufacturer(m.slug),
+      })),
+      { label: 'All manufacturers', href: routes.manufacturersIndex() },
+    ],
+  },
+  {
     title: 'Delivery across India',
     links: [
       ...TIER_1_CITIES.map((c) => ({
@@ -96,7 +128,7 @@ export default function SiteLinkHub() {
       </summary>
       <nav
         aria-label="Browse Yukizi"
-        className="mt-6 grid grid-cols-2 gap-x-6 gap-y-8 text-left sm:grid-cols-3 lg:grid-cols-5"
+        className="mt-6 grid grid-cols-2 gap-x-6 gap-y-8 text-left sm:grid-cols-3 lg:grid-cols-4"
       >
         {columns.map((col) => (
           <div key={col.title}>
