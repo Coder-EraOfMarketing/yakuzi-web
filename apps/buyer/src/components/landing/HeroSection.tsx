@@ -50,33 +50,87 @@ export default function HeroSection({ initialBanners }: { initialBanners?: any[]
   // order the API returns them (it already sorts by `order` and filters out
   // inactive ones). With a single banner this renders exactly as before: no
   // dots, no arrows, no auto-advance.
-  const [bannerIndex, setBannerIndex] = useState(0);
+  /**
+   * Current slide plus the one it is replacing, in ONE piece of state.
+   *
+   * This fixes a white flash on every banner transition. The slides are
+   * absolutely stacked, and they used to animate opacity simultaneously with
+   * no z-index — so the outgoing slide fell to 0.38 while the incoming rose to
+   * 0.62, and the container's `bg-white` showed through the gap between them.
+   * Measured on production: 24% of the white background visible at 220ms, 23%
+   * at 291ms, peaking at 25% mid-transition. Every five seconds.
+   *
+   * The fix is to stop cross-fading. The incoming slide fades in ON TOP of an
+   * outgoing slide that holds full opacity until the animation has finished,
+   * so the stack is never translucent and nothing behind it can show through.
+   *
+   * `previous` lives in the SAME state object as `current` on purpose, and
+   * that detail is load-bearing. The first attempt tracked it in a separate
+   * `useState` written from an effect, which meant React committed one render
+   * where the new slide was current and the old one had already been marked
+   * non-current — the old cross-fade, for a frame — and the correction then
+   * animated the outgoing slide back UP from 0 to 1. Measured: the incoming
+   * slide snapped to full opacity instantly and the fade was gone entirely.
+   * Updating both in one transition means no render ever sees an inconsistent
+   * pair.
+   */
+  const [slide, setSlide] = useState<{ current: number; previous: number | null }>({
+    current: 0,
+    previous: null,
+  });
+  const bannerIndex = slide.current;
   const [isBannerPaused, setIsBannerPaused] = useState(false);
 
   const hasBannerSlideshow = banners.length > 1;
+
+  const goToBanner = useCallback((next: number) => {
+    setSlide((s) => (s.current === next ? s : { current: next, previous: s.current }));
+  }, []);
+
+  // Drop `previous` once the fade has finished, so only one slide is painted
+  // at rest. The delay must outlast the 700ms transition below — clearing it
+  // early would uncover the white container while the slide on top is still
+  // partly transparent, which is the exact bug being fixed.
+  useEffect(() => {
+    if (slide.previous === null) return;
+    const timer = setTimeout(
+      () => setSlide((s) => (s.previous === null ? s : { ...s, previous: null })),
+      800,
+    );
+    return () => clearTimeout(timer);
+  }, [slide.previous, slide.current]);
 
   // Guard against the index dangling past the end when banners are added or
   // removed while the page is open.
   useEffect(() => {
     if (bannerIndex > banners.length - 1) {
-      setBannerIndex(0);
+      setSlide({ current: 0, previous: null });
     }
   }, [banners.length, bannerIndex]);
 
   useEffect(() => {
     if (!hasBannerSlideshow || isBannerPaused) return;
     const interval = setInterval(() => {
-      setBannerIndex((prev) => (prev + 1) % banners.length);
+      setSlide((s) => ({
+        current: (s.current + 1) % banners.length,
+        previous: s.current,
+      }));
     }, 5000);
     return () => clearInterval(interval);
   }, [hasBannerSlideshow, isBannerPaused, banners.length]);
 
   const goToPrevBanner = useCallback(() => {
-    setBannerIndex((prev) => (prev - 1 + banners.length) % banners.length);
+    setSlide((s) => ({
+      current: (s.current - 1 + banners.length) % banners.length,
+      previous: s.current,
+    }));
   }, [banners.length]);
 
   const goToNextBanner = useCallback(() => {
-    setBannerIndex((prev) => (prev + 1) % banners.length);
+    setSlide((s) => ({
+      current: (s.current + 1) % banners.length,
+      previous: s.current,
+    }));
   }, [banners.length]);
 
   const heroBanner = banners[bannerIndex];
@@ -156,10 +210,25 @@ export default function HeroSection({ initialBanners }: { initialBanners?: any[]
               // A banner slot can hold a video now. Only the slide on screen
               // plays; see BannerVideo for why that matters with a stack of
               // absolutely-positioned slides.
-              const slide = isVideoUrl(desktopImage) || isVideoUrl(mobileImage) ? (
+              // Whichever of the two uploaded slots is a still image becomes the
+              // video's poster, so a video slide shows artwork rather than the
+              // white container while it buffers. A banner with a video in both
+              // slots has no still to offer and relies on BannerVideo's warm
+              // preload instead — uploading a mobile image fixes that properly.
+              const videoPoster = !isVideoUrl(desktopImage)
+                ? desktopImage
+                : !isVideoUrl(mobileImage)
+                  ? mobileImage
+                  : undefined;
+
+              // Named slideContent, not `slide`: the carousel state above is
+              // `slide`, and shadowing it here made `slide.previous` resolve to
+              // this JSX Element rather than to the state.
+              const slideContent = isVideoUrl(desktopImage) || isVideoUrl(mobileImage) ? (
                 <BannerVideo
                   desktop={desktopImage}
                   mobile={mobileImage}
+                  poster={videoPoster}
                   active={isCurrent}
                   fit="contain"
                   title={banner?.title ?? undefined}
@@ -186,11 +255,29 @@ export default function HeroSection({ initialBanners }: { initialBanners?: any[]
                 </picture>
               );
 
+              const isFadingOut = index === slide.previous && !isCurrent;
+
               return (
                 <div
                   key={banner?.id ?? index}
+                  // The incoming slide sits ABOVE the outgoing one and fades in;
+                  // the outgoing one holds full opacity and does not animate.
+                  // See the `slide` state above for the measurements behind this.
+                  // `transition-opacity` stays on EVERY slide, in every state.
+                  // A CSS transition only animates if the transition property
+                  // was already present when the value changed — move it onto
+                  // the current slide at the same moment the opacity changes
+                  // and the browser snaps instead of fading.
+                  //
+                  // The outgoing slide's own fade-out runs late (after
+                  // slide.previous clears) but is invisible, because by then
+                  // it is underneath a fully opaque slide at a higher z-index.
                   className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
-                    isCurrent ? 'opacity-100' : 'pointer-events-none opacity-0'
+                    isCurrent
+                      ? 'z-[2] opacity-100'
+                      : isFadingOut
+                        ? 'z-[1] pointer-events-none opacity-100'
+                        : 'z-0 pointer-events-none opacity-0'
                   }`}
                   aria-hidden={!isCurrent}
                 >
@@ -202,10 +289,10 @@ export default function HeroSection({ initialBanners }: { initialBanners?: any[]
                       className="block h-full w-full"
                       tabIndex={isCurrent ? undefined : -1}
                     >
-                      {slide}
+                      {slideContent}
                     </a>
                   ) : (
-                    slide
+                    slideContent
                   )}
                 </div>
               );
@@ -242,7 +329,7 @@ export default function HeroSection({ initialBanners }: { initialBanners?: any[]
                   <button
                     key={banner?.id ?? index}
                     type="button"
-                    onClick={() => setBannerIndex(index)}
+                    onClick={() => goToBanner(index)}
                     aria-label={`Go to banner ${index + 1}`}
                     aria-current={index === bannerIndex}
                     className={`h-2 rounded-full transition-all ${

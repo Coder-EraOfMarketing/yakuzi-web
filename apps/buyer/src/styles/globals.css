@@ -1,5 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
-
+/* The Google Sans @import that used to sit here has been removed.
+ *
+ * It was dead weight on the critical path of every page, in the worst
+ * possible position. A CSS `@import` on line 1 is render-blocking AND
+ * serialized: the browser had to download globals.css, parse it, only then
+ * discover the import, open a connection to fonts.googleapis.com, download
+ * 32KB of @font-face rules (it ships every unicode-range subset — armenian,
+ * bengali, cyrillic and the rest), and only then continue. That is an extra
+ * cross-origin round trip in front of first paint on every single page.
+ *
+ * And nothing used it. `font-family: 'Google Sans'` appears nowhere in the
+ * codebase, and tailwind.config.ts sets `fontFamily.sans` to Inter — so the
+ * declarations matched no element and not one font file was ever fetched.
+ * The site paid the round trip and rendered in Inter regardless.
+ *
+ * Removing it therefore changes nothing visually. If Google Sans is ever
+ * genuinely wanted, load it through `next/font/google` in the root layout
+ * like Inter: self-hosted, preloaded, and not blocking on a third party.
+ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
