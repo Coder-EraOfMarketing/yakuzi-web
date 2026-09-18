@@ -5,7 +5,7 @@ import {
   getAdminDashboard, getAdminUsers, getUserById, approveUser, rejectUser, blockUser, unblockUser,
   getBuyers, getSellers, setSellerSelfShip, updateUser, deleteUser, updateUserStatus, updateGstPanStatus, updateSellerProfile,
   getAdminProducts, getAdminProductsFiltered, getProductById, disableProduct, enableProduct, deleteProduct, createProduct, updateProduct, approveProduct, rejectProduct,
-  getAdminOrders, getAdminOrdersFiltered, getOrderById, updateAdminOrderStatus, updateAdminShippingDocs, uploadAdminOrderDocument, cancelOrder, getTestOrdersCount, cancelTestOrders, getOrderInvoices, getOrderTracking, classifyOrder,
+  getAdminOrders, getAdminOrdersFiltered, getOrderById, updateAdminOrderStatus, updateAdminShippingDocs, uploadAdminOrderDocument, cancelOrder, recordOrderRefund, getTestOrdersCount, cancelTestOrders, getOrderInvoices, getOrderTracking, classifyOrder,
   getPayments, confirmPayment, rejectPayment,
   getSettlements, getSettlementsSummary, markSettlementPaid, getSellerSettlements, createSettlement, syncSettlements,
   getTickets, getTicketById, replyToTicket, updateTicketStatus,
@@ -386,6 +386,21 @@ export function useAdminOrdersFiltered(params: { page?: number; limit?: number; 
 
 export function useOrderById(orderId: string) {
   return useQuery({ queryKey: ["admin", "order", orderId], queryFn: () => getOrderById(orderId), enabled: !!orderId, staleTime: 60_000, refetchInterval: 10000, retry: 1 });
+}
+
+export function useRecordOrderRefund() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      orderId,
+      ...payload
+    }: { orderId: string; amount?: number; reference?: string; notes?: string }) =>
+      recordOrderRefund(orderId, payload),
+    onSuccess: (_, { orderId }) => {
+      void qc.invalidateQueries({ queryKey: ["admin", "orders"] });
+      void qc.invalidateQueries({ queryKey: ["admin", "order", orderId] });
+    },
+  });
 }
 
 export function useCancelOrder() {
