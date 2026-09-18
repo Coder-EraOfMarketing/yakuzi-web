@@ -396,6 +396,24 @@ export async function cancelOrder(orderId: string, reason?: string) {
   return data.data;
 }
 
+/**
+ * Records that a refund has gone back to the buyer, and emails them to say so.
+ *
+ * Does not move money — refunds are issued in Razorpay or at the bank. This is
+ * the record of it, and the thing that finally answers the buyer's "you said I
+ * would be refunded, where is it".
+ */
+export async function recordOrderRefund(
+  orderId: string,
+  payload: { amount?: number; reference?: string; notes?: string },
+) {
+  const { data } = await apiClient.patch<{ data: any }>(
+    `/admin/orders/${orderId}/refund`,
+    payload,
+  );
+  return data.data;
+}
+
 export async function getTestOrdersCount() {
   const { data } = await apiClient.get<{ data: number }>(`/admin/orders/test-orders-count`);
   return data.data;

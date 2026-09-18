@@ -2,14 +2,14 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Clock, CreditCard, FileText, User, MapPin, Phone, Building2, Mail, ExternalLink, Navigation, Calculator, RefreshCw, Loader2, Download, Receipt } from "lucide-react";
+import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Clock, CreditCard, FileText, User, MapPin, Phone, Building2, Mail, ExternalLink, Navigation, Calculator, RefreshCw, Loader2, Download, Receipt, IndianRupee } from "lucide-react";
 
 
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Badge, Modal, Input, Skeleton } from "@/components/ui";
 import { formatCurrency, calculatePricing } from "@yukizi/utils";
 import { cn } from "@/lib/utils";
-import { useOrderById, useUpdateAdminOrderStatus, useCancelOrder, useUpdateAdminShippingDocs, useUploadAdminOrderDocument, useOrderTracking, useOrderInvoices } from "@/hooks/useAdmin";
+import { useOrderById, useUpdateAdminOrderStatus, useCancelOrder, useRecordOrderRefund, useUpdateAdminShippingDocs, useUploadAdminOrderDocument, useOrderTracking, useOrderInvoices } from "@/hooks/useAdmin";
 import { downloadOrderInvoicePdf, type OrderInvoice } from "@/api/admin.api";
 import toast from "react-hot-toast";
 
@@ -45,12 +45,17 @@ export default function OrderDetailPage() {
   };
   const updateStatus = useUpdateAdminOrderStatus();
   const cancelOrder = useCancelOrder();
+  const recordRefund = useRecordOrderRefund();
   
   const updateShippingDocs = useUpdateAdminShippingDocs();
   const uploadDoc = useUploadAdminOrderDocument();
   
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReference, setRefundReference] = useState("");
+  const [refundNotes, setRefundNotes] = useState("");
   const [adminFiles, setAdminFiles] = useState<Record<string, {
     label: File | null;
     invoice: File | null;
@@ -65,6 +70,23 @@ export default function OrderDetailPage() {
       toast.success(`Order updated to ${status}`);
     } catch {
       toast.error("Failed to update order status");
+    }
+  };
+
+  const handleRefund = async () => {
+    try {
+      await recordRefund.mutateAsync({
+        orderId: id,
+        amount: refundAmount.trim() ? Number(refundAmount) : undefined,
+        reference: refundReference.trim() || undefined,
+        notes: refundNotes.trim() || undefined,
+      });
+      toast.success("Refund recorded — the buyer has been emailed");
+      setShowRefundModal(false);
+    } catch (err: any) {
+      // The API refuses a second refund on the same order and says so. That
+      // message is the useful one: it means a colleague already did this.
+      toast.error(err?.response?.data?.message || "Failed to record the refund");
     }
   };
 
@@ -259,6 +281,18 @@ export default function OrderDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Only worth offering where money actually moved. Recording a
+                refund on an unpaid order would email the buyer about money
+                they never sent. */}
+            {order.paymentStatus === "SUCCESS" && !order.refundedAt && (
+              <Button size="sm" variant="secondary" onClick={() => setShowRefundModal(true)} leftIcon={<IndianRupee className="h-4 w-4" />}>Record Refund</Button>
+            )}
+            {order.refundedAt && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-medium text-green-600 dark:text-green-400">
+                <IndianRupee className="h-3 w-3" />
+                Refunded {new Date(order.refundedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+              </span>
+            )}
             {!isCancelled && order.orderStatus !== "DELIVERED" && (
               <Button size="sm" variant="danger" onClick={() => setShowCancelModal(true)} leftIcon={<XCircle className="h-4 w-4" />}>Cancel Order</Button>
             )}
@@ -961,6 +995,42 @@ export default function OrderDetailPage() {
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setShowCancelModal(false)}>Keep Order</Button>
             <Button variant="danger" onClick={handleCancel} loading={cancelOrder.isPending} disabled={cancelReason.trim().length < 3}>Cancel Order</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Record Refund */}
+      <Modal open={showRefundModal} onClose={() => setShowRefundModal(false)} title="Record Refund">
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            This does <strong>not</strong> move any money — issue the refund in Razorpay or at the bank first,
+            then record it here. The buyer is emailed straight away to confirm it is on its way.
+          </p>
+          <Input
+            label={`Amount in ₹ — leave blank for the full ${Number(order.totalAmount ?? 0).toLocaleString("en-IN")}`}
+            type="number"
+            value={refundAmount}
+            onChange={e => setRefundAmount(e.target.value)}
+            placeholder={String(order.totalAmount ?? "")}
+          />
+          <Input
+            label="Reference — shown to the buyer so they can quote it to their bank"
+            value={refundReference}
+            onChange={e => setRefundReference(e.target.value)}
+            placeholder="e.g. rfnd_PqL2xAb9"
+          />
+          <Input
+            label="Note to the buyer (optional)"
+            value={refundNotes}
+            onChange={e => setRefundNotes(e.target.value)}
+            placeholder="e.g. Seller could not source the figure in time"
+          />
+          <p className="text-xs text-muted-foreground">
+            A refund can only be recorded once per order, so nobody gets told twice about the same money.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" onClick={() => setShowRefundModal(false)}>Cancel</Button>
+            <Button onClick={handleRefund} loading={recordRefund.isPending}>Record Refund &amp; Notify</Button>
           </div>
         </div>
       </Modal>
