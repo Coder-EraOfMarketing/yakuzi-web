@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Package, Truck, ChevronLeft, Calendar, FileText, Loader2, AlertCircle, XCircle, CheckCircle2, CreditCard } from 'lucide-react';
+import { Package, Truck, ChevronLeft, Calendar, FileText, Loader2, AlertCircle, XCircle, CheckCircle2, CreditCard, LifeBuoy } from 'lucide-react';
 import Navbar from '@/components/landing/Navbar';
 import dynamicComponent from 'next/dynamic';
 import Timeline from '@/components/shared/Timeline';
@@ -215,6 +215,16 @@ export default function OrderIdPage({ params }: { params: { orderId: string } })
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Tax invoice
+                    </Link>
+                    {/* Opens the support form with this order already chosen.
+                        Raising it against the order is what lets the seller of
+                        the item be told about it. */}
+                    <Link
+                      href={`/support?orderId=${order.id}`}
+                      className="flex items-center gap-1.5 rounded-full border border-[#e2e8f0] bg-white px-4 py-2 text-sm font-bold text-[#593696] hover:bg-[#f5f3fa] transition-colors"
+                    >
+                      <LifeBuoy className="w-3.5 h-3.5" />
+                      Get help
                     </Link>
                   </div>
                 </div>
