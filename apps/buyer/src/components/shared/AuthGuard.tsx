@@ -1,21 +1,46 @@
 'use client';
 
 import { useAuth } from '@yukizi/api-client';
-import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Loader2, CheckCircle2 } from 'lucide-react';
-import { useToast } from '@/components/shared/Toast';
-import { useQueryClient } from '@tanstack/react-query';
+import { Shield } from 'lucide-react';
 
+/**
+ * Gates a page on being LOGGED IN. Nothing more.
+ *
+ * It used to gate on being logged in AND "verified", where verified meant an
+ * admin had approved a KYC submission carrying a GST number, a PAN and a
+ * legal business name. That is PharmaBag's B2B flow — its buyers are
+ * pharmacies that must prove a drug licence before they can order — and it
+ * came across with the fork. On a consumer store selling anime figures it was
+ * asking every shopper for a GST number they do not have, then holding them
+ * in a pending state until somebody approved them by hand.
+ *
+ * Two behaviours were removed here:
+ *
+ *  1. A redirect that sent any logged-in-but-unverified buyer to /onboarding
+ *     from anywhere outside a small allow-list. That is what made the KYC
+ *     wall inescapable rather than merely present on checkout.
+ *  2. A 10-second polling loop that re-fetched the profile waiting for an
+ *     admin to approve the account, plus the "Your account has been
+ *     verified!" toast it fired. With no approval step left there is nothing
+ *     to poll for, and removing it also stops a background request every ten
+ *     seconds on every authenticated page.
+ *
+ * Deliberately UNCHANGED, because none of it is about KYC:
+ *  - the login redirect and the `open-login` event for anonymous visitors
+ *  - the "login modal dismissed" fallback back to the homepage
+ *  - the loading state
+ *  - the API's block on BLOCKED accounts, which is a moderation ban and
+ *    still enforced server-side in the JWT strategy
+ *
+ * Seller verification is untouched and lives in a different app entirely.
+ */
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading, refresh } = useAuth();
-  const { toast } = useToast();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
-  const queryClient = useQueryClient();
   const [showRedirect, setShowRedirect] = useState(false);
-  const prevStatusRef = useRef<string | undefined>(user?.status || user?.verificationStatus);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -29,21 +54,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!isLoading && isAuthenticated) {
       setShowRedirect(false);
     }
-
-    if (!isLoading && isAuthenticated && user) {
-      // Check if buyer is verified: admin sets user.status = 'APPROVED' and buyerProfile.verificationStatus = 'VERIFIED'
-      const bp = user.buyerProfile as any;
-      const isApproved = user.status === 'APPROVED';
-      const isBuyerProfileVerified = bp?.verificationStatus === 'VERIFIED';
-      const isLegacyVerified = user.verificationStatus === 'VERIFIED';
-      const isVerified = isApproved || isBuyerProfileVerified || isLegacyVerified;
-
-      const allowedPaths = ['/onboarding', '/profile', '/support', '/products', '/blogs', '/notifications', '/wishlist'];
-      if (!isVerified && !allowedPaths.some(p => pathname.startsWith(p))) {
-        router.push('/onboarding');
-      }
-    }
-  }, [isLoading, isAuthenticated, user, router, pathname]);
+  }, [isLoading, isAuthenticated]);
 
   // If the user cancels the login modal (X, backdrop click) instead of logging
   // in, don't leave them stranded on the "redirecting to login" placeholder —
@@ -55,37 +66,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     window.addEventListener('login-modal-closed', handleDismissed);
     return () => window.removeEventListener('login-modal-closed', handleDismissed);
   }, [isAuthenticated, router]);
-
-  // Status Polling — poll every 10s while buyer is pending so approval reflects automatically
-  useEffect(() => {
-    if (!isAuthenticated || !user) return;
-
-    const bp = user.buyerProfile as any;
-    const isApproved = user.status === 'APPROVED' || user.verificationStatus === 'VERIFIED' || bp?.verificationStatus === 'VERIFIED';
-    const isRejected = user.status === 'REJECTED' || user.verificationStatus === 'REJECTED' || bp?.verificationStatus === 'REJECTED';
-    
-    // Notify if status changed to approved
-    const currentStatus = user.status || user.verificationStatus || bp?.verificationStatus;
-    if (isApproved && prevStatusRef.current !== currentStatus && (prevStatusRef.current === 'PENDING' || !prevStatusRef.current)) {
-      toast('Your account has been verified! You can now start ordering.', 'success');
-      // Force refresh profile data
-      queryClient.invalidateQueries({ queryKey: ['buyerProfile'] });
-      
-      // If on onboarding, redirect to products
-      if (pathname === '/onboarding') {
-        router.push('/');
-      }
-    }
-    prevStatusRef.current = currentStatus;
-
-    if (isApproved || isRejected) return;
-
-    const interval = setInterval(() => {
-      console.log('[AuthGuard] Polling status...');
-      refresh();
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [user, isAuthenticated, refresh, toast, pathname, router]);
 
   if (isLoading) {
     return (
@@ -116,10 +96,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) return null;
-
-  // If pending approval and not on onboarding, show pending view?
-  // User wants "Disable orders until status=1+".
-  // For now, redirecting to onboarding is fine, as onboarding can show "Awaiting approval".
 
   return <>{children}</>;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Search, HelpCircle, AlertCircle, ShieldCheck, Truck } from 'lucide-react';
+import { Search, HelpCircle, AlertCircle, Truck } from 'lucide-react';
 import { useCart, useSyncCart, useClearCart } from '@/hooks/useCart';
 import { useCreateOrder } from '@/hooks/useOrders';
 import { useCreatePayment } from '@/hooks/usePayments';
@@ -10,7 +10,6 @@ import { useToast } from '@/components/shared/Toast';
 import { usePlatformConfig } from '@/hooks/usePlatformConfig';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import AuthGuard from '@/components/shared/AuthGuard';
 import { useAuth, createRazorpayOrder, verifyRazorpayPayment, cancelOrder } from '@yukizi/api-client';
 import { track } from '@/lib/analytics/tracker';
@@ -71,14 +70,11 @@ export default function CheckoutPage() {
   }, []);
 
   const { user } = useAuth();
-  const router = useRouter();
-  const bp = user?.buyerProfile as any;
-  const isApproved = user?.status === 'APPROVED';
-  const isBuyerProfileVerified = bp?.verificationStatus === 'VERIFIED';
-  const isLegacyVerified = user?.verificationStatus === 'VERIFIED';
-  const isVerified = isApproved || isBuyerProfileVerified || isLegacyVerified;
-  const isPending = !isVerified && (user?.status === 'PENDING' || bp?.verificationStatus === 'PENDING' || user?.verificationStatus === 'PENDING');
-  const isRejected = user?.status === 'REJECTED' || bp?.verificationStatus === 'REJECTED' || user?.verificationStatus === 'REJECTED';
+  // The buyer KYC flags that used to live here are gone. They drove a
+  // full-page block further down that stopped anyone without an
+  // admin-approved GST/PAN submission from checking out — PharmaBag's B2B
+  // gate, inherited by the fork and wrong for a consumer store. See
+  // components/shared/AuthGuard.tsx for the rest of the removal.
 
   const { data: cartData, isLoading: isCartLoading } = useCart();
   const { data: profileData } = useBuyerProfile();
@@ -379,10 +375,7 @@ export default function CheckoutPage() {
           onError: (error: any) => {
             const status = error?.response?.status;
             const backendMsg = error?.response?.data?.message;
-            if (status === 403) {
-              toast(backendMsg || 'Please complete your KYC verification before placing orders.', 'error');
-              router.push('/onboarding');
-            } else if (status === 409) {
+            if (status === 409) {
               // The phone or email they typed belongs to another account, so
               // they have to change it before this can go through. A toast
               // disappears; this has to stay on screen next to the button
@@ -412,35 +405,12 @@ export default function CheckoutPage() {
     );
   }
 
-  if (!isVerified) {
-    return (
-      <AuthGuard>
-        <main style={{ minHeight: '100vh', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div style={{ maxWidth: 440, width: '100%', background: '#fff', border: '1px solid #e8e8e8', borderRadius: 12, padding: 36, textAlign: 'center' }}>
-            <div style={{ margin: '0 auto 20px', width: 56, height: 56, background: '#fefce8', border: '1px solid #fde047', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ShieldCheck size={26} color="#ca8a04" />
-            </div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>
-              {isPending ? 'Verification Under Review' : isRejected ? 'Verification Rejected' : 'Complete Verification'}
-            </h1>
-            <p style={{ fontSize: 14, color: '#666', marginBottom: 24, lineHeight: 1.5 }}>
-              {isPending
-                ? 'Your documents are being reviewed. You can place orders once approved.'
-                : isRejected
-                ? 'We could not verify your business. Please contact support.'
-                : 'Complete your KYC to start placing orders.'}
-            </p>
-            <Link
-              href={isRejected ? '/support' : '/onboarding'}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 48, background: '#1a1a1a', color: '#fff', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
-            >
-              {isPending ? 'Continue Browsing' : isRejected ? 'Contact Support' : 'Complete Verification'}
-            </Link>
-          </div>
-        </main>
-      </AuthGuard>
-    );
-  }
+  // The KYC interstitial that stood here is removed. It replaced the whole
+  // checkout with "Complete your KYC to start placing orders" for any buyer
+  // an admin had not approved, which on a consumer store meant every buyer.
+  // Nothing server-side ever enforced it: roles.guard checks role only, and
+  // the JWT strategy rejects just BLOCKED accounts, so this was a purely
+  // client-side wall in front of an API that was happy to take the order.
 
   const userName = address.firstName
     ? `${address.firstName} ${address.lastName}`.trim()
