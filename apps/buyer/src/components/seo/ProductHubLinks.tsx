@@ -166,7 +166,25 @@ export default function ProductHubLinks({ product }: ProductHubLinksProps) {
   return (
     <nav
       aria-label="Related collections"
-      className="mx-auto w-full max-w-4xl px-4 pb-6"
+      // `--nav-clearance`, not `pb-6`.
+      //
+      // This block renders as a SIBLING after <ProductPageClient />, outside
+      // the <main> that reserves room for the floating bottom bar — so it
+      // inherited none of that reservation and only had 24px of its own. That
+      // was survivable when this was a single row of collection chips; it is
+      // not now that it is up to eight rows.
+      //
+      // Measured on production at a 658px viewport: the bar sits at y=217-321
+      // (it lifts off the bottom edge to avoid the footer, so it is 104px
+      // tall and floating, not docked), while this nav's bottom edge was at
+      // 321 — leaving the last 104px, the "Read first" and "Collections"
+      // rows, underneath it.
+      //
+      // The variable is published by the navbar from the bar's real measured
+      // height plus 24px, which is why it is used here rather than another
+      // hardcoded guess; the 150px fallback only applies for the first frame
+      // before the navbar has measured itself.
+      className="mx-auto w-full max-w-4xl px-4 pb-[var(--nav-clearance,150px)]"
     >
       {groups.map((group) => {
         const links = group.links.filter((l) => {
