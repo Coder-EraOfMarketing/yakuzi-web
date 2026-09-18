@@ -7,7 +7,8 @@ import Navbar from '@/components/landing/Navbar';
 import { SkeletonList } from '@/components/shared/LoaderSkeleton';
 import { useToast } from '@/components/shared/Toast';
 import { useTickets, useCreateTicket } from '@/hooks/useTickets';
-import { useState } from 'react';
+import { useOrders } from '@/hooks/useOrders';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AuthGuard from '@/components/shared/AuthGuard';
 
@@ -16,18 +17,53 @@ export default function SupportPage() {
   const createTicket = useCreateTicket();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ subject: '', message: '' });
+  const [form, setForm] = useState({ subject: '', message: '', orderId: '' });
 
   const tickets = Array.isArray(data) ? data : ((data as any)?.data?.tickets ?? (data as any)?.tickets ?? (data as any)?.data ?? []);
+
+  // Recent orders, so a ticket can say what it is about. This is what lets the
+  // seller of the item be told a buyer has raised something — without it a
+  // complaint about a figure never reaches the person who sold it.
+  const { data: ordersData } = useOrders({ limit: 20 });
+  const orders: any[] = Array.isArray(ordersData)
+    ? ordersData
+    : ((ordersData as any)?.data?.orders ?? (ordersData as any)?.orders ?? (ordersData as any)?.data ?? []);
+
+  // Deep link from an order page: /support?orderId=… opens the form with that
+  // order already chosen, so "get help with this order" is one tap.
+  //
+  // Read from window rather than useSearchParams(): this page is prerendered,
+  // and useSearchParams() forces it out of static generation unless the whole
+  // thing is wrapped in a Suspense boundary. Reading it in an effect is
+  // client-only anyway, which is all this needs.
+  useEffect(() => {
+    const preselected = new URLSearchParams(window.location.search).get('orderId');
+    if (preselected) {
+      setForm((f) => ({ ...f, orderId: preselected }));
+      setShowForm(true);
+    }
+  }, []);
+
+  const orderLabel = (order: any) => {
+    const ref = String(order?.id ?? '').slice(0, 8).toUpperCase();
+    const placed = order?.createdAt
+      ? new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      : '';
+    return `#${ref}${placed ? ` · ${placed}` : ''}`;
+  };
 
   const handleCreateTicket = () => {
     if (!form.subject.trim() || !form.message.trim()) return;
     createTicket.mutate(
-      { subject: form.subject, message: form.message },
+      {
+        subject: form.subject,
+        message: form.message,
+        ...(form.orderId ? { orderId: form.orderId } : {}),
+      },
       {
         onSuccess: () => {
           setShowForm(false);
-          setForm({ subject: '', message: '' });
+          setForm({ subject: '', message: '', orderId: '' });
           toast('Ticket created successfully!', 'success');
         },
         onError: () => toast('Failed to create ticket', 'error'),
@@ -92,6 +128,26 @@ export default function SupportPage() {
                   </button>
                 </div>
                 <div className="grid grid-cols-1 gap-6">
+                  {orders.length > 0 && (
+                    <div>
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">
+                        Which order? <span className="normal-case tracking-normal font-medium text-gray-400">(optional)</span>
+                      </label>
+                      <select
+                        value={form.orderId}
+                        onChange={(e) => setForm((f) => ({ ...f, orderId: e.target.value }))}
+                        className="w-full px-5 py-3 bg-white/60 rounded-2xl border border-gray-200 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-lime-300"
+                      >
+                        <option value="">Not about a specific order</option>
+                        {orders.map((order: any) => (
+                          <option key={order.id} value={order.id}>{orderLabel(order)}</option>
+                        ))}
+                      </select>
+                      <p className="mt-2 text-xs text-gray-400">
+                        Telling us which order this is about gets it to the right people faster.
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-2">Subject</label>
                     <input

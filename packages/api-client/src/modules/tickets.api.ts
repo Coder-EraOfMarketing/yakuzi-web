@@ -32,6 +32,10 @@ export const TicketListResponseSchema = z.object({
 export const CreateTicketSchema = z.object({
   subject: z.string().min(1),
   message: z.string().min(1),
+  // Which order this is about, when the buyer picked one. Optional — plenty of
+  // tickets are general. When set, the API tells the sellers on that order
+  // that a buyer has raised something, which is otherwise unknowable.
+  orderId: z.string().uuid().optional(),
 });
 
 // ─── Types ──────────────────────────────────────────
