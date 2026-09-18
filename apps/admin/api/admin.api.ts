@@ -788,3 +788,40 @@ export async function deleteCustomOrder(id: string) {
   const { data } = await apiClient.delete<{ data: any }>(`/custom-orders/${id}`);
   return data.data;
 }
+
+// ─── Activity log ───────────────────────────────────────────────────────────
+// Read-only on purpose. There is no delete/clear/export-and-purge counterpart
+// here because the API exposes none — the log is append-only by design.
+
+export interface ActivityLogEntry {
+  id: string;
+  adminUserId: string | null;
+  adminName: string;
+  adminEmail: string | null;
+  section: string;
+  method: string;
+  path: string;
+  description: string;
+  targetType: string | null;
+  targetId: string | null;
+  targetLabel: string | null;
+  statusCode: number;
+  success: boolean;
+  changes: Record<string, unknown> | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export async function getActivityLog(params: Record<string, unknown> = {}) {
+  const { data } = await apiClient.get<{ data: ActivityLogEntry[]; meta: any }>(
+    "/admin/activity",
+    { params },
+  );
+  return data;
+}
+
+export async function getActivityFilters() {
+  const { data } = await apiClient.get<{ data: any }>("/admin/activity/filters");
+  return data.data;
+}
