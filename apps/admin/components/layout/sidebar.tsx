@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, Users, Package, ClipboardList, Settings, LogOut, Shield, ChevronLeft, FolderTree, CreditCard, Banknote, Ticket, Bell, UserCog, FileSpreadsheet, Image, Gift, Layout, MessageSquare, PackagePlus, Bot, Layers, Tag, Star, Globe, LayoutGrid, Newspaper, Truck, SlidersHorizontal } from "lucide-react";
+import { LayoutDashboard, Users, Package, ClipboardList, Settings, LogOut, Shield, ChevronLeft, FolderTree, CreditCard, Banknote, Ticket, Bell, UserCog, FileSpreadsheet, Image, Gift, Layout, MessageSquare, PackagePlus, Bot, Layers, Tag, Star, Globe, LayoutGrid, Newspaper, Truck, SlidersHorizontal, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can, firstAccessibleRoute, TabKey } from "@/lib/access";
 import { useAdminAccess } from "@/hooks/useAccess";
@@ -36,6 +36,7 @@ const NAV: { icon: any; label: string; href: string; tab?: TabKey }[] = [
   { icon: Ticket, label: "Tickets", href: "/tickets", tab: "tickets" },
   { icon: Star, label: "Reviews", href: "/reviews", tab: "reviews" },
   { icon: UserCog, label: "Admins", href: "/admins", tab: "admins" },
+  { icon: Activity, label: "Activity Log", href: "/activity", tab: "activity" },
   { icon: Bell, label: "Notifications", href: "/notifications", tab: "notifications" },
   { icon: Settings, label: "Settings", href: "/settings", tab: "settings" },
 ];

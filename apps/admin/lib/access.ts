@@ -34,7 +34,8 @@ export type TabKey =
   | "chatbot"
   | "notifications"
   | "admins"
-  | "settings";
+  | "settings"
+  | "activity";
 
 export interface AdminAccess {
   isSuper: boolean;
@@ -149,6 +150,19 @@ export const ACCESS_GROUPS: AccessGroup[] = [
       { key: "settings", label: "Settings" },
     ],
   },
+  {
+    // Its own group rather than a row inside System, because its levels are
+    // genuinely different: the activity log has no write actions, so "full"
+    // would be a control that does nothing. Offering none/view only keeps the
+    // grant screen honest about what can actually be given.
+    key: "audit",
+    label: "Audit",
+    supportsPartial: false,
+    levels: ["none", "view"],
+    fullMeans:
+      "See the activity log: every action other admins take in the panel. Entries can never be edited or deleted by anyone, including Super Admins.",
+    tabs: [{ key: "activity", label: "Activity Log" }],
+  },
 ];
 
 export const ALL_TAB_KEYS: TabKey[] = ACCESS_GROUPS.flatMap((group) =>
@@ -230,6 +244,7 @@ const ROUTE_TABS: [string, TabKey][] = [
   ["/chatbot", "chatbot"],
   ["/notifications", "notifications"],
   ["/admins", "admins"],
+  ["/activity", "activity"],
   ["/settings", "settings"],
 ];
 

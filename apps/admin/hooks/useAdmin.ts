@@ -24,6 +24,7 @@ import {
   getMarketingProducts, addMarketingProduct, removeMarketingProduct, uploadSettlementProof,
   getAdminCustomOrders, updateCustomOrderStatus, deleteCustomOrder,
   getProductRequests, updateProductRequestStatus,
+  getActivityLog, getActivityFilters,
 } from "@/api/admin.api";
 import { useAdminAuth } from "@/store";
 import { writeAccessToken } from "@yukizi/api-client";
@@ -757,5 +758,26 @@ export function useUpdateProductRequestStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => updateProductRequestStatus(id, status),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "product-requests"] }),
+  });
+}
+
+/**
+ * Activity log. `keepPreviousData` so paging and filtering do not blank the
+ * table between requests — a log that flickers empty reads as "nothing here".
+ */
+export function useActivityLog(params: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ["admin", "activity", params],
+    queryFn: () => getActivityLog(params),
+    placeholderData: (prev) => prev,
+  });
+}
+
+/** Admins and sections that actually appear in the log, for the dropdowns. */
+export function useActivityFilters() {
+  return useQuery({
+    queryKey: ["admin", "activity", "filters"],
+    queryFn: getActivityFilters,
+    staleTime: 60_000,
   });
 }
