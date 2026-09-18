@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { sendOtp, verifyOtp, registerBuyer, loginWithPassword as apiLoginWithPassword, loginWithGoogle as apiLoginWithGoogle, logout as apiLogout, getProfile, type User, type RegisterBuyerRequest } from '../modules/auth.api';
 import { getAccessToken, setAccessToken, setBaseURL } from '../api';
+import { readAccessToken, readRefreshToken } from '../token-storage';
 
 interface AuthContextValue {
   user: User | null;
@@ -39,8 +40,10 @@ export function AuthProvider({ children, baseURL }: { children: ReactNode; baseU
       }
 
       // Check localStorage directly for token
-      const storedToken = typeof window !== 'undefined' ? localStorage.getItem('pb_access_token') : null;
-      const storedRT = typeof window !== 'undefined' ? localStorage.getItem('pb_refresh_token') : null;
+      // Via token-storage so a session saved under the legacy `pb_*` keys is
+      // migrated forward rather than treated as "not logged in".
+      const storedToken = readAccessToken();
+      const storedRT = readRefreshToken();
       
       console.log('[Auth] Init - Checking localStorage:', {
         hasToken: !!storedToken,

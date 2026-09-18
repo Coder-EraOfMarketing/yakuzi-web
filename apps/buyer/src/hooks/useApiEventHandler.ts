@@ -6,6 +6,7 @@ import { onApiEvent } from '@yukizi/api-client';
 import { useToast } from '@/components/shared/Toast';
 import { localCart } from '@/lib/local-cart';
 import { useQueryClient } from '@tanstack/react-query';
+import { clearTokens } from '@yukizi/api-client';
 
 /**
  * Subscribes to global API events and shows toast notifications / handles redirects.
@@ -24,8 +25,9 @@ export function useApiEventHandler() {
         queryClient.invalidateQueries({ queryKey: ['cart'] });
         
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('pb_access_token');
-          localStorage.removeItem('pb_refresh_token');
+          // clearTokens() removes the current keys AND every legacy `pb_*`
+          // name, so a stale copy cannot resurrect a session after logout.
+          clearTokens();
         }
       }),
       onApiEvent('error:forbidden', (detail) => {
