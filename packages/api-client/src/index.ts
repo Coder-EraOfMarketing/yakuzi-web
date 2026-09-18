@@ -248,3 +248,13 @@ export {
   type HomepageSectionCategory,
   type HomepageSectionSubCategory,
 } from './modules/homepage-sections.api';
+
+// Browser token storage, with migration off the legacy `pb_*` key names.
+export {
+  readAccessToken,
+  readRefreshToken,
+  writeAccessToken,
+  writeRefreshToken,
+  clearTokens,
+  TOKEN_KEYS,
+} from './token-storage';

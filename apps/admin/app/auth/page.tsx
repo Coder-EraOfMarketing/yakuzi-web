@@ -7,6 +7,7 @@ import { Button, Input } from "@/components/ui";
 import { useAdminAuth } from "@/store";
 import { useSendAdminOtp, useVerifyAdminOtp } from "@/hooks/useAdmin";
 import toast from "react-hot-toast";
+import { clearTokens } from "@yukizi/api-client";
 
 export default function AdminAuthPage() {
   const [phone, setPhone] = useState("");
@@ -53,14 +54,13 @@ export default function AdminAuthPage() {
 
       if (role !== "ADMIN") {
         setStep("denied");
-        localStorage.removeItem("pb_access_token");
+        clearTokens();
         return;
       }
 
       if (user?.status === "PENDING") {
         setStep("denied");
-        localStorage.removeItem("pb_access_token");
-        localStorage.removeItem("pb_refresh_token");
+        clearTokens();
         return;
       }
 

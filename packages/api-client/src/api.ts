@@ -1,4 +1,10 @@
 import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import {
+  readAccessToken,
+  readRefreshToken,
+  writeAccessToken,
+  writeRefreshToken,
+} from './token-storage';
 
 // ─── API Event System ───────────────────────────────
 // Allows UI layers to subscribe to API events (e.g., show toasts, trigger logout)
@@ -22,34 +28,21 @@ function emitApiEvent(event: ApiEventType, detail?: { message?: string; status?:
 
 // ─── Token Storage ──────────────────────────────────
 
-// In-memory + LocalStorage token storage
-let accessToken: string | null = typeof window !== 'undefined' ? localStorage.getItem('pb_access_token') : null;
-let refreshTokenStored: string | null = typeof window !== 'undefined' ? localStorage.getItem('pb_refresh_token') : null;
-
-// Safe init to strip literal undefined strings saved by mistake
-if (refreshTokenStored === 'undefined' || refreshTokenStored === 'null') {
-  refreshTokenStored = null;
-  if (typeof window !== 'undefined') localStorage.removeItem('pb_refresh_token');
-}
+// In-memory + LocalStorage token storage.
+//
+// Reads go through token-storage.ts, which migrates the legacy `pb_*` keys
+// forward on first read so renaming them cannot sign anyone out. The
+// "undefined"/"null" string guard that used to live here moved there too.
+let accessToken: string | null = readAccessToken();
+let refreshTokenStored: string | null = readRefreshToken();
 
 export function setAccessToken(token: string | null, refreshToken?: string | null) {
   accessToken = token;
-  if (typeof window !== 'undefined') {
-    if (token) {
-      localStorage.setItem('pb_access_token', token);
-    } else {
-      localStorage.removeItem('pb_access_token');
-    }
-    
-    // Explicitly handle truthy checks to prevent stringified null/undefined
-    if (refreshToken !== undefined) {
-      refreshTokenStored = refreshToken;
-      if (refreshToken && refreshToken !== 'undefined' && refreshToken !== 'null') {
-        localStorage.setItem('pb_refresh_token', refreshToken);
-      } else {
-        localStorage.removeItem('pb_refresh_token');
-      }
-    }
+  writeAccessToken(token);
+  // `undefined` means "leave the refresh token alone"; `null` means clear it.
+  if (refreshToken !== undefined) {
+    refreshTokenStored = refreshToken;
+    writeRefreshToken(refreshToken);
   }
 }
 

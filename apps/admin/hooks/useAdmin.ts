@@ -26,6 +26,7 @@ import {
   getProductRequests, updateProductRequestStatus,
 } from "@/api/admin.api";
 import { useAdminAuth } from "@/store";
+import { writeAccessToken } from "@yukizi/api-client";
 
 // ─── Auth Hooks ──────────────────────────────────────
 
@@ -39,7 +40,7 @@ export function useVerifyAdminOtp() {
     onSuccess: (data) => {
       const inner = data.data ?? data;
       if (typeof window !== "undefined" && inner.accessToken && inner.user?.status !== "PENDING") {
-        localStorage.setItem("pb_access_token", inner.accessToken);
+        writeAccessToken(inner.accessToken);
       }
       if (inner.user && inner.user.status !== "PENDING") {
         setUser(inner.user);

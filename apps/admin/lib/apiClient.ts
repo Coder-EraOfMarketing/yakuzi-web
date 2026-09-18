@@ -1,6 +1,7 @@
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useAdminAuth } from "@/store";
+import { readAccessToken, clearTokens } from "@yukizi/api-client";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 
@@ -11,7 +12,10 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config: any) => {
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("pb_access_token") || localStorage.getItem("pb_token");
+    // readAccessToken() also migrates a session still stored under the
+    // legacy pb_access_token / pb_token names, so the rename cannot log
+    // an admin out mid-session.
+    const token = readAccessToken();
     if (token && config.headers) {
       const cleanToken = token.replace(/^(Bearer\s+)+/i, "");
       config.headers.Authorization = `Bearer ${cleanToken}`;
@@ -28,7 +32,7 @@ apiClient.interceptors.response.use(
 
     if (status === 401) {
       if (typeof window !== "undefined") {
-        localStorage.removeItem("pb_access_token");
+        clearTokens();
         useAdminAuth.getState().logout();
         window.location.href = "/auth";
       }

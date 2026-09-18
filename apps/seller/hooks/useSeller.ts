@@ -22,6 +22,7 @@ import {
   getExternalOrders } from "@/api/seller.api";
 import type { ProductPayload } from "@yukizi/utils";
 import { useSellerAuth } from "@/store";
+import { writeAccessToken } from "@/lib/tokenStorage";
 
 export function useSendOtp() { return useMutation({ mutationFn: sendOtp }); }
 
@@ -34,7 +35,7 @@ export function useVerifyOtp() {
       // Backend wraps response in { data: { accessToken, user } } — handle both nested and flat shapes
       const inner = (data as any).data ?? data;
       if (typeof window !== "undefined" && inner.accessToken) {
-        localStorage.setItem("pb_access_token", inner.accessToken);
+        writeAccessToken(inner.accessToken);
       }
       if (inner.user) setUser(inner.user);
       // Invalidate ALL seller queries so guard fetches fresh status
