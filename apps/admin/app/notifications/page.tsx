@@ -166,8 +166,8 @@ export default function NotificationsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { id: "ALL", label: "Everyone", desc: "All Buyers & Sellers" },
-                { id: "BUYER", label: "Buyers Only", desc: "Retailers & Pharmacies" },
-                { id: "SELLER", label: "Sellers Only", desc: "Distributors & Wholesalers" }
+                { id: "BUYER", label: "Buyers Only", desc: "Customers" },
+                { id: "SELLER", label: "Sellers Only", desc: "Marketplace sellers" }
               ].map((option) => (
                 <label 
                   key={option.id}
