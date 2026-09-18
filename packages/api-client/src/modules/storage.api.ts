@@ -18,14 +18,6 @@ export async function uploadKycDocument(file: File): Promise<{ key: string }> {
   return response.data.data ?? response.data;
 }
 
-export async function uploadDrugLicense(file: File): Promise<{ key: string }> {
-  const formData = new FormData();
-  formData.append('file', file);
-  const response = await api.post('/storage/drug-license', formData);
-
-  return response.data.data ?? response.data;
-}
-
 export async function uploadReviewImage(file: File): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append('file', file);

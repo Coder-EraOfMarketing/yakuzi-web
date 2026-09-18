@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "sw
 
 export const metadata: Metadata = {
   title: { default: "Yukizi Seller Portal", template: "%s | Yukizi Seller" },
-  description: "Manage your pharma products, orders, inventory, and payouts on Yukizi.",
+  description: "Manage your products, orders, inventory and payouts on Yukizi.",
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 

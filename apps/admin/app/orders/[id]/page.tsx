@@ -558,58 +558,9 @@ export default function OrderDetailPage() {
                   )}
                 </div>
 
-                {/* Drug Licenses */}
-                {(order.buyer?.buyerProfile?.drugLicenseNumber || order.buyer?.buyerProfile?.drugLicenseNumber2) && (
-                  <div className="pb-3 border-b border-border/30">
-                    <div className="flex items-center gap-2 mb-3">
-                      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <span className="text-xs font-bold text-foreground">Drug Licenses</span>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {order.buyer?.buyerProfile?.drugLicenseNumber && (
-                        <div className="flex justify-between items-end gap-2 bg-muted/30 rounded-lg p-2">
-                          <div>
-                            <p className="text-[9px] text-muted-foreground uppercase font-bold">License 1 (20B)</p>
-                            <p className="text-xs font-bold text-foreground">{order.buyer.buyerProfile.drugLicenseNumber}</p>
-                          </div>
-                          {order.buyer.buyerProfile.drugLicenseExpiry && (
-                            <div className="text-right">
-                              <p className="text-[8px] text-muted-foreground uppercase font-bold">Expiry</p>
-                              <p className={cn("text-[10px] font-bold", 
-                                new Date(order.buyer.buyerProfile.drugLicenseExpiry) < new Date() ? "text-red-500" : "text-emerald-500"
-                              )}>
-                                {new Date(order.buyer.buyerProfile.drugLicenseExpiry).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
-                      {order.buyer?.buyerProfile?.drugLicenseNumber2 && (
-                        <div className="flex justify-between items-end gap-2 bg-muted/30 rounded-lg p-2">
-                          <div>
-                            <p className="text-[9px] text-muted-foreground uppercase font-bold">License 2 (21B)</p>
-                            <p className="text-xs font-bold text-foreground">{order.buyer.buyerProfile.drugLicenseNumber2}</p>
-                          </div>
-                          {order.buyer.buyerProfile.drugLicenseExpiry2 && (
-                            <div className="text-right">
-                              <p className="text-[8px] text-muted-foreground uppercase font-bold">Expiry</p>
-                              <p className={cn("text-[10px] font-bold", 
-                                new Date(order.buyer.buyerProfile.drugLicenseExpiry2) < new Date() ? "text-red-500" : "text-emerald-500"
-                              )}>
-                                {new Date(order.buyer.buyerProfile.drugLicenseExpiry2).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Verification Documents */}
-                {(order.buyer?.buyerProfile?.document || order.buyer?.buyerProfile?.cancelCheck || order.buyer?.buyerProfile?.drugLicenseUrl || order.buyer?.buyerProfile?.drugLicenseUrl2) && (
+                {(order.buyer?.buyerProfile?.document || order.buyer?.buyerProfile?.cancelCheck) && (
                   <div className="pb-3 border-b border-border/30">
                     <div className="flex items-center gap-2 mb-3">
                       <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -620,18 +571,6 @@ export default function OrderDetailPage() {
                         <a href={order.buyer.buyerProfile.document} target="_blank" rel="noopener noreferrer" 
                           className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-lg text-[10px] font-bold text-primary transition-colors">
                           GST/PAN <ExternalLink className="h-3 w-3" />
-                        </a>
-                      )}
-                      {order.buyer?.buyerProfile?.drugLicenseUrl && (
-                        <a href={order.buyer.buyerProfile.drugLicenseUrl} target="_blank" rel="noopener noreferrer" 
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-lg text-[10px] font-bold text-primary transition-colors">
-                          DL 1 <ExternalLink className="h-3 w-3" />
-                        </a>
-                      )}
-                      {order.buyer?.buyerProfile?.drugLicenseUrl2 && (
-                        <a href={order.buyer.buyerProfile.drugLicenseUrl2} target="_blank" rel="noopener noreferrer" 
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-lg text-[10px] font-bold text-primary transition-colors">
-                          DL 2 <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
                       {order.buyer?.buyerProfile?.cancelCheck && (

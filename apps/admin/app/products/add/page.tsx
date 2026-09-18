@@ -225,13 +225,13 @@ export default function AddProductPage() {
               <h3 className="text-base font-semibold text-foreground">Inventory</h3>
               <div className="grid grid-cols-2 gap-4">
                 <Input
-                  label="Unit (e.g., Tablet, Bottle)"
-                  placeholder="Tablet"
+                  label="Unit (e.g., Piece, Box, Set)"
+                  placeholder="Piece"
                   value={form.unit}
                   onChange={e => setForm(f => ({ ...f, unit: e.target.value }))}
                 />
                 <Input
-                  label="Pack Size (e.g., 10x10)"
+                  label="Pack Size (e.g., Set of 6)"
                   placeholder="10x10"
                   value={form.packSize}
                   onChange={e => setForm(f => ({ ...f, packSize: e.target.value }))}
