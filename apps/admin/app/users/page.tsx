@@ -85,22 +85,6 @@ function BuyerDetails({ userId }: { userId: string }) {
           <p className="text-sm font-mono text-foreground">{bp.panNumber || "—"}</p>
         </div>
 
-        {bp.drugLicenseUrl && (
-          <SecureDocViewer 
-            url={typeof bp.drugLicenseUrl === 'object' ? bp.drugLicenseUrl.url : bp.drugLicenseUrl} 
-            label="License 1 (20B)" 
-            number={bp.drugLicenseNumber} 
-            expiry={bp.drugLicenseExpiry}
-          />
-        )}
-        {bp.drugLicenseUrl2 && (
-          <SecureDocViewer 
-            url={typeof bp.drugLicenseUrl2 === 'object' ? bp.drugLicenseUrl2.url : bp.drugLicenseUrl2} 
-            label="License 2 (21B)" 
-            number={bp.drugLicenseNumber2} 
-            expiry={bp.drugLicenseExpiry2}
-          />
-        )}
         <div className="space-y-1 sm:col-span-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase"><MapPin className="h-3 w-3" />Address</div>
           <p className="text-sm text-foreground">{

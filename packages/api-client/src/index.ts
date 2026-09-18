@@ -166,7 +166,6 @@ export {
 export {
   uploadPaymentProofFile,
   uploadKycDocument,
-  uploadDrugLicense,
   uploadReviewImage,
   getPresignedUrl,
 } from './modules/storage.api';

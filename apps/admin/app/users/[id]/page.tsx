@@ -276,22 +276,6 @@ export default function UserDetailPage() {
                   {sp.cancelCheck && (
                     <SecureDocViewer url={typeof sp.cancelCheck === 'object' ? sp.cancelCheck.url : sp.cancelCheck} label="Cancelled Cheque" />
                   )}
-                  {(sp?.drugLicenseUrl ?? user.drugLicenseUrl) && (
-                    <SecureDocViewer 
-                      url={sp?.drugLicenseUrl ?? user.drugLicenseUrl ?? ''} 
-                      label="License 1 (20B)" 
-                      number={sp?.drugLicenseNumber ?? user.drugLicenseNumber} 
-                      expiry={sp?.drugLicenseExpiry ?? user.drugLicenseExpiry}
-                    />
-                  )}
-                  {(sp?.drugLicenseUrl2 ?? user.drugLicenseUrl2) && (
-                    <SecureDocViewer 
-                      url={sp?.drugLicenseUrl2 ?? user.drugLicenseUrl2 ?? ''} 
-                      label="License 2 (21B)" 
-                      number={sp?.drugLicenseNumber2 ?? user.drugLicenseNumber2} 
-                      expiry={sp?.drugLicenseExpiry2 ?? user.drugLicenseExpiry2}
-                    />
-                  )}
                   {(() => {
                     // additionalDocuments may be on sp or at top-level user, and may be a JSON string
                     let docs: any = sp.additionalDocuments ?? (user as any).additionalDocuments;
@@ -323,22 +307,6 @@ export default function UserDetailPage() {
                 {bp?.phone && <InfoRow icon={Phone} label="Phone" value={bp.phone} mono />}
 
                 <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">
-                  {(bp?.drugLicenseUrl ?? user.drugLicenseUrl) && (
-                    <SecureDocViewer 
-                      url={bp?.drugLicenseUrl ?? user.drugLicenseUrl ?? ''} 
-                      label="License 1 (20B)" 
-                      number={bp?.drugLicenseNumber ?? user.drugLicenseNumber} 
-                      expiry={bp?.drugLicenseExpiry ?? user.drugLicenseExpiry}
-                    />
-                  )}
-                  {(bp?.drugLicenseUrl2 ?? user.drugLicenseUrl2) && (
-                    <SecureDocViewer 
-                      url={bp?.drugLicenseUrl2 ?? user.drugLicenseUrl2 ?? ''} 
-                      label="License 2 (21B)" 
-                      number={bp?.drugLicenseNumber2 ?? user.drugLicenseNumber2} 
-                      expiry={bp?.drugLicenseExpiry2 ?? user.drugLicenseExpiry2}
-                    />
-                  )}
                 </div>
               </div>
             )}
