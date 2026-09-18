@@ -52,9 +52,15 @@ export default function ProfilePage() {
               <AlertCircle className="w-10 h-10 text-red-400" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Profile Not Found</h2>
-            <p className="text-gray-500">Please complete your onboarding to view your profile.</p>
-            <Link href="/onboarding" className="px-8 py-3 bg-lime-300 text-gray-900 rounded-2xl font-bold hover:bg-lime-400 transition-colors shadow-lg">
-              Go to Onboarding
+            {/* Repointed away from /onboarding, which was the buyer KYC form
+                and has been removed. A profile row is created at signup on
+                both registration paths, so reaching this state now means the
+                profile genuinely failed to load rather than that the buyer
+                still owes us documents — hence "try again", not "go finish
+                signing up". */}
+            <p className="text-gray-500">We couldn&apos;t load your profile. Please try again.</p>
+            <Link href="/" className="px-8 py-3 bg-lime-300 text-gray-900 rounded-2xl font-bold hover:bg-lime-400 transition-colors shadow-lg">
+              Back to Home
             </Link>
           </motion.div>
         </div>
