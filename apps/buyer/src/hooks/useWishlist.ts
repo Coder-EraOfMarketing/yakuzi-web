@@ -8,7 +8,7 @@ import {
   mergeWishlist,
   useAuth,
 } from '@yukizi/api-client';
-import { localWishlist } from '@/lib/local-wishlist';
+import { localWishlist, WISHLIST_CHANGED_EVENT } from '@/lib/local-wishlist';
 import { track } from '@/lib/analytics/tracker';
 import { useEffect } from 'react';
 
@@ -33,8 +33,15 @@ export function useWishlist() {
     const handleStorage = () => {
       queryClient.invalidateQueries({ queryKey: ['wishlist'] });
     };
+    // This tab's own writes, and another tab's. Deliberately not a bare
+    // 'storage' dispatch: the cart fires one on every tap of +, and hearing
+    // those meant a saved-items request the buyer never asked for.
+    window.addEventListener(WISHLIST_CHANGED_EVENT, handleStorage);
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener(WISHLIST_CHANGED_EVENT, handleStorage);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, [queryClient]);
 
   return useQuery({
@@ -61,10 +68,16 @@ export function useWishlist() {
       try {
         return await getWishlist();
       } catch (e) {
-        // Signed in but the account list is unreachable — show whatever this
-        // browser still holds instead of an empty wishlist.
+        // Signed in but the account list is unreachable. Show whatever this
+        // browser still holds, and when it holds nothing, fail rather than
+        // answer with an empty list — an empty answer is indistinguishable
+        // from "nothing saved", and that is how a dropped request used to
+        // wipe the drawer to "Your saved items list is empty". Failing keeps
+        // the last good list on screen.
         console.error('Failed to fetch wishlist from the account', e);
-        return localWishlist.get();
+        const cached = localWishlist.get();
+        if (cached.items.length) return cached;
+        throw e;
       }
     },
     staleTime: 15 * 1000,

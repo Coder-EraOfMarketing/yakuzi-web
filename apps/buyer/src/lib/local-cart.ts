@@ -2,6 +2,9 @@ import { type Cart, type CartItem } from '@yukizi/api-client';
 
 const STORAGE_KEY = 'yukizi_local_cart';
 
+/** Fired in this tab whenever the local cart is written. */
+export const CART_CHANGED_EVENT = 'yukizi:cart-changed';
+
 /**
  * Highest quantity an item may be raised to, given whatever we know about its
  * availability. Returns Infinity when nothing is known, so callers that never
@@ -40,8 +43,12 @@ export const localCart = {
   set: (cart: Cart) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
-    // Trigger storage event for other tabs/components
-    window.dispatchEvent(new Event('storage'));
+    // Tell this tab the cart changed. Named for the cart rather than borrowing
+    // 'storage': that one is heard by everything holding local state, so every
+    // cart write also made the saved-items list refetch itself — a request per
+    // tap on +, and a chance to show an empty list if one of them fell over.
+    // The browser's own cross-tab 'storage' event is untouched.
+    window.dispatchEvent(new Event(CART_CHANGED_EVENT));
   },
 
   addItem: (itemData: any, replace: boolean = false) => {

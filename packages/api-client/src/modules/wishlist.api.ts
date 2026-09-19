@@ -15,6 +15,9 @@ export const WishlistItemSchema = z.object({
     images: z.array(z.string()).optional(),
     manufacturer: z.string().optional(),
     stock: z.number().optional(),
+    // The listing "Add" puts in the bag — a save is filed against a product,
+    // but a cart line is a listing.
+    bestListingId: z.string().nullable().optional(),
   }).optional(),
   createdAt: z.string().optional(),
 });
@@ -52,6 +55,7 @@ function mapBackendWishlist(responseData: any): Wishlist {
         images: Array.isArray(product.images) ? product.images : (raw.image ? [raw.image] : []),
         manufacturer: product.manufacturer || raw.manufacturer,
         stock: product.stock ?? raw.stock,
+        bestListingId: product.bestListingId ?? raw.bestListingId ?? null,
       },
       createdAt: raw.createdAt,
     };
@@ -65,16 +69,26 @@ function mapBackendWishlist(responseData: any): Wishlist {
 
 // ─── API Functions ──────────────────────────────────
 
+/**
+ * Only an answer counts as an empty list.
+ *
+ * Every failure used to be turned into `{ items: [] }`, which the storefront
+ * cannot tell apart from "nothing saved" — so one dropped request made the
+ * saved list read "Your saved items list is empty" and the caller's own
+ * fallback never ran, because nothing was ever thrown to it. A request that
+ * did not complete is raised; the caller decides what to show.
+ */
 export async function getWishlist(): Promise<Wishlist> {
   try {
     const { data } = await api.get('/wishlist');
     return mapBackendWishlist(data);
   } catch (err: any) {
+    // A buyer with nothing saved: an answer, and an empty one.
     if (err.response?.status === 404) {
       return { items: [], total: 0 };
     }
     console.error('[Wishlist] Error fetching wishlist:', err);
-    return { items: [], total: 0 };
+    throw err;
   }
 }
 
