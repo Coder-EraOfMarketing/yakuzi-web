@@ -73,7 +73,7 @@ export default function InvoicePage({ params }: { params: { orderId: string } })
     return (
       <main className="min-h-screen flex flex-col items-center justify-center gap-3 bg-white px-6 text-center">
         <p className="text-[#64748b]">{error}</p>
-        <Link href={`/orders/${params.orderId}`} className="text-[#593696] font-semibold underline underline-offset-2">
+        <Link href={`/orders?drawer=${params.orderId}`} className="text-[#593696] font-semibold underline underline-offset-2">
           Back to order
         </Link>
       </main>
@@ -102,7 +102,7 @@ export default function InvoicePage({ params }: { params: { orderId: string } })
 
         <div className="max-w-[900px] mx-auto mb-4 flex items-center justify-between no-print">
           <Link
-            href={`/orders/${params.orderId}`}
+            href={`/orders?drawer=${params.orderId}`}
             className="flex items-center gap-1.5 text-[#64748b] hover:text-[#593696] font-semibold text-sm"
           >
             <ChevronLeft className="w-4 h-4" /> Back to order

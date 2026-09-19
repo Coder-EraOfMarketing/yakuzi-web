@@ -102,7 +102,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
               onSuccess: () => {
                 toast('Order placed successfully!', 'success');
                 onClose();
-                router.push(`/orders/${orderId}?success=true`);
+                router.push(`/orders?drawer=${orderId}&success=true`);
               }
             });
           },
