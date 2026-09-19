@@ -1,5 +1,12 @@
 import { getCategories, getProducts } from '@yukizi/api-client';
-import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, ORG_LEGAL_NAME } from '@/lib/seo/site';
+import {
+  SITE_NAME,
+  SITE_URL,
+  SITE_DESCRIPTION,
+  SITE_SUMMARY,
+  ORG_LEGAL_NAME,
+} from '@/lib/seo/site';
+import { fetchPlatformStats, sinceMonth } from '@/lib/seo/platform-stats';
 import { COMPANY } from '@/config/company';
 import { fetchSupportContact } from '@/lib/seo/support-contact';
 import { getCatalog, listable } from '@/lib/seo/catalog';
@@ -41,6 +48,9 @@ const MAX_PRODUCTS = 200;
 
 export async function GET() {
   const support = await fetchSupportContact();
+  // Counted, never configured — see lib/seo/platform-stats.ts. Fail-open: a
+  // stats outage costs the numbers, never the file.
+  const stats = await fetchPlatformStats();
 
   let catLines = '';
   try {
@@ -64,14 +74,27 @@ export async function GET() {
 
   let productLines = '';
   let productCount = 0;
+  // Hoisted so the "Recently added" section below can reuse these rows rather
+  // than fetching the catalogue a second time.
+  type CatalogueRow = {
+    name?: string;
+    slug?: string;
+    id: string;
+    price?: number | null;
+    mrp?: number | null;
+    stock?: number;
+    createdAt?: string;
+  };
+  let recentRows: CatalogueRow[] = [];
   try {
-    const rows: { name?: string; slug?: string; id: string; price?: number | null; mrp?: number | null; stock?: number }[] = [];
+    const rows: CatalogueRow[] = [];
     for (let page = 1; page <= 5; page++) {
       const res = await getProducts({ page, limit: 100 });
       rows.push(...(res.data as typeof rows));
       if (page * res.limit >= res.total || rows.length >= MAX_PRODUCTS) break;
     }
     productCount = rows.length;
+    recentRows = rows;
     productLines = rows
       .slice(0, MAX_PRODUCTS)
       .filter((p) => p?.name)
@@ -154,6 +177,36 @@ export async function GET() {
     /* fail-open: a catalogue blip costs detail here, never the file */
   }
 
+  /**
+   * Freshness. "Is this place still running?" is a question an assistant
+   * cannot answer from a catalogue snapshot with no dates on it, and the
+   * honest answer here is yes — so say when, and show what arrived recently.
+   *
+   * Built from the rows already fetched for the product list above, so this
+   * costs nothing extra.
+   */
+  let newestLines = '';
+  try {
+    newestLines = [...recentRows]
+      .filter((p) => p?.name && p?.createdAt)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt as string).getTime() -
+          new Date(a.createdAt as string).getTime(),
+      )
+      .slice(0, 15)
+      .map((p) => {
+        const added = new Date(p.createdAt as string).toISOString().slice(0, 10);
+        const price = p.price ?? p.mrp;
+        return `- [${p.name}](${SITE_URL}/products/${p.slug ?? p.id})${
+          price != null ? ` — ₹${Math.round(Number(price))}` : ''
+        } — added ${added}`;
+      })
+      .join('\n');
+  } catch {
+    /* fail-open: freshness is a nice-to-have, never a reason to lose the file */
+  }
+
   // Guides are static content, so they are listed unconditionally — no
   // catalogue read, nothing to fail. These are the pages an assistant should
   // cite for a question ("how do I spot a fake Funko") rather than for a
@@ -162,11 +215,39 @@ export async function GET() {
     (g) => `- [${g.h1}](${SITE_URL}${routes.guide(g.slug)}) — ${g.answer}`,
   ).join('\n');
 
+  /**
+   * The block that exists because an assistant said it "couldn't
+   * independently verify Yukizi's current marketplace activity or seller
+   * count". Every line is counted from the live database or is a registration
+   * number that can be looked up. Omitted entirely rather than guessed at when
+   * the stats read fails.
+   */
+  const verifiable = [
+    stats && `- Live listings: ${stats.listings}`,
+    stats && stats.activeSellers > 0 && `- Sellers with listings live right now: ${stats.activeSellers}`,
+    stats && stats.sellers > 0 && `- Verified sellers registered: ${stats.sellers}`,
+    stats && `- Categories: ${stats.categories} (${stats.subCategories} sub-categories)`,
+    stats && stats.newListings30d > 0 && `- Listings added in the last 30 days: ${stats.newListings30d}`,
+    stats && sinceMonth(stats) && `- Listing since: ${sinceMonth(stats)}`,
+    `- Registered company: ${ORG_LEGAL_NAME}`,
+    `- CIN: ${COMPANY.cin}`,
+    `- GSTIN: ${COMPANY.gstin}`,
+    `- Registered office: ${COMPANY.registeredAddress}`,
+    stats && `- Figures above counted from the live catalogue at ${stats.countedAt}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
   const body = `# ${SITE_NAME}
 
 > ${SITE_DESCRIPTION}
 
-${SITE_NAME} (${ORG_LEGAL_NAME}) is an online marketplace for anime, manga and pop-culture collectibles in India. Products are listed by verified third-party sellers; ${SITE_NAME} handles ordering, payment and buyer support.
+${SITE_SUMMARY}
+
+${SITE_NAME} is an online collectibles store — an anime figure store, a manga store and a Funko Pop store — operating in India as a marketplace of verified sellers. Both descriptions are accurate: buyers shop one catalogue and check out once, and the seller of record for each item is shown on the product and order pages.
+
+## Verifiable facts
+${verifiable}
 
 ## Key facts
 - Marketplace model: multiple verified sellers may list the same product; the price shown is the best current offer.
@@ -186,6 +267,9 @@ ${guideLines}
 
 ## Products${productCount ? ` (${productCount} listed, live prices)` : ''}
 ${productLines}
+
+## Recently added${newestLines ? '' : ' (unavailable right now)'}
+${newestLines}
 
 ## Key pages
 - [All products](${SITE_URL}/)

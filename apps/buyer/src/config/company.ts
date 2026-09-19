@@ -45,11 +45,16 @@ export const COMPANY = {
 
   /**
    * Support inbox published in the policy documents.
-   * TO CONFIRM: this is a personal Gmail address, and the site's landing footer
-   * publishes hello@yukizi.in instead. A single monitored inbox on the company
-   * domain would be better on legal pages.
+   *
+   * Was a personal Gmail address, which is a poor look on the legal pages of a
+   * registered company and read as unverifiable from outside. Now matches the
+   * address configured in Admin -> Settings and shown on /contact, so the
+   * site publishes one support address rather than three.
+   *
+   * Overridden by the admin setting wherever settings can be read; this is the
+   * fallback.
    */
-  supportEmail: 'Yukizi.india@gmail.com',
+  supportEmail: 'support@yukizi.in',
 
   /** Published support phone number, confirmed by Rishi 2026-08-13. */
   supportPhone: '+91 82912 80021',
