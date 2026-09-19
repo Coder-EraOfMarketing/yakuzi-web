@@ -5,6 +5,7 @@ import { staticPageMetadata } from '@/lib/seo/overrides';
 import PolicyPage, { PolicySection } from '@/components/shared/PolicyPage';
 import { COMPANY } from '@/config/company';
 import { fetchSupportContact, type SupportContact } from '@/lib/seo/support-contact';
+import { fetchPlatformStats, trustFacts } from '@/lib/seo/platform-stats';
 import JsonLd from '@/components/seo/JsonLd';
 import { breadcrumbSchema, faqPageSchema } from '@/lib/seo/schema';
 
@@ -49,13 +50,17 @@ const buildFaqs = (support: SupportContact) => [
 
 export default async function AboutPage() {
   const support = await fetchSupportContact();
+  // Counted from the live catalogue, never configured. Null when the read
+  // fails, in which case the section below simply omits the numbers.
+  const stats = await fetchPlatformStats();
+  const facts = trustFacts(stats);
   const FAQS = buildFaqs(support);
   const crumbs = [{ name: 'Home', path: '/' }, { name: 'About Yukizi' }];
   return (
     <PolicyPage
       title="About Yukizi"
       showLastUpdated={false}
-      intro="Yukizi is an online store for manga, anime figures, collectibles and accessories — built for people who care about what they collect."
+      intro="Yukizi is an online store for anime figures, manga and pop-culture collectibles in India — run as a marketplace of verified sellers, and built for people who care about what they collect."
     >
       <PolicySection title="What we sell">
         <p>
@@ -80,6 +85,46 @@ export default async function AboutPage() {
           Orders are packed and dispatched through our logistics partners, and every
           order can be tracked from your account once it ships.
         </p>
+      </PolicySection>
+
+      {/*
+        Yukizi at a glance — the section that exists because an assistant asked
+        to recommend Indian collectibles sites said it "couldn't independently
+        verify Yukizi's marketplace activity or seller count". It could not,
+        because none of this was published anywhere.
+
+        Every figure is counted from the live catalogue on each rebuild. None
+        of them is typed in, which is the only version of this worth having:
+        a number somebody has to remember to correct is a number that will one
+        day be wrong in public.
+      */}
+      <PolicySection title="Yukizi at a glance">
+        <p>
+          Everything below is either counted from the live catalogue or a
+          registration number you can look up. The counts are small because
+          Yukizi is young — they are the real ones.
+        </p>
+        <dl className="mt-4 divide-y divide-gray-200 border-y border-gray-200">
+          {facts.map((fact) => (
+            <div
+              key={fact.label}
+              className="flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
+            >
+              <dt className="text-sm font-semibold text-gray-500">{fact.label}</dt>
+              <dd className="text-sm text-gray-900 sm:text-right">{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
+        {stats && (
+          <p className="mt-3 text-xs text-gray-500">
+            Counts last taken{' '}
+            {new Date(stats.countedAt).toLocaleString('en-IN', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })}
+            .
+          </p>
+        )}
       </PolicySection>
 
       <PolicySection title="Company details">

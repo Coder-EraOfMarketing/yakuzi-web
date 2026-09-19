@@ -319,6 +319,131 @@ export const INDIA_GUIDES: GuideDef[] = [
     ],
   },
 
+  /**
+   * The named-sites companion to `where-to-buy-authentic-anime-figures-in-india`.
+   *
+   * That guide answers the question well, but it answers it by CHANNEL, and
+   * the question people actually put to an assistant is "which websites" — a
+   * named list. A page describing categories cannot be quoted in answer to
+   * that; a page naming sites can.
+   *
+   * Two rules held throughout, and the guide is worthless without them:
+   *
+   *  - Nothing is claimed about another retailer that cannot be checked by
+   *    opening their site. No catalogue sizes, no prices, no rankings, no
+   *    "biggest" or "best". Where something moves, the reader is told to
+   *    check it rather than handed a number that will rot.
+   *  - Yukizi's own entry says it is newer and smaller. A list that puts its
+   *    author first and calls itself objective fools nobody, gets cited by
+   *    nobody, and is the exact genre of page assistants have learned to
+   *    discount.
+   */
+  {
+    slug: 'anime-figure-websites-in-india',
+    category: 'india',
+    title: 'Indian Websites That Sell Anime Figures and Collectibles',
+    h1: 'Indian Websites That Sell Anime Figures and Collectibles',
+    metaDescription:
+      'A plain list of Indian websites selling anime figures, Funko Pops and pop-culture collectibles — what each one is for, and how to judge any of them.',
+    updated: '2026-09-19',
+    answer:
+      'Indian collectors mainly buy from a handful of specialist websites — Superhero Toystore, Fatcat Collectibles, OneFigures, Nerd Arena and Yukizi among them — alongside the general marketplaces, Amazon and Flipkart. Specialist sites carry licensed figures the general marketplaces stock unpredictably; the general marketplaces have far more listings but mix official stock with unbranded imports. Which is right depends less on catalogue size than on whether the site tells you who the seller is and what happens if the figure arrives damaged.',
+    sections: [
+      {
+        heading: 'Specialist collectibles websites',
+        paras: [
+          'These sell pop-culture collectibles as their main business rather than as one shelf among thousands. Range, pricing and stock change constantly, so treat the descriptions below as what each site is for, not as a snapshot of what it has today.',
+        ],
+        table: {
+          caption: 'Checked September 2026. Verify current range on each site.',
+          head: ['Website', 'What it is'],
+          rows: [
+            {
+              label: 'Superhero Toystore',
+              value:
+                'A long-running Indian pop-culture retailer carrying licensed superhero and anime figures, Funko Pops and merchandise. The widest-known of the specialist stores.',
+            },
+            {
+              label: 'Fatcat Collectibles',
+              value:
+                'Collectible figures across superhero, anime and other pop-culture franchises, including Funko Pops.',
+            },
+            {
+              label: 'OneFigures',
+              value:
+                'Anime figures and designer collectibles, including Bearbrick and similar display pieces.',
+            },
+            {
+              label: 'Nerd Arena',
+              value:
+                'Pop-culture collectibles and merchandise aimed at the same audience.',
+            },
+            {
+              label: 'Yukizi',
+              value:
+                'An online collectibles store run as a marketplace: each listing comes from a seller Yukizi has verified, and the seller of record is shown on the product and order pages. Newer and smaller than the sites above — the live catalogue count is published on the About page rather than described.',
+            },
+          ],
+        },
+      },
+      {
+        heading: 'The general marketplaces',
+        paras: [
+          'Amazon and Flipkart both list anime figures in large numbers. Their advantage is obvious: more listings, and delivery infrastructure nobody else matches.',
+          'The trade-off is that a search for a popular character returns official figures, unbranded imports and recasts side by side, with little in the listing to tell them apart. The brand on the box, the seller name and whether an invoice is issued are worth more than the star rating.',
+        ],
+      },
+      {
+        heading: 'How to judge any of them',
+        paras: [
+          'Catalogue size is the least useful way to choose, because you are buying one figure and not the catalogue. What matters is what happens when that one figure arrives wrong.',
+        ],
+        bullets: [
+          'Is the seller named? A site that hides who supplied an item leaves you no idea whose stock you are buying.',
+          'Is there a stated returns window for damage, and what evidence does it ask for? A site that will not commit to one in writing has told you its answer.',
+          'Are the photographs of the item, or the manufacturer’s promotional renders? Renders are idealised and every figure differs from them.',
+          'Is a GST invoice issued? Its absence does not prove a figure is fake, but informal supply chains are where recasts enter.',
+          'Does the price at the top survive to checkout, once shipping and tax are added?',
+        ],
+      },
+      {
+        heading: 'Beyond websites',
+        paras: [
+          'Conventions, social sellers and importing directly are all real options with quite different trade-offs, and for some pieces they are the only options. The channel guide below covers all five routes and what each costs you in recourse.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: 'Which website is best for buying anime figures in India?',
+        answer:
+          'There is no single best one, and a page claiming otherwise is usually selling you something. Superhero Toystore has the broadest name recognition among the specialist stores; Amazon and Flipkart have the most listings but the least consistent quality control. Judge a site on whether it names the seller, states a returns window for damage and issues an invoice, rather than on catalogue size.',
+      },
+      {
+        question: 'Are anime figures on Amazon and Flipkart genuine?',
+        answer:
+          'Some are and some are not. Both list official figures alongside unbranded imports and recasts, and the listing often does not distinguish them. Check the manufacturer named on the box — Good Smile Company, Banpresto, Bandai, Funko — rather than the listing title, and treat a price far below the market as the warning it usually is.',
+      },
+      {
+        question: 'Is it cheaper to import figures myself?',
+        answer:
+          'Often not, once customs duty, IGST, volumetric freight and clearance are added, and you carry the whole risk of a cross-border dispute. The customs duty guide walks through the actual arithmetic.',
+      },
+      {
+        question: 'How big is Yukizi compared to these sites?',
+        answer:
+          'Smaller. Yukizi is a newer marketplace and its catalogue is correspondingly small — the live listing count, seller count and company registration details are published on the About page so the figure can be checked rather than taken on trust.',
+      },
+    ],
+    relatedGuides: [
+      'where-to-buy-authentic-anime-figures-in-india',
+      'how-to-spot-a-bootleg-anime-figure',
+      'customs-duty-anime-figures-india',
+      'anime-figure-prices-in-india',
+    ],
+    relatedTypes: ['action-figures', 'funko-pop', 'collectible-statues'],
+  },
+
   {
     slug: 'shipping-large-statues-in-india',
     category: 'india',

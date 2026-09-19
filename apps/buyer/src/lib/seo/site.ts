@@ -25,14 +25,59 @@ if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_SITE_URL) 
   console.warn(`[seo] NEXT_PUBLIC_SITE_URL="${process.env.NEXT_PUBLIC_SITE_URL}" is not a valid absolute URL (needs a scheme, e.g. https://) — falling back to ${DEV_SITE_URL}`);
 }
 export const SITE_NAME = 'Yukizi';
-export const SITE_TAGLINE = 'Anime, Manga & Collectibles Marketplace';
+
+/**
+ * How Yukizi describes itself, in the order that decides whether it gets
+ * shortlisted.
+ *
+ * This used to read "Anime, Manga & Collectibles Marketplace" — marketplace
+ * first, in the tagline, in llms.txt and in the schema. That is accurate, and
+ * it was costing shortlist places: asked for sites to buy collectibles from in
+ * India, an assistant answered "I've focused on stores that cater to
+ * collectors rather than general e-commerce marketplaces" and left Yukizi out.
+ * Not for being unknown — it had read the site and described it correctly —
+ * but for being filed under the wrong kind of thing.
+ *
+ * So: store first, in the words a buyer actually uses, with the marketplace
+ * model kept as the supporting fact it is. Both are true and both are still
+ * said; only the order changed. /about already led with "online store", so
+ * this also ends a contradiction between the two.
+ */
+export const SITE_TAGLINE = 'Buy Anime Figures & Collectibles Online in India';
 export const SITE_DESCRIPTION =
-  'Shop authentic anime figures, manga, action figures, trading cards and pop-culture collectibles from verified sellers across India on Yukizi.';
+  'Buy authentic anime figures, manga, action figures, Funko Pops and pop-culture collectibles online in India. Yukizi is an online collectibles store where every seller is verified before they can list.';
+
+/**
+ * The single sentence that answers "what is this?".
+ *
+ * Written to be quotable as-is: an assistant summarising Yukizi should be able
+ * to lift this line and be both accurate and useful. Store first, marketplace
+ * second, country stated.
+ */
+export const SITE_SUMMARY =
+  'Yukizi is an online store for anime figures, manga and pop-culture collectibles in India, run as a marketplace: every listing comes from a seller verified by Yukizi, and Yukizi handles ordering, payment and buyer support.';
 // Sourced from the single COMPANY config (not a second hardcoded copy) so
 // this can't drift from the legal name shown on the About/Contact/policy
 // pages again - it already had, silently, until 19 August 2026.
 export const ORG_LEGAL_NAME = COMPANY.legalName;
-export const SUPPORT_EMAIL = 'support@yukizi.com';
+/**
+ * The published support address.
+ *
+ * The site was shipping three of these at once: this constant said
+ * support@yukizi.com, config/company.ts fell back to a personal Gmail, and
+ * the admin-configured value — the one on /contact and the one the grievance
+ * officer uses — said support@yukizi.in. The homepage rendered two of them on
+ * the same page.
+ *
+ * Aligned to support@yukizi.in, which is what the owner actually configured.
+ * Contradictory contact details are exactly what "I couldn't verify this
+ * business" looks like from the outside, and this was the clearest example of
+ * it on the site.
+ *
+ * Anything that can read settings should still prefer the admin-set value;
+ * this is the fallback for the places that cannot (module scope, build time).
+ */
+export const SUPPORT_EMAIL = 'support@yukizi.in';
 // 1200x630 branded share card (logo + mascot + tagline). The old value was
 // the raw square logo, which platforms crop/squish in link previews.
 export const DEFAULT_OG_IMAGE = '/og-default.png';

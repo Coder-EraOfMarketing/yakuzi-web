@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { SUPPORT_EMAIL } from '@/lib/seo/site';
 import Link from 'next/link';
 import { ChevronLeft, Printer, Loader2, Mail, ShieldCheck, Package, Headphones, Lock } from 'lucide-react';
 import { getOrderInvoices, emailOrderInvoices, type OrderInvoice } from '@yukizi/api-client';
@@ -275,7 +276,7 @@ export default function InvoicePage({ params }: { params: { orderId: string } })
               <div className="mt-8 grid grid-cols-4 gap-4 rounded-lg border border-[#e2e8f0] p-4">
                 <Assurance icon={<ShieldCheck className="w-4 h-4" />} title="100% Authentic Products" body="Sourced directly from trusted sellers." />
                 <Assurance icon={<Package className="w-4 h-4" />} title="Hassle-free Returns" body="Easy returns & refunds as per Yukizi policy." />
-                <Assurance icon={<Headphones className="w-4 h-4" />} title="Need Help?" body="Email support@yukizi.com" />
+                <Assurance icon={<Headphones className="w-4 h-4" />} title="Need Help?" body={`Email ${SUPPORT_EMAIL}`} />
                 <Assurance icon={<Lock className="w-4 h-4" />} title="Secure Payments" body="Your transactions are safe and secure." />
               </div>
             </div>
@@ -291,7 +292,7 @@ export default function InvoicePage({ params }: { params: { orderId: string } })
               </p>
               <p className="text-xs opacity-90 mt-1">
                 Questions about this order:{' '}
-                <a href="mailto:support@yukizi.com" className="underline">support@yukizi.com</a> | yukizi.com
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">{SUPPORT_EMAIL}</a> | yukizi.com
               </p>
               <p className="text-xs opacity-75 text-center mt-4">
                 This is a system generated invoice and does not require signature.

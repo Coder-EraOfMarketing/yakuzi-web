@@ -1,5 +1,12 @@
 import { COMPANY } from '@/config/company';
-import { SITE_NAME, SITE_URL, ORG_LEGAL_NAME, SUPPORT_EMAIL, absoluteUrl } from './site';
+import {
+  SITE_NAME,
+  SITE_URL,
+  ORG_LEGAL_NAME,
+  SITE_SUMMARY,
+  SUPPORT_EMAIL,
+  absoluteUrl,
+} from './site';
 
 // `contact` lets the homepage pass the admin-set support details through, so
 // the structured data and the contact page can never publish different
@@ -10,13 +17,37 @@ export function organizationSchema(
 ) {
   return {
     '@context': 'https://schema.org',
-    '@type': 'Organization',
+    // Two types, because Yukizi is genuinely both and was only declaring one.
+    // `Organization` alone leaves a machine to infer what kind of thing this
+    // is, and it was inferring "marketplace" from the copy and filing the site
+    // away from questions about where to BUY something. OnlineStore is the
+    // schema.org type for exactly that, and stating it is cheaper and more
+    // reliable than hoping the prose carries it.
+    '@type': ['Organization', 'OnlineStore'],
     '@id': `${SITE_URL}/#organization`,
     name: SITE_NAME,
+    alternateName: 'Yukizi India',
     legalName: ORG_LEGAL_NAME,
+    description: SITE_SUMMARY,
     url: SITE_URL,
     logo: absoluteUrl('/YukiziLogo.png'),
+    image: absoluteUrl('/YukiziLogo.png'),
     email: SUPPORT_EMAIL,
+    // The registration numbers. These are the difference between a site that
+    // claims to be a business and one that can be looked up in a register —
+    // published on the policy pages already, but nowhere a machine would read.
+    identifier: [
+      { '@type': 'PropertyValue', propertyID: 'CIN', value: COMPANY.cin },
+      { '@type': 'PropertyValue', propertyID: 'GSTIN', value: COMPANY.gstin },
+    ],
+    taxID: COMPANY.gstin,
+    vatID: COMPANY.gstin,
+    // Where this sells and in what currency, stated rather than inferred from
+    // the prices happening to carry a rupee sign.
+    areaServed: { '@type': 'Country', name: 'India' },
+    currenciesAccepted: 'INR',
+    paymentAccepted: 'Credit Card, Debit Card, UPI, Net Banking',
+    knowsLanguage: ['en', 'hi'],
     // Real, published details only (the same values the Contact page shows) —
     // they let Google/LLMs pin the entity to a concrete registered business.
     address: {
