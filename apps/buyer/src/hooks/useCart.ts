@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCart, addToCart, updateCartItem, removeCartItem, clearCart, useAuth, validateProductIds } from '@yukizi/api-client';
-import { localCart } from '@/lib/local-cart';
+import { localCart, CART_CHANGED_EVENT } from '@/lib/local-cart';
 import { track } from '@/lib/analytics/tracker';
 import { useEffect, useState } from 'react';
 
@@ -14,8 +14,13 @@ export function useCart() {
     const handleStorage = () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     };
+    // This tab's own writes, and another tab's.
+    window.addEventListener(CART_CHANGED_EVENT, handleStorage);
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener(CART_CHANGED_EVENT, handleStorage);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, [queryClient]);
 
   return useQuery({
@@ -38,7 +43,7 @@ export function useCart() {
         // without the buyer needing to do anything.
         //
         // Only actually write back (and only then) when something changed. This
-        // isn't just an optimization: localCart.set() dispatches a 'storage' event
+        // isn't just an optimization: localCart.set() dispatches a cart-changed event
         // that this hook's own effect listens for and turns into
         // queryClient.invalidateQueries — an unconditional write on every poll
         // would retrigger this same queryFn immediately, forever (set -> storage

@@ -71,13 +71,14 @@ export default function WishlistPage() {
           </div>
 
           {/* Content */}
-          {isLoading ? (
+          {isLoading && items.length === 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
                 <SkeletonCard key={i} />
               ))}
             </div>
-          ) : isError ? (
+          ) : /* A failed refresh keeps the last good list rather than
+                 replacing it with an error. */ isError && items.length === 0 ? (
             <EmptyState
               icon={Heart}
               title="Unable to load wishlist"

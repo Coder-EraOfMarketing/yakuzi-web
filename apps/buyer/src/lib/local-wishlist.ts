@@ -2,6 +2,9 @@ import { type Wishlist, type WishlistItem } from '@yukizi/api-client';
 
 const STORAGE_KEY = 'yukizi_local_wishlist';
 
+/** Fired in this tab whenever the local saved-items list is written. */
+export const WISHLIST_CHANGED_EVENT = 'yukizi:wishlist-changed';
+
 export const localWishlist = {
   get: (): Wishlist => {
     if (typeof window === 'undefined') return { items: [], total: 0 };
@@ -21,7 +24,10 @@ export const localWishlist = {
   set: (wishlist: Wishlist) => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(wishlist));
-    window.dispatchEvent(new Event('storage'));
+    // Named for the saved list rather than borrowing 'storage', which every
+    // other local store also listens to. The browser's own cross-tab
+    // 'storage' event is untouched.
+    window.dispatchEvent(new Event(WISHLIST_CHANGED_EVENT));
   },
 
   addItem: (productData: any) => {
