@@ -40,7 +40,7 @@ export default function PaymentIdPage({ params }: { params: { orderId: string } 
       
       // Auto redirect after 2 seconds
       setTimeout(() => {
-        router.push(`/orders/${params.orderId}`);
+        router.push(`/orders?drawer=${params.orderId}`);
       }, 2000);
     } catch (err: any) {
       console.error('[Payment] Upload flow failed:', err);
@@ -76,9 +76,12 @@ export default function PaymentIdPage({ params }: { params: { orderId: string } 
           className="space-y-6 sm:space-y-8"
         >
           <div className="flex items-center justify-between">
-            <Link href="/payments" className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors font-bold">
+            {/* Back to the order being paid for, which is where Pay Now came
+                from — not the payment history, which is a different place
+                than the one the buyer left. */}
+            <Link href={`/orders?drawer=${params.orderId}`} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors font-bold">
               <ChevronLeft className="w-5 h-5" />
-              Back to Payments
+              Back to order
             </Link>
           </div>
 
@@ -249,7 +252,7 @@ export default function PaymentIdPage({ params }: { params: { orderId: string } 
                     We&apos;ll notify you once it&apos;s confirmed.
                   </p>
                   <Link 
-                    href={`/orders/${params.orderId}`}
+                    href={`/orders?drawer=${params.orderId}`}
                     className="px-12 py-4 bg-gray-900 text-white rounded-full font-bold shadow-xl shadow-black/20 hover:bg-black transition-colors inline-block"
                   >
                     View Order Details
