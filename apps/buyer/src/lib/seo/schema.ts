@@ -45,6 +45,40 @@ export function organizationSchema(
     // Where this sells and in what currency, stated rather than inferred from
     // the prices happening to carry a rupee sign.
     areaServed: { '@type': 'Country', name: 'India' },
+    /**
+     * Shipping and returns, on the Organization node — which means on every
+     * page, including the homepage.
+     *
+     * Asked "does Yukizi ship across India?", an assistant replied that it
+     * "couldn't verify Yukizi's current shipping policy from an official
+     * source". /shipping said so plainly and was crawlable; the assistant had
+     * fetched the homepage, which said nothing about delivery at all. A site
+     * gets one fetch, and it is rarely the page you would have picked.
+     *
+     * Both mirror the policy pages exactly. `merchantReturnDays` and the
+     * delivery window are read from COMPANY, so a policy change cannot leave
+     * the structured data quietly contradicting the page.
+     */
+    hasMerchantReturnPolicy: {
+      '@type': 'MerchantReturnPolicy',
+      applicableCountry: 'IN',
+      returnPolicyCategory:
+        'https://schema.org/MerchantReturnFiniteReturnWindow',
+      merchantReturnDays: COMPANY.returnWindowDays,
+      url: absoluteUrl('/returns'),
+    },
+    // Free shipping, anywhere in India. Stated as a zero rate rather than
+    // described in prose, because "free" in a sentence is not a number a
+    // machine can act on.
+    shippingDetails: {
+      '@type': 'OfferShippingDetails',
+      shippingRate: { '@type': 'MonetaryAmount', value: '0', currency: 'INR' },
+      shippingDestination: {
+        '@type': 'DefinedRegion',
+        addressCountry: 'IN',
+      },
+      url: absoluteUrl('/shipping'),
+    },
     currenciesAccepted: 'INR',
     paymentAccepted: 'Credit Card, Debit Card, UPI, Net Banking',
     knowsLanguage: ['en', 'hi'],

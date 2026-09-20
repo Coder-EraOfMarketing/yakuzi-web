@@ -251,8 +251,11 @@ ${verifiable}
 
 ## Key facts
 - Marketplace model: multiple verified sellers may list the same product; the price shown is the best current offer.
-- Ships across India. Delivery is tracked from dispatch.
-- Returns: accepted for damaged or incorrect deliveries, reported within 3 days of delivery with photographs. Change-of-mind returns are not accepted.
+- Ships to serviceable pin codes across India, including smaller towns. No international shipping at present.
+- Shipping is free on all eligible orders across India; no shipping charge is added at checkout unless the product page says otherwise.
+- Orders are processed within 24-48 hours of payment; estimated delivery is ${COMPANY.deliveryWindow} from dispatch, and every order is tracked.
+- Returns: accepted for damaged, incorrect or materially different items, reported within ${COMPANY.returnWindowDays} days of delivery with photographs. Change-of-mind returns are not accepted.
+- Refunds go back to the original payment method; banks typically take 3-7 working days to show them.
 - Seller verification: every seller is verified before they can list.
 - Payments: online payment at checkout.
 - Support: ${support.email}${support.phone ? ` / ${support.phone}` : ''}
