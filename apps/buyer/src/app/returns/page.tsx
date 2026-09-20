@@ -3,7 +3,54 @@ import { absoluteUrl } from '@/lib/seo/site';
 import { staticPageMetadata } from '@/lib/seo/overrides';
 import PolicyPage, { PolicySection } from '@/components/shared/PolicyPage';
 import { COMPANY } from '@/config/company';
-import { fetchSupportContact } from '@/lib/seo/support-contact';
+import { fetchSupportContact, type SupportContact } from '@/lib/seo/support-contact';
+import Breadcrumbs from '@/components/seo/Breadcrumbs';
+import JsonLd from '@/components/seo/JsonLd';
+import { breadcrumbSchema, faqPageSchema } from '@/lib/seo/schema';
+
+/**
+ * The same gap the shipping page had: a complete policy, in prose, with no
+ * structured data — so "can I return this?" could not be answered from it
+ * without reading and interpreting seven sections.
+ *
+ * Returns policy is one of the two things a buyer checks before trusting an
+ * unfamiliar shop (the other is whether it ships to them), and it is the
+ * question an assistant is most often asked on their behalf. Worth being
+ * answerable rather than merely correct.
+ *
+ * Every answer restates something stated elsewhere on this page. Note what is
+ * NOT softened: change-of-mind returns are not accepted, and saying so plainly
+ * is better for everyone than letting a buyer discover it after ordering.
+ */
+const buildReturnsFaqs = (support: SupportContact) => [
+  {
+    question: 'Does Yukizi accept returns?',
+    answer: `Yes, for damaged, incorrect or materially different items. A request must be raised within ${COMPANY.returnWindowDays} days of delivery with photographic proof. Change-of-mind returns are not accepted.`,
+  },
+  {
+    question: 'How long do I have to report a problem with an order?',
+    answer: `${COMPANY.returnWindowDays} days from the date of delivery. Requests raised after that window cannot be processed.`,
+  },
+  {
+    question: 'What proof does Yukizi need for a return?',
+    answer:
+      'Clear photographs of the damaged or incorrect item, along with the packaging it arrived in. An unboxing video is the strongest evidence for a damaged delivery and is worth recording for anything fragile.',
+  },
+  {
+    question: 'Can I return a figure because I changed my mind?',
+    answer:
+      'No. Returns are accepted for damaged, incorrect or materially different items only, not for change of mind.',
+  },
+  {
+    question: 'How long does a Yukizi refund take?',
+    answer:
+      'Once a return is verified and approved, the refund is issued to the original payment method. Banks typically take 3 to 7 working days to show it on a statement, and Yukizi emails a confirmation with a reference when it is sent.',
+  },
+  {
+    question: 'Who do I contact about a return?',
+    answer: `Email ${support.email} or call ${support.phone} (${COMPANY.supportHours}).`,
+  },
+];
 
 const derivedMetadata: Metadata = {
   title: 'Return & Refund Policy',
@@ -18,6 +65,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ReturnsPage() {
   const support = await fetchSupportContact();
+  const FAQS = buildReturnsFaqs(support);
+  const crumbs = [{ name: 'Home', path: '/' }, { name: 'Return & Refund Policy' }];
   return (
     <PolicyPage
       title="Return & Refund Policy"
@@ -111,6 +160,18 @@ export default async function ReturnsPage() {
           </a>
         </p>
       </PolicySection>
+
+      <PolicySection title="Frequently asked questions">
+        {FAQS.map((f) => (
+          <div key={f.question}>
+            <p className="font-semibold text-gray-900">{f.question}</p>
+            <p>{f.answer}</p>
+          </div>
+        ))}
+      </PolicySection>
+
+      <Breadcrumbs items={crumbs} className="mb-6" />
+      <JsonLd data={[breadcrumbSchema(crumbs), faqPageSchema(FAQS)]} />
     </PolicyPage>
   );
 }
