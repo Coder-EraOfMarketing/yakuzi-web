@@ -46,15 +46,15 @@ export const COMPANY = {
   /**
    * Support inbox published in the policy documents.
    *
-   * Was a personal Gmail address, which is a poor look on the legal pages of a
-   * registered company and read as unverifiable from outside. Now matches the
-   * address configured in Admin -> Settings and shown on /contact, so the
-   * site publishes one support address rather than three.
+   * Must be an address that actually receives mail. yukizi.in is registered
+   * but suspended pending WHOIS verification — no nameservers, no MX, nothing
+   * resolves — so support@yukizi.in bounces and always has. yukizi.com has
+   * live Google Workspace MX records.
    *
    * Overridden by the admin setting wherever settings can be read; this is the
-   * fallback.
+   * fallback for the places that cannot read settings.
    */
-  supportEmail: 'support@yukizi.in',
+  supportEmail: 'support@yukizi.com',
 
   /** Published support phone number, confirmed by Rishi 2026-08-13. */
   supportPhone: '+91 82912 80021',
@@ -70,7 +70,12 @@ export const COMPANY = {
    */
   grievanceOfficer: {
     name: 'Rupali Salvekar',
-    email: 'support@yukizi.in',
+    // Was support@yukizi.in, which does not resolve and cannot receive mail —
+    // see supportEmail above. Publishing a grievance contact that bounces is
+    // not only unhelpful, it defeats the purpose of the Consumer Protection
+    // (E-Commerce) Rules requirement this field exists to satisfy. Moved to
+    // the domain that has working mail.
+    email: 'support@yukizi.com',
   },
 
   /** TO CONFIRM: courts of which city have jurisdiction under the Terms. */

@@ -63,21 +63,30 @@ export const ORG_LEGAL_NAME = COMPANY.legalName;
 /**
  * The published support address.
  *
- * The site was shipping three of these at once: this constant said
- * support@yukizi.com, config/company.ts fell back to a personal Gmail, and
- * the admin-configured value — the one on /contact and the one the grievance
- * officer uses — said support@yukizi.in. The homepage rendered two of them on
- * the same page.
+ * The site was shipping three of these at once, so they were consolidated onto
+ * support@yukizi.in — the value configured in admin and shown on /contact.
+ * That was the wrong one to consolidate on, and this corrects it.
  *
- * Aligned to support@yukizi.in, which is what the owner actually configured.
- * Contradictory contact details are exactly what "I couldn't verify this
- * business" looks like from the outside, and this was the clearest example of
- * it on the site.
+ * yukizi.in does not resolve. The domain is registered but suspended pending
+ * WHOIS verification, so it has no nameservers, no A record and no MX record
+ * of any kind. Mail sent to support@yukizi.in bounces; it has never been
+ * deliverable. yukizi.com, by contrast, has live Google Workspace MX records
+ * and receives mail today.
  *
- * Anything that can read settings should still prefer the admin-set value;
- * this is the fallback for the places that cannot (module scope, build time).
+ * Checked 20 September 2026:
+ *   yukizi.com MX -> aspmx.l.google.com (+4 alternates), NOERROR
+ *   yukizi.in  MX -> NXDOMAIN, no records at all
+ *
+ * The rule this encodes: publish the address that answers, not the address
+ * somebody typed into a settings box. A support address that bounces is worse
+ * than a slightly inconsistent one, because the customer thinks they have
+ * asked for help and nobody has.
+ *
+ * NOTE: the admin-set value in Platform Settings still overrides this for
+ * every surface that reads settings (/contact, policy pages, llms.txt). It
+ * must be changed there too, or those pages keep publishing the dead address.
  */
-export const SUPPORT_EMAIL = 'support@yukizi.in';
+export const SUPPORT_EMAIL = 'support@yukizi.com';
 // 1200x630 branded share card (logo + mascot + tagline). The old value was
 // the raw square logo, which platforms crop/squish in link previews.
 export const DEFAULT_OG_IMAGE = '/og-default.png';
