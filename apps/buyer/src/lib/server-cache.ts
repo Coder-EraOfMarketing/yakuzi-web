@@ -6,6 +6,7 @@ import {
   getHomepageSections,
   getCategories,
 } from '@yukizi/api-client';
+import { fetchProductsOrThrow } from './products-fetch';
 
 // Cross-request TTL caches for the anonymous storefront's server fetches.
 //
@@ -22,6 +23,11 @@ import {
 //   call sites' existing try/catch behaviour is byte-identical to today.
 //   For the same reason the call-site `.catch()`s must stay OUTSIDE these
 //   wrappers — moving a catch inside would cache the empty fallback.
+//   getProducts defeated this on its own: it never rejects, it resolves to
+//   { data: [], failed: true }, so a failure was a fulfilled value and was
+//   cached like any other — one lost request, then two minutes of
+//   "Something went wrong" for everyone. fetchProductsOrThrow restores the
+//   invariant by retrying and then genuinely rejecting.
 // - The serialized arguments are part of the cache key, so every distinct
 //   filter/search combination caches separately and can never bleed into
 //   another URL's results.
@@ -31,7 +37,8 @@ import {
 //   how long an admin's coming-soon toggle takes to appear.
 
 export const getProductsCached = unstable_cache(
-  (params: Parameters<typeof getProducts>[0]) => getProducts(params),
+  (params: Parameters<typeof getProducts>[0]) =>
+    fetchProductsOrThrow(params, 'storefront:getProducts'),
   ['storefront:getProducts'],
   { revalidate: 120 },
 );
