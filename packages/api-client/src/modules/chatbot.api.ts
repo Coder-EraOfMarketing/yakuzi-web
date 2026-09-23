@@ -22,6 +22,16 @@ export interface ChatResponse {
   thinkingTimeMs?: number;
 }
 
+/**
+ * The shared client times out at 30s, which is right for ordinary REST calls and
+ * far too short for this one: a thinking-enabled Gemini turn that also runs a
+ * product or order lookup regularly passes it. Axios then aborts with no
+ * response, so the widget showed "Sorry, I encountered an error processing your
+ * request." on exactly the questions worth asking, while the server kept working
+ * on a reply nobody would ever see.
+ */
+const CHAT_TIMEOUT_MS = 120000;
+
 export async function sendChatMessageFull(
   message: string, 
   history: ChatMessage[] = [],
@@ -35,7 +45,7 @@ export async function sendChatMessageFull(
       attachments,
       thinkingEnabled: options?.thinkingEnabled ?? true,
       thinkingBudget: options?.thinkingBudget ?? 2048,
-    });
+    }, { timeout: CHAT_TIMEOUT_MS });
     return data;
   } catch (err) {
     console.warn('[Chatbot] Failed to send message:', err);
