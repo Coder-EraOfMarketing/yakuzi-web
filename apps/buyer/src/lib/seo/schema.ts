@@ -1,4 +1,5 @@
 import { COMPANY } from '@/config/company';
+import { realManufacturer } from './manufacturer';
 import {
   SITE_NAME,
   SITE_URL,
@@ -162,6 +163,7 @@ export function productSchema(p: {
     if (url && !images.includes(url)) images.push(url);
   }
   const price = p.price ?? p.mrp;
+  const brand = realManufacturer(p.manufacturer);
   const url = absoluteUrl(`/products/${p.slug ?? p.id}`);
   const hasSellers = p.hasSellers ?? ((p.listings?.length ?? 0) > 0 || (p.sellerCount ?? 0) > 0);
   return {
@@ -172,7 +174,11 @@ export function productSchema(p: {
     url,
     ...(images.length ? { image: images } : {}),
     ...(p.description ? { description: p.description } : {}),
-    ...(p.manufacturer ? { brand: { '@type': 'Brand', name: p.manufacturer } } : {}),
+    // realManufacturer, not a truthiness check: "Unknown" is truthy and sits on
+    // 77 of 85 live products, so this published a brand that does not exist on
+    // nine pages in ten. An absent brand is an open question; a stated one is a
+    // claim, and Google matches products on it.
+    ...(brand ? { brand: { '@type': 'Brand', name: brand } } : {}),
     ...(p.category?.name ? { category: p.category.name } : {}),
     // Identifiers let Google reconcile this page with the Merchant feed as
     // ONE product instead of two unlinked descriptions of the same item.
