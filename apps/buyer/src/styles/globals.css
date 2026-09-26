@@ -635,6 +635,17 @@
   background-color: rgba(255, 255, 255, 0.06) !important;
 }
 
+/* The customer's own bubble in the mascot chat. Its utilities
+   (bg-white text-[#7f26d9]) were tuned for the light theme; the .bg-white
+   remap above turns the bubble into a dark surface while the fixed purple
+   text stays, leaving the customer's own words illegible on the purple
+   glass. Keep the light-theme pairing in both themes — white bubble, deep
+   purple text — doubled selector to outrank the remap's !important. */
+.dark .chat-bubble-user.chat-bubble-user {
+  background-color: #ffffff !important;
+  color: #7f26d9 !important;
+}
+
 .dark .text-gray-900,
 .dark .text-gray-800,
 .dark .text-black,
