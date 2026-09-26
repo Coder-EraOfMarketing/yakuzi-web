@@ -996,7 +996,7 @@ export default function Navbar({
                     <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 flex flex-col gap-4 scrollbar-hide">
                       {chatMessages.map((msg, idx) => (
                         <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${msg.role === 'user' ? 'bg-white text-[#7f26d9]' : 'bg-[#562996] text-white border border-white/20'}`}>
+                          <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${msg.role === 'user' ? 'chat-bubble-user bg-white text-[#7f26d9]' : 'bg-[#562996] text-white border border-white/20'}`}>
                             {msg.role === 'assistant' && msg.thoughts && (
                               <details className="mb-2 text-xs bg-white/10 rounded-xl p-2.5 border border-white/15 text-white/90">
                                 <summary className="cursor-pointer font-semibold flex items-center gap-1.5 select-none hover:text-white transition-colors">
