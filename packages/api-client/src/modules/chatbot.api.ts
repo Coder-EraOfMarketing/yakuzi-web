@@ -55,7 +55,12 @@ export async function sendChatMessageFull(
   try {
     const { data } = await api.post<ChatResponse>('/chatbot/chat', {
       message,
-      history,
+      // The transcript is replayed as history, but the product cards on
+      // assistant messages are display data: the model gets its product
+      // facts from tools, and the API's strict DTO validation 400s on
+      // fields it does not expect. Strip them at this single choke point
+      // so no caller can ship a conversation the API refuses.
+      history: history.map(({ products: _products, ...m }) => m),
       attachments,
       thinkingEnabled: options?.thinkingEnabled ?? true,
       thinkingBudget: options?.thinkingBudget ?? 2048,
