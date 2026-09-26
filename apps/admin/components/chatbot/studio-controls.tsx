@@ -224,6 +224,10 @@ export function NumberField({
   unit: string;
   zeroMeans?: string;
 }) {
+  // The keystrokes in flight, distinct from the committed value: clamping on
+  // every keystroke turned "2000" into the minimum at the first digit and
+  // fought the user for the field.
+  const [draft, setDraft] = React.useState<string | null>(null);
   return (
     <div className="rounded-2xl border border-border/60 bg-card/40 p-4">
       <label className="text-sm font-semibold text-foreground">{label}</label>
@@ -233,12 +237,17 @@ export function NumberField({
           type="number"
           min={min}
           max={max}
-          value={value}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            // Clamp here as well as on the server: a typo should not be
-            // saveable in the first place.
-            onChange(Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : min);
+          value={draft ?? value}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            // Clamp once the admin is done, still before it can be saved; an
+            // emptied field reverts to the previous value instead of jumping
+            // to the minimum. The server clamps again regardless.
+            const n = Number(draft);
+            if (draft !== null && draft.trim() !== '' && Number.isFinite(n)) {
+              onChange(Math.min(max, Math.max(min, Math.round(n))));
+            }
+            setDraft(null);
           }}
           className="w-32 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
         />
