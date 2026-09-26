@@ -15,7 +15,9 @@ export default function PostPage({ params }: { params: { id: string } }) {
     const fetchPost = async () => {
       try {
         const data = await getBlogBySlug(params.id);
-        setPost(data);
+        // the API returns DRAFT posts by slug — same guard as the buyer app's
+        // /blogs/[slug], which treats anything not PUBLISHED as not found
+        setPost(data && data.status && data.status !== "PUBLISHED" ? null : data);
       } catch (err) {
         console.error("Failed to fetch post:", err);
       } finally {

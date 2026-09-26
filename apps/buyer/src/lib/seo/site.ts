@@ -19,6 +19,29 @@ function isValidAbsoluteUrl(candidate: string): boolean {
 // env value (e.g. missing "https://") must never throw and crash every render.
 export const SITE_URL = isValidAbsoluteUrl(rawSiteUrl) ? rawSiteUrl : DEV_SITE_URL;
 
+// A production BUILD, though, must fail instead of falling back. NEXT_PUBLIC_ vars
+// are inlined at build time, so a build that falls back bakes dev.yukizi.com into
+// every canonical, og:url, JSON-LD @id, sitemap <loc>, llms.txt and robots line on
+// the live site — a single unset variable away from de-indexing the whole domain,
+// guarded until now only by a console.warn nobody reads in build logs. Vercel
+// preview/dev builds and `next dev` keep the fallback; only a build destined for
+// production (VERCEL_ENV=production, or a non-Vercel build such as Docker/CI)
+// refuses to proceed. An explicit NEXT_PUBLIC_SITE_URL=https://dev.yukizi.com is
+// still accepted — that is how the dev deployment is meant to be configured.
+const isProductionDeployBuild =
+  process.env.NEXT_PHASE === 'phase-production-build' &&
+  (!process.env.VERCEL_ENV || process.env.VERCEL_ENV === 'production');
+const envSiteUrlIsUsable =
+  !!process.env.NEXT_PUBLIC_SITE_URL && SITE_URL === rawSiteUrl;
+
+if (isProductionDeployBuild && !envSiteUrlIsUsable) {
+  throw new Error(
+    process.env.NEXT_PUBLIC_SITE_URL
+      ? `[seo] NEXT_PUBLIC_SITE_URL="${process.env.NEXT_PUBLIC_SITE_URL}" is not a valid absolute URL (needs a scheme, e.g. https://yukizi.com). Refusing to build: the fallback would point every canonical, sitemap URL and JSON-LD @id at ${DEV_SITE_URL}.`
+      : `[seo] NEXT_PUBLIC_SITE_URL is not set. Refusing to build: the fallback would point every canonical, sitemap URL and JSON-LD @id at ${DEV_SITE_URL}. Set it to this deployment's public origin (e.g. https://yukizi.com).`,
+  );
+}
+
 if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_SITE_URL) {
   console.warn('[seo] NEXT_PUBLIC_SITE_URL is not set — canonicals and JSON-LD will point at the dev domain');
 } else if (process.env.NEXT_PUBLIC_SITE_URL && SITE_URL !== rawSiteUrl) {
