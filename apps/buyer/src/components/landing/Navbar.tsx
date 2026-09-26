@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { track } from '@/lib/analytics/tracker';
 import Image from "next/image";
-import { useState, useRef, useEffect, Suspense } from "react";
+import { useState, useRef, useEffect, Suspense, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
@@ -79,6 +79,50 @@ import { useIsDesktop } from "@/hooks/useIsDesktop";
 // the old conversation moves to history instead of reappearing as if
 // nothing happened.
 const CHAT_IDLE_RESET_MS = 60 * 60 * 1000;
+
+/**
+ * The in-conversation "working on it" bubble. Real token streaming is off the
+ * table — the Gemini SDK does not run tools in streaming mode, and tools are
+ * what make this assistant useful — so perceived latency is handled here: an
+ * immediate bubble whose status advances while the (up to ~60s) request runs,
+ * instead of a conversation that looks frozen.
+ */
+function ChatThinkingBubble() {
+  const stages = ['Thinking…', 'Searching the store…', 'Putting your answer together…'];
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setStage((v) => Math.min(v + 1, stages.length - 1)), 5000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div className="flex items-start">
+      <div className="flex items-center gap-2.5 rounded-2xl border border-white/20 bg-[#562996] px-4 py-2.5 text-white/90">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/80 border-t-transparent" />
+        <span className="text-sm">{stages[stage]}</span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Reveals a reply progressively once it arrives, so a long answer reads as
+ * the assistant talking rather than a wall of text snapping in.
+ */
+function TypewriterText({ text, render }: { text: string; render: (visible: string) => ReactNode }) {
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    setShown(0);
+  }, [text]);
+  useEffect(() => {
+    if (shown >= text.length) return;
+    // ~1.3s for any length: step scales with the text instead of the clock.
+    const step = Math.max(2, Math.round(text.length / 80));
+    const t = setTimeout(() => setShown((v) => Math.min(text.length, v + step)), 16);
+    return () => clearTimeout(t);
+  }, [shown, text]);
+  return <>{render(text.slice(0, shown))}</>;
+}
 
 export default function Navbar({
   onLoginClick,
@@ -231,6 +275,9 @@ export default function Navbar({
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
+  // Index of the reply that just arrived over the network — the only one the
+  // typewriter animates; everything else (restored history) renders instantly.
+  const freshReplyIdxRef = useRef<number | null>(null);
   const [searchInput, setSearchInput] = useState("");
   // Live results shown inside the search panel while typing.
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -420,13 +467,25 @@ export default function Navbar({
     setIsChatLoading(true);
 
     try {
-      const response = await sendChatMessageFull(userMessage.content, currentHistory, userMessage.attachments);
-      setChatMessages((prev) => [...prev, {
-        role: 'assistant',
-        content: response.response,
-        thoughts: response.thoughts,
-        thinkingTimeMs: response.thinkingTimeMs
-      }]);
+      const response = await sendChatMessageFull(userMessage.content, currentHistory, userMessage.attachments, {
+        // Where the customer is right now, so "is this good?" on a product
+        // page needs no clarifying question. The API clamps the length.
+        pageContext: typeof window !== 'undefined'
+          ? `${window.location.pathname} — ${document.title}`
+          : undefined,
+      });
+      setChatMessages((prev) => {
+        // Only the reply that just arrived gets the typewriter — replies
+        // restored from localStorage must render instantly.
+        freshReplyIdxRef.current = prev.length;
+        return [...prev, {
+          role: 'assistant',
+          content: response.response,
+          thoughts: response.thoughts,
+          thinkingTimeMs: response.thinkingTimeMs,
+          products: response.products,
+        }];
+      });
     } catch (error) {
       console.error('Chat error:', error);
       setChatMessages((prev) => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error processing your request.' }]);
@@ -995,7 +1054,7 @@ export default function Navbar({
                   {chatMessages.length > 0 && (
                     <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 flex flex-col gap-4 scrollbar-hide">
                       {chatMessages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                           <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${msg.role === 'user' ? 'chat-bubble-user bg-white text-[#7f26d9]' : 'bg-[#562996] text-white border border-white/20'}`}>
                             {msg.role === 'assistant' && msg.thoughts && (
                               <details className="mb-2 text-xs bg-white/10 rounded-xl p-2.5 border border-white/15 text-white/90">
@@ -1008,15 +1067,79 @@ export default function Navbar({
                                 </div>
                               </details>
                             )}
-                            <div className="whitespace-pre-wrap leading-relaxed">{formatFormattedMessage(msg.content)}</div>
+                            <div className="whitespace-pre-wrap leading-relaxed">
+                              {msg.role === 'assistant' && idx === freshReplyIdxRef.current ? (
+                                <TypewriterText text={msg.content} render={(visible) => formatFormattedMessage(visible)} />
+                              ) : (
+                                formatFormattedMessage(msg.content)
+                              )}
+                            </div>
                           </div>
+                          {/* Product cards: what the assistant's tools actually
+                              returned this turn — image, price and a working
+                              link, so a recommendation is one tap from the
+                              product page instead of a re-typed name. */}
+                          {msg.role === 'assistant' && msg.products && msg.products.length > 0 && (
+                            <div className="mt-2 flex max-w-full gap-3 overflow-x-auto pb-1 scrollbar-hide">
+                              {msg.products.map((p) => (
+                                <Link
+                                  key={p.url}
+                                  href={p.url}
+                                  onClick={() => setIsChatOpen(false)}
+                                  className="w-36 shrink-0 overflow-hidden rounded-xl bg-white/95 shadow-md transition-colors hover:bg-white"
+                                >
+                                  <div className="relative h-28 w-full bg-gray-100">
+                                    {p.image ? (
+                                      <Image src={p.image} alt={p.name} fill sizes="144px" className="object-cover" />
+                                    ) : (
+                                      <div className="flex h-full w-full items-center justify-center text-xs text-gray-300">No image</div>
+                                    )}
+                                    {p.stock <= 0 && (
+                                      <span className="absolute left-1.5 top-1.5 rounded-md bg-gray-900/80 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                        Out of stock
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="p-2">
+                                    <div className="line-clamp-2 text-[11px] font-semibold leading-tight text-gray-900">{p.name}</div>
+                                    <div className="mt-1 text-xs font-bold text-[#7f26d9]">
+                                      {p.price != null ? `₹${p.price.toLocaleString('en-IN')}` : 'See price'}
+                                    </div>
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
+                      {isChatLoading && <ChatThinkingBubble />}
                     </div>
                   )}
 
                   {/* Chat Box Header / Input Area */}
                   <div className={`${chatMessages.length > 0 ? 'h-16 shrink-0' : 'flex-1'} transition-all duration-300 pb-4 flex flex-col`}>
+                    {/* Suggestion chips: routes customers into asks the
+                        assistant is known to answer well, instead of leaving
+                        them to invent phrasing at a blank input. */}
+                    {chatMessages.length === 0 && !isChatLoading && (
+                      <div className="mb-5 flex flex-wrap gap-2">
+                        {[
+                          'Suggest me items under ₹2000',
+                          "What's new in the store?",
+                          'Show me the bestsellers',
+                          'What is your return policy?',
+                        ].map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => performChatRequest(s, chatMessages, attachments)}
+                            className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     {/* Attachments Preview */}
                     {attachments.length > 0 && (
                       <div className="flex items-center gap-2 mb-2 overflow-x-auto">

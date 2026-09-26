@@ -1,11 +1,24 @@
 import { api } from '../api';
 
+/** A product row the assistant surfaced, rendered by the widget as a card. */
+export interface ChatProduct {
+  name: string;
+  price: number | null;
+  stock: number;
+  url: string;
+  image: string | null;
+  category?: string;
+  avg_rating?: number | null;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant' | string;
   content: string;
   thoughts?: string;
   thinkingTimeMs?: number;
   attachments?: { name: string; data: string; type: string }[];
+  /** Present on assistant messages whose turn ran a product tool. */
+  products?: ChatProduct[];
 }
 
 export interface ChatRequest {
@@ -20,6 +33,7 @@ export interface ChatResponse {
   response: string;
   thoughts?: string;
   thinkingTimeMs?: number;
+  products?: ChatProduct[];
 }
 
 /**
@@ -33,10 +47,10 @@ export interface ChatResponse {
 const CHAT_TIMEOUT_MS = 120000;
 
 export async function sendChatMessageFull(
-  message: string, 
+  message: string,
   history: ChatMessage[] = [],
   attachments?: { name: string; data: string; type: string }[],
-  options?: { thinkingEnabled?: boolean; thinkingBudget?: number }
+  options?: { thinkingEnabled?: boolean; thinkingBudget?: number; pageContext?: string }
 ): Promise<ChatResponse> {
   try {
     const { data } = await api.post<ChatResponse>('/chatbot/chat', {
@@ -45,6 +59,9 @@ export async function sendChatMessageFull(
       attachments,
       thinkingEnabled: options?.thinkingEnabled ?? true,
       thinkingBudget: options?.thinkingBudget ?? 2048,
+      // Where the customer is on the site, so "is this good?" on a product
+      // page needs no clarifying question. The API clamps the length.
+      pageContext: options?.pageContext,
     }, { timeout: CHAT_TIMEOUT_MS });
     return data;
   } catch (err) {
