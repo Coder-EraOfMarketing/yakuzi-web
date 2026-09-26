@@ -125,10 +125,23 @@ export async function getChatbotConfig(): Promise<ChatbotConfig> {
   return data.data;
 }
 
+/** The Studio holds the raw config row in state, bookkeeping columns and
+ * all. Those columns are not settings — id is the singleton's, updatedAt is
+ * the database's, updatedBy is the server's — and the API's strict
+ * validation has already rejected payloads carrying unexpected fields once.
+ * Strip them at this single choke point before any request leaves. */
+function editableFields(payload: Partial<ChatbotConfig>): Partial<ChatbotConfig> {
+  const { id: _id, updatedAt: _updatedAt, updatedBy: _updatedBy, ...editable } = payload as Record<string, unknown>;
+  return editable as Partial<ChatbotConfig>;
+}
+
 export async function updateChatbotConfig(
   payload: Partial<ChatbotConfig>,
 ): Promise<ChatbotConfig> {
-  const { data } = await apiClient.patch<{ data: ChatbotConfig }>("/admin/chatbot/config", payload);
+  const { data } = await apiClient.patch<{ data: ChatbotConfig }>(
+    "/admin/chatbot/config",
+    editableFields(payload),
+  );
   return data.data;
 }
 
@@ -138,7 +151,7 @@ export async function previewChatbotConfig(
 ): Promise<{ systemInstruction: string; tools: string[]; instructionWords: number }> {
   const { data } = await apiClient.post<{
     data: { systemInstruction: string; tools: string[]; instructionWords: number };
-  }>("/admin/chatbot/config/preview", payload);
+  }>("/admin/chatbot/config/preview", editableFields(payload));
   return data.data;
 }
 

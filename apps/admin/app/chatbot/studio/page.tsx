@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { AdminLayout } from "@/components/layout/admin-layout";
 import {
   ArrowLeft,
   BookOpen,
@@ -69,7 +70,7 @@ const reading = {
         : "Recommends only when it genuinely answers the question.",
 };
 
-export default function ChatbotStudioPage() {
+function ChatbotStudioContent() {
   const [config, setConfig] = useState<ChatbotConfig | null>(null);
   const [saved, setSaved] = useState<ChatbotConfig | null>(null);
   const [usage, setUsage] = useState<ChatbotUsage | null>(null);
@@ -351,7 +352,7 @@ export default function ChatbotStudioPage() {
               <li className="flex items-center gap-2"><Globe className="h-3.5 w-3.5" /> Admin screens and settings</li>
             </ul>
             <p className="mt-3 text-xs text-muted-foreground">
-              These are not switches. The assistant is only given the four lookups above — nothing else is reachable from it.
+              These are not switches. The assistant is only given the lookups above, plus the store’s own published facts (policies and buying guides) — nothing else is reachable from it.
             </p>
           </div>
         </Section>
@@ -550,5 +551,16 @@ export default function ChatbotStudioPage() {
         .
       </p>
     </div>
+  );
+}
+
+/** Every admin page lives inside the admin chrome. This one did not, so
+ * clicking "Chatbot Studio" in the sidebar made the sidebar vanish — the
+ * only way back was one unlabelled arrow. */
+export default function ChatbotStudioPage() {
+  return (
+    <AdminLayout>
+      <ChatbotStudioContent />
+    </AdminLayout>
   );
 }
