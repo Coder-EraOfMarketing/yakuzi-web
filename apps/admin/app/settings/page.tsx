@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, Key, LifeBuoy, Building2 } from "lucide-react";
+import { Bell, Key, LifeBuoy, Building2, Hash } from "lucide-react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Input, Skeleton } from "@/components/ui";
 import toast from "react-hot-toast";
@@ -22,6 +22,25 @@ export default function AdminSettingsPage() {
         supportEmail: s.supportEmail ?? "",
         supportPhone: s.supportPhone ?? "",
         comingSoonMode: s.comingSoonMode ?? true,
+        // The commission-invoice issuer details. Seeded here so the fields
+        // below show what is actually stored instead of rendering blank and
+        // silently wiping the saved values on the next save.
+        companyLegalName: s.companyLegalName ?? "",
+        companyGstin: s.companyGstin ?? "",
+        companyState: s.companyState ?? "",
+        companyAddress: s.companyAddress ?? "",
+        companyEmail: s.companyEmail ?? "",
+        // Invoice numbering. Dotted keys are flat SystemSetting keys, not
+        // nested objects.
+        "invoiceNumbering.enabled": s["invoiceNumbering.enabled"] ?? false,
+        "invoiceNumbering.resetMonth": s["invoiceNumbering.resetMonth"] ?? 4,
+        "invoiceNumbering.resetDay": s["invoiceNumbering.resetDay"] ?? 1,
+        "invoiceNumbering.consumer.prefix": s["invoiceNumbering.consumer.prefix"] ?? "YKZ/INV",
+        "invoiceNumbering.consumer.next": s["invoiceNumbering.consumer.next"] ?? 1,
+        "invoiceNumbering.consumer.resetStart": s["invoiceNumbering.consumer.resetStart"] ?? 1,
+        "invoiceNumbering.seller.prefix": s["invoiceNumbering.seller.prefix"] ?? "YKZ/COM",
+        "invoiceNumbering.seller.next": s["invoiceNumbering.seller.next"] ?? 1,
+        "invoiceNumbering.seller.resetStart": s["invoiceNumbering.seller.resetStart"] ?? 1,
         // Owned by the SEO page — round-tripped so saving here never wipes them.
         googleSiteVerification: s.googleSiteVerification ?? "",
         bingSiteVerification: s.bingSiteVerification ?? "",
@@ -80,10 +99,26 @@ export default function AdminSettingsPage() {
       { key: "supportEmail", label: "Support Email (shown on Contact, About and every policy page — leave blank to keep the current one)" },
       { key: "supportPhone", label: "Support Phone (shown alongside the email and in the site's structured data)" },
     ]},
+    // Only takes effect once "Use my own invoice numbering" is switched on
+    // below. The number you enter is the NEXT invoice number exactly — it is
+    // not skipped and nothing is added to it. Consumer = buyer tax invoices;
+    // Seller = commission invoices. The two run as independent series.
+    // Invoices issued before you turn this on keep their existing numbers.
+    { id: "invoiceNumbering", icon: Hash, title: "Invoice numbering", fields: [
+      { key: "invoiceNumbering.consumer.next", label: "Consumer — next invoice number (the very next buyer invoice gets exactly this)", type: "number" },
+      { key: "invoiceNumbering.consumer.resetStart", label: "Consumer — restart each year from this number", type: "number" },
+      { key: "invoiceNumbering.consumer.prefix", label: "Consumer — prefix (e.g. YKZ/INV → YKZ/INV/2026-27/000123)" },
+      { key: "invoiceNumbering.seller.next", label: "Seller — next commission invoice number (exactly this)", type: "number" },
+      { key: "invoiceNumbering.seller.resetStart", label: "Seller — restart each year from this number", type: "number" },
+      { key: "invoiceNumbering.seller.prefix", label: "Seller — prefix (e.g. YKZ/COM → YKZ/COM/2026-27/000045)" },
+      { key: "invoiceNumbering.resetMonth", label: "Restart month (1–12; 4 = April, the Indian financial year)", type: "number" },
+      { key: "invoiceNumbering.resetDay", label: "Restart day of month (1–31)", type: "number" },
+    ]},
   ];
 
   const FEATURE_FLAGS = [
     { key: "comingSoonMode", label: "Buyer App Coming Soon Mode", desc: "Replaces the storefront with the Coming Soon screen" },
+    { key: "invoiceNumbering.enabled", label: "Use my own invoice numbering", desc: "Off = invoices keep the automatic reference. On = use the numbers and yearly restart set above. Turning it on only affects invoices issued from now on." },
   ];
 
 
