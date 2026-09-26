@@ -13,7 +13,9 @@ export default function BlogHome() {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
-        const response = await getBlogs();
+        // drafts must never surface in the public list — same guard as the
+        // buyer app's /blogs (the API returns DRAFT posts without this filter)
+        const response = await getBlogs({ status: "PUBLISHED" });
         // getBlogs returns { data: BlogPost[], total: number }
         setBlogs(response.data || []);
       } catch (err) {
