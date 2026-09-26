@@ -219,6 +219,7 @@ export {
   sendChatMessage,
   sendChatMessageFull,
   type ChatMessage,
+  type ChatProduct,
   type ChatRequest,
   type ChatResponse,
 } from './modules/chatbot.api';
