@@ -1,11 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Bell, Key, LifeBuoy, Building2, Hash } from "lucide-react";
+import { Bell, Key, LifeBuoy, Building2, Hash, ShoppingBag } from "lucide-react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Input, Skeleton } from "@/components/ui";
 import toast from "react-hot-toast";
 import { usePlatformSettings, useUpdatePlatformSettings } from "@/hooks/useAdmin";
+import { MerchantPanel } from "@/components/settings/merchant-panel";
 
 export default function AdminSettingsPage() {
   const { data: settingsData, isLoading } = usePlatformSettings();
@@ -41,6 +42,10 @@ export default function AdminSettingsPage() {
         "invoiceNumbering.seller.prefix": s["invoiceNumbering.seller.prefix"] ?? "YKZ/COM",
         "invoiceNumbering.seller.next": s["invoiceNumbering.seller.next"] ?? 1,
         "invoiceNumbering.seller.resetStart": s["invoiceNumbering.seller.resetStart"] ?? 1,
+        // Google Merchant Center. The credential is a server env var, never here.
+        "merchant.enabled": s["merchant.enabled"] ?? false,
+        "merchant.accountId": s["merchant.accountId"] ?? "",
+        "merchant.dataSourceId": s["merchant.dataSourceId"] ?? "",
         // Owned by the SEO page — round-tripped so saving here never wipes them.
         googleSiteVerification: s.googleSiteVerification ?? "",
         bingSiteVerification: s.bingSiteVerification ?? "",
@@ -114,11 +119,19 @@ export default function AdminSettingsPage() {
       { key: "invoiceNumbering.resetMonth", label: "Restart month (1–12; 4 = April, the Indian financial year)", type: "number" },
       { key: "invoiceNumbering.resetDay", label: "Restart day of month (1–31)", type: "number" },
     ]},
+    // The service-account credential is NOT here — it is a private key, set on
+    // the server as GOOGLE_MERCHANT_CREDENTIALS. Account id and data source id
+    // both come from Merchant Center's own "Add products → API" screen.
+    { id: "merchant", icon: ShoppingBag, title: "Google Merchant Center", fields: [
+      { key: "merchant.accountId", label: "Merchant Center account ID (the number in Merchant Center → Settings)" },
+      { key: "merchant.dataSourceId", label: "API data source ID (from Merchant Center → Add products → API)" },
+    ]},
   ];
 
   const FEATURE_FLAGS = [
     { key: "comingSoonMode", label: "Buyer App Coming Soon Mode", desc: "Replaces the storefront with the Coming Soon screen" },
     { key: "invoiceNumbering.enabled", label: "Use my own invoice numbering", desc: "Off = invoices keep the automatic reference. On = use the numbers and yearly restart set above. Turning it on only affects invoices issued from now on." },
+    { key: "merchant.enabled", label: "Sync products to Google Merchant Center", desc: "Off = nothing is sent to Google. On = the catalogue is pushed daily and whenever you press Sync now below. Needs the account and data source IDs above and the server credential." },
   ];
 
 
@@ -164,6 +177,8 @@ export default function AdminSettingsPage() {
             ))}
           </div>
         </motion.div>
+
+        <MerchantPanel enabled={!!form["merchant.enabled"]} />
 
         <div className="flex justify-end gap-3">
           <Button variant="outline" disabled={!dirty} onClick={() => { setForm(settingsData ?? {}); setDirty(false); }}>Cancel</Button>

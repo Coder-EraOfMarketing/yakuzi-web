@@ -669,6 +669,35 @@ export async function updatePlatformSettings(payload: Record<string, any>) {
   return data.data;
 }
 
+// ─── Google Merchant Center ──────────────────────────
+export interface MerchantSyncSummary {
+  ran: boolean;
+  reason?: string;
+  total: number;
+  pushed: number;
+  skipped: number;
+  failed: number;
+  problems: string[];
+  dryRun: boolean;
+  finishedAt: string;
+}
+
+export interface MerchantStatus {
+  ready: boolean;
+  problems: string[];
+  lastSync: MerchantSyncSummary | null;
+}
+
+export async function getMerchantStatus(): Promise<MerchantStatus> {
+  const { data } = await apiClient.get<{ data: MerchantStatus }>("/admin/merchant/status");
+  return data.data;
+}
+
+export async function runMerchantSync(dryRun: boolean): Promise<MerchantSyncSummary> {
+  const { data } = await apiClient.post<{ data: MerchantSyncSummary }>("/admin/merchant/sync", { dryRun });
+  return data.data;
+}
+
 // ─── Analytics ───────────────────────────────────────
 export async function getRevenueChart(params: { period?: string } = {}) {
   const qs = params.period ? `?period=${params.period}` : "";
