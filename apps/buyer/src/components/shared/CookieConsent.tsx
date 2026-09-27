@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Settings } from 'lucide-react';
 import {
   applyConsent,
   getStoredConsent,
@@ -61,30 +62,40 @@ export default function CookieConsent() {
     <div
       role="region"
       aria-label="Cookie consent"
-      className="glass-chrome fixed inset-x-0 top-0 z-[120] border-b border-white/20 shadow-md"
+      className="yz-consent-bar fixed inset-x-0 top-0 z-[120] border-b border-white/15 shadow-2xl"
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-2.5 sm:px-6">
-        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs leading-relaxed text-white sm:text-sm">
-            We use essential cookies to run the store, optional analytics to understand how
-            it&rsquo;s used, and optional marketing cookies to measure our ads.{' '}
-            <Link href="/cookie-policy" className="underline underline-offset-2 hover:opacity-80">
-              Cookie policy
-            </Link>
-          </p>
-          <div className="flex shrink-0 items-center gap-2">
+      <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="flex items-start gap-3">
+            <span aria-hidden className="text-2xl leading-none sm:text-3xl">🍪</span>
+            <div>
+              <p className="text-base font-bold text-white sm:text-lg">We value your privacy</p>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-white/85">
+                We use essential cookies to run the store, plus optional analytics and marketing
+                cookies to improve it and measure our ads.{' '}
+                <Link href="/cookie-policy" className="font-medium underline underline-offset-2 hover:opacity-80">
+                  Cookie policy
+                </Link>
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center justify-end gap-3">
+            {/* A faded gear, not a button, so "Accept all" reads as the one
+                clear action and only the deliberate few open preferences. */}
             <button
               type="button"
               onClick={() => setShowPrefs((v) => !v)}
               aria-expanded={showPrefs}
-              className="yz-consent-btn-pref rounded-full px-4 py-1.5 text-xs font-semibold transition-colors sm:text-sm"
+              aria-label="Cookie preferences"
+              title="Cookie preferences"
+              className="yz-consent-gear shrink-0 p-2 transition-colors"
             >
-              Preferences
+              <Settings className="h-5 w-5" />
             </button>
             <button
               type="button"
               onClick={() => decide(true, true)}
-              className="yz-consent-btn-accept rounded-full px-4 py-1.5 text-xs font-semibold transition-colors sm:text-sm"
+              className="yz-consent-btn-accept flex-1 rounded-full px-8 py-3 text-base font-bold shadow-lg transition-colors sm:flex-none"
             >
               Accept all
             </button>
@@ -92,35 +103,35 @@ export default function CookieConsent() {
         </div>
 
         {showPrefs && (
-          <div className="flex flex-col gap-2 border-t border-white/20 pt-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-1.5 text-xs text-white sm:flex-row sm:items-center sm:gap-5 sm:text-sm">
+          <div className="mt-4 flex flex-col gap-3 border-t border-white/20 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2.5 text-sm text-white sm:flex-row sm:items-center sm:gap-6">
               <label className="flex items-center gap-2 opacity-80">
-                <input type="checkbox" checked disabled className="h-3.5 w-3.5 accent-white" />
-                Essential (required — cart, checkout, sign-in)
+                <input type="checkbox" checked disabled className="h-4 w-4 accent-white" />
+                Essential (required)
               </label>
               <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="checkbox"
                   checked={analyticsOn}
                   onChange={(e) => setAnalyticsOn(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-white"
+                  className="h-4 w-4 accent-white"
                 />
-                Analytics (anonymous, first-party only)
+                Analytics (anonymous)
               </label>
               <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="checkbox"
                   checked={marketingOn}
                   onChange={(e) => setMarketingOn(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-white"
+                  className="h-4 w-4 accent-white"
                 />
-                Marketing (Meta ads measurement)
+                Marketing (Meta ads)
               </label>
             </div>
             <button
               type="button"
               onClick={() => decide(analyticsOn, marketingOn)}
-              className="yz-consent-btn-accept self-start rounded-full px-4 py-1.5 text-xs font-semibold transition-colors sm:self-auto sm:text-sm"
+              className="yz-consent-btn-save self-start rounded-full px-5 py-2 text-sm font-semibold transition-colors sm:self-auto"
             >
               Save choices
             </button>
@@ -129,20 +140,19 @@ export default function CookieConsent() {
       </div>
 
       {/*
-        Button colours stated explicitly rather than via bg-white/text-[#...]
-        utilities.
+        Colours stated explicitly, not via bg-white/text-[#...] utilities:
+        globals.css remaps those inside `.dark` (right for content cards, wrong
+        for controls sitting ON this chrome bar). A dedicated class matches no
+        remap list, so one rule serves both themes.
 
-        globals.css deliberately remaps those utilities inside `.dark`
-        (`.dark .bg-white` -> the dark surface, `.dark .text-[#562996]` ->
-        the lifted violet), which is right for content cards but wrong for a
-        button sitting ON the dark chrome: it turned Accept into a
-        translucent plate with light-violet text, measured at 3.11:1 - below
-        the 4.5:1 readable threshold and visibly washed out.
-
-        A dedicated class name matches no remap list, so one rule serves both
-        themes. Measured against the live stylesheet in both modes: 11.23:1.
+        The bar itself is a SOLID brand-purple gradient rather than the old
+        translucent glass — over the bright hero the translucent bar was easy
+        to miss, and the whole point is that it should not be.
       */}
       <style jsx global>{`
+        .yz-consent-bar {
+          background: linear-gradient(180deg, #5a2ea6 0%, #46207f 100%) !important;
+        }
         .yz-consent-btn-accept {
           background-color: #ffffff !important;
           color: #4a2287 !important;
@@ -150,13 +160,20 @@ export default function CookieConsent() {
         .yz-consent-btn-accept:hover {
           background-color: #f3ecff !important;
         }
-        .yz-consent-btn-pref {
+        .yz-consent-btn-save {
           border: 1px solid rgba(255, 255, 255, 0.55) !important;
           color: #ffffff !important;
           background-color: transparent !important;
         }
-        .yz-consent-btn-pref:hover {
+        .yz-consent-btn-save:hover {
           background-color: rgba(255, 255, 255, 0.14) !important;
+        }
+        .yz-consent-gear {
+          color: rgba(255, 255, 255, 0.55) !important;
+          background: transparent !important;
+        }
+        .yz-consent-gear:hover {
+          color: #ffffff !important;
         }
       `}</style>
     </div>
