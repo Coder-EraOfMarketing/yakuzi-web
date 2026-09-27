@@ -7,6 +7,7 @@ import { Button, Input, Skeleton } from "@/components/ui";
 import toast from "react-hot-toast";
 import { usePlatformSettings, useUpdatePlatformSettings } from "@/hooks/useAdmin";
 import { MerchantPanel } from "@/components/settings/merchant-panel";
+import { LockableSection } from "@/components/settings/lockable-section";
 
 export default function AdminSettingsPage() {
   const { data: settingsData, isLoading } = usePlatformSettings();
@@ -83,7 +84,7 @@ export default function AdminSettingsPage() {
     );
   }
 
-  const SECTIONS: { id: string; icon: any; title: string; fields: { key: string; label: string; type?: string }[] }[] = [
+  const SECTIONS: { id: string; icon: any; title: string; locked?: boolean; warning?: string; fields: { key: string; label: string; type?: string }[] }[] = [
     { id: "notifications", icon: Bell, title: "Notifications", fields: [
       { key: "adminAlertEmail", label: "Admin Alert Email (receives new-seller signups, seller shipping-details submissions, and a copy of every tax invoice issued)" },
       { key: "mailFromAddress", label: "Sender Email (must be a verified alias on the mail account, else Gmail will reject it)" },
@@ -125,14 +126,16 @@ export default function AdminSettingsPage() {
     // The service-account credential is NOT here — it is a private key, set on
     // the server as GOOGLE_MERCHANT_CREDENTIALS. Account id and data source id
     // both come from Merchant Center's own "Add products → API" screen.
-    { id: "merchant", icon: ShoppingBag, title: "Google Merchant Center", fields: [
+    { id: "merchant", icon: ShoppingBag, title: "Google Merchant Center", locked: true,
+      warning: "Changing or clearing these IDs disconnects the product sync — your catalogue would stop updating on Google.", fields: [
       { key: "merchant.accountId", label: "Merchant Center account ID (the number in Merchant Center → Settings)" },
       { key: "merchant.dataSourceId", label: "API data source ID (from Merchant Center → Add products → API)" },
     ]},
     // The Conversions API access token is NOT here — it is a server secret
     // (META_CAPI_ACCESS_TOKEN). The Pixel ID ships in the browser, so it is safe
     // to hold here. The Pixel only loads once a visitor accepts Marketing cookies.
-    { id: "metaPixel", icon: Radio, title: "Meta (Facebook) Pixel", fields: [
+    { id: "metaPixel", icon: Radio, title: "Meta (Facebook) Pixel", locked: true,
+      warning: "Changing or clearing this ID stops all Meta tracking and breaks your ad measurement and audiences.", fields: [
       { key: "metaPixel.pixelId", label: "Meta Pixel ID (Events Manager → Data sources → your pixel)" },
     ]},
   ];
@@ -153,19 +156,32 @@ export default function AdminSettingsPage() {
           <p className="text-sm text-muted-foreground mt-0.5">Configure global platform parameters</p>
         </div>
 
-        {SECTIONS.map(({ id, icon: Icon, title, fields }, si) => (
-          <motion.div key={id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: si * 0.1 }} className="glass-card rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center"><Icon className="h-4.5 w-4.5 text-primary" aria-hidden /></div>
-              <h2 className="font-semibold text-foreground">{title}</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {fields.map(({ key, label, type }) => (
-                <Input key={key} label={label} type={type} value={form[key] ?? ""} onChange={e => set(key, type === "number" ? Number(e.target.value) : e.target.value)} />
-              ))}
-            </div>
-          </motion.div>
-        ))}
+        {SECTIONS.map(({ id, icon: Icon, title, fields, locked, warning }, si) =>
+          locked ? (
+            <LockableSection
+              key={id}
+              icon={Icon}
+              title={title}
+              warning={warning ?? "Changing this can break a live connection."}
+              fields={fields}
+              delay={si * 0.1}
+              form={form}
+              onChange={set}
+            />
+          ) : (
+            <motion.div key={id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: si * 0.1 }} className="glass-card rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center"><Icon className="h-4.5 w-4.5 text-primary" aria-hidden /></div>
+                <h2 className="font-semibold text-foreground">{title}</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {fields.map(({ key, label, type }) => (
+                  <Input key={key} label={label} type={type} value={form[key] ?? ""} onChange={e => set(key, type === "number" ? Number(e.target.value) : e.target.value)} />
+                ))}
+              </div>
+            </motion.div>
+          ),
+        )}
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-6">
