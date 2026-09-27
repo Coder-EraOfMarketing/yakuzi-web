@@ -9,11 +9,18 @@ import { usePlatformSettings, useUpdatePlatformSettings } from "@/hooks/useAdmin
 import { MerchantPanel } from "@/components/settings/merchant-panel";
 import { LockableSection } from "@/components/settings/lockable-section";
 
+// Feature-flag toggles that switch a live integration on or off. Flipping one
+// by accident disconnects Merchant Center / Meta, so a change is gated behind
+// a typed "change" confirmation — same guard as the ID fields above.
+const LOCKED_FLAGS = new Set(["merchant.enabled", "metaPixel.enabled"]);
+
 export default function AdminSettingsPage() {
   const { data: settingsData, isLoading } = usePlatformSettings();
   const updateSettings = useUpdatePlatformSettings();
   const [form, setForm] = useState<Record<string, any>>({});
   const [dirty, setDirty] = useState(false);
+  const [pendingFlag, setPendingFlag] = useState<{ key: string; label: string; next: boolean } | null>(null);
+  const [flagTyped, setFlagTyped] = useState("");
 
   useEffect(() => {
     if (settingsData) {
@@ -60,6 +67,24 @@ export default function AdminSettingsPage() {
   const set = (key: string, value: any) => {
     setForm(f => ({ ...f, [key]: value }));
     setDirty(true);
+  };
+
+  // A protected integration toggle asks for confirmation before it flips;
+  // every other flag flips immediately as before.
+  const toggleFlag = (key: string, label: string, current: boolean) => {
+    if (LOCKED_FLAGS.has(key)) {
+      setPendingFlag({ key, label, next: !current });
+      setFlagTyped("");
+    } else {
+      set(key, !current);
+    }
+  };
+
+  const confirmFlag = () => {
+    if (!pendingFlag || flagTyped.trim().toLowerCase() !== "change") return;
+    set(pendingFlag.key, pendingFlag.next);
+    setPendingFlag(null);
+    setFlagTyped("");
   };
 
   const handleSave = async () => {
@@ -195,7 +220,7 @@ export default function AdminSettingsPage() {
                   <p className="text-sm font-medium text-foreground">{label}</p>
                   <p className="text-xs text-muted-foreground">{desc}</p>
                 </div>
-                <button onClick={() => set(key, !form[key])}
+                <button onClick={() => toggleFlag(key, label, !!form[key])}
                   className={`relative h-6 w-11 rounded-full transition-colors ${form[key] ? "bg-primary" : "bg-muted"}`} role="switch" aria-checked={!!form[key]} aria-label={label}>
                   <div className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form[key] ? "translate-x-5" : "translate-x-0.5"}`} />
                 </button>
@@ -211,6 +236,38 @@ export default function AdminSettingsPage() {
           <Button onClick={handleSave} loading={updateSettings.isPending} disabled={!dirty}>Save Changes</Button>
         </div>
       </div>
+
+      {pendingFlag && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-2xl bg-background p-6 shadow-xl border border-border">
+            <h3 className="font-semibold text-foreground">
+              Turn {pendingFlag.next ? "ON" : "OFF"}: {pendingFlag.label}?
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {pendingFlag.next
+                ? "This switches on a live integration."
+                : "This switches off a live integration — data will stop flowing until it is turned back on."}
+            </p>
+            <p className="mt-4 text-sm text-foreground">
+              To confirm, type <span className="font-semibold">change</span> below.
+            </p>
+            <input
+              autoFocus
+              value={flagTyped}
+              onChange={(e) => setFlagTyped(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") confirmFlag(); }}
+              placeholder="change"
+              className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+            <div className="mt-5 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => { setPendingFlag(null); setFlagTyped(""); }}>Cancel</Button>
+              <Button onClick={confirmFlag} disabled={flagTyped.trim().toLowerCase() !== "change"}>
+                {pendingFlag.next ? "Turn on" : "Turn off"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
