@@ -682,10 +682,20 @@ export interface MerchantSyncSummary {
   finishedAt: string;
 }
 
+/** Which Google account the sync authenticates as. */
+export interface MerchantIdentity {
+  /** 'key' = explicit service-account key, 'adc' = the GCP VM's own account. */
+  mode: "key" | "adc" | "none";
+  email: string | null;
+  reason?: string;
+}
+
 export interface MerchantStatus {
   ready: boolean;
   problems: string[];
   lastSync: MerchantSyncSummary | null;
+  /** Optional: absent when talking to an API that predates identity reporting. */
+  identity?: MerchantIdentity;
 }
 
 export async function getMerchantStatus(): Promise<MerchantStatus> {

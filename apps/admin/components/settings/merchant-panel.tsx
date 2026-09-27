@@ -8,6 +8,7 @@ import {
   getMerchantStatus,
   runMerchantSync,
   type MerchantSyncSummary,
+  type MerchantIdentity,
 } from "@/api/admin.api";
 
 /**
@@ -41,12 +42,14 @@ export function MerchantPanel({ enabled }: { enabled: boolean }) {
   const [busy, setBusy] = useState<null | "dry" | "live" | "status">(null);
   const [result, setResult] = useState<MerchantSyncSummary | null>(null);
   const [problems, setProblems] = useState<string[] | null>(null);
+  const [identity, setIdentity] = useState<MerchantIdentity | null>(null);
 
   const checkStatus = async () => {
     setBusy("status");
     try {
       const s = await getMerchantStatus();
       setProblems(s.problems);
+      setIdentity(s.identity ?? null);
       setResult(s.lastSync);
       toast.success(s.ready ? "Ready to sync" : "Not ready yet — see the checklist");
     } catch (err) {
@@ -112,6 +115,29 @@ export function MerchantPanel({ enabled }: { enabled: boolean }) {
           <PlayCircle className="h-4 w-4 mr-1.5" /> Sync now
         </Button>
       </div>
+
+      {/*
+        Which Google account the server will authenticate as. This is the one
+        thing an admin cannot look up themselves when running on Application
+        Default Credentials: there is no key file to read the address out of,
+        and Merchant Center will reject the sync until this exact address is
+        granted access under People and access.
+      */}
+      {identity && identity.email && (
+        <div className="mt-4 rounded-xl bg-accent/40 p-4">
+          <p className="text-sm font-medium text-foreground">
+            Authenticating as
+          </p>
+          <p className="mt-0.5 font-mono text-xs break-all text-muted-foreground">
+            {identity.email}
+          </p>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {identity.mode === "adc"
+              ? "This server's own Google service account — no key file needed. Add this address in Merchant Center → People and access (Standard) to authorise it."
+              : "From the service-account key configured on the server. This address must have access in Merchant Center → People and access."}
+          </p>
+        </div>
+      )}
 
       {problems && problems.length > 0 && (
         <div className="mt-4 rounded-xl bg-amber-500/10 p-4">
