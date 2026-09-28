@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -9,14 +9,27 @@ import Navbar from '@/components/landing/Navbar';
 import LoginModal from '@/components/landing/LoginModal';
 import { useBlogBySlug } from '@/hooks/useBlogs';
 import { sanitizeHtml } from '@/lib/sanitize';
+import { prepareBlogContent } from '@/lib/seo/blog-content';
 import { authorSlug } from '@/lib/seo/schema';
 
 export default function BlogDetailPage({
   slug,
   initialPost,
+  aiSummary,
+  imageAlt,
 }: {
   slug: string;
   initialPost?: any;
+  /**
+   * The admin's factual summary for AI search engines (Advanced SEO → AI
+   * summary). Fetched server-side in page.tsx from the same SeoMeta record as
+   * the metadata and the FAQ, and shown to readers too: a summary that is
+   * only in the markup is hidden content, and an answer engine has no reason
+   * to trust a claim the page does not make to a person.
+   */
+  aiSummary?: string | null;
+  /** Admin ALT overrides for in-body images, keyed by image URL. */
+  imageAlt?: Record<string, string> | null;
 }) {
   const router = useRouter();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -25,6 +38,17 @@ export default function BlogDetailPage({
     slug || '',
     initialPost ? { initialData: initialPost } : {},
   ) as any;
+
+  // Heading anchors and image ALT, once per post rather than once per render.
+  // Declared above the early returns so the hook order never changes.
+  const prepared = useMemo(
+    () =>
+      prepareBlogContent(typeof blog?.content === 'string' ? blog.content : '', {
+        imageAlt,
+        fallbackAlt: blog?.title,
+      }),
+    [blog?.content, blog?.title, imageAlt],
+  );
 
   // Log errors for debugging
   if (isError && error) {
@@ -155,11 +179,46 @@ export default function BlogDetailPage({
               </div>
             )}
 
+            {aiSummary && aiSummary.trim() && (
+              // Answer-first, and the same text llms.txt carries for this post,
+              // so what an assistant quotes is what the page says.
+              <aside className="mb-8 rounded-2xl border border-lime-200 bg-lime-50/60 p-4 sm:p-5">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-lime-800 mb-1.5">
+                  In short
+                </h2>
+                <p className="text-sm sm:text-base text-gray-800 leading-relaxed">
+                  {aiSummary.trim()}
+                </p>
+              </aside>
+            )}
+
+            {prepared.headings.length >= 3 && (
+              // The anchors exist for Google and for assistants citing one
+              // section; a contents list is what makes them reachable by the
+              // reader too, and it is the cheapest internal linking a long
+              // post has.
+              <nav aria-label="On this page" className="mb-8 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                  On this page
+                </h2>
+                <ol className="space-y-1.5 text-sm">
+                  {prepared.headings.map((h) => (
+                    <li key={h.id} className={h.level === 3 ? 'ml-4' : undefined}>
+                      <a href={`#${h.id}`} className="text-gray-700 hover:text-lime-700 hover:underline">
+                        {h.text}
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )}
+
             {blog.content ? (
               <div
-                className="prose prose-gray max-w-none prose-headings:font-bold prose-a:text-lime-600 prose-img:rounded-xl"
-                // CMS HTML is sanitised before injection — see lib/sanitize.ts.
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(blog.content) }}
+                className="prose prose-gray max-w-none prose-headings:font-bold prose-a:text-lime-600 prose-img:rounded-xl prose-headings:scroll-mt-24"
+                // Anchors and image ALT are added first, then the whole lot —
+                // author markup and ours alike — goes through the sanitiser.
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(prepared.html) }}
               />
             ) : (
               <p className="text-gray-500">No content available for this blog post.</p>

@@ -86,7 +86,17 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   ];
 
   const jsonLd: object[] = [
-    mergeStructuredData(articleSchema(post), override?.structuredDataOverride),
+    mergeStructuredData(
+      // The admin's AI summary and focus keywords are the post's own account
+      // of what it says; emitting them as abstract/keywords means the schema
+      // agrees with the "In short" block a reader sees rather than leaving an
+      // engine to infer both.
+      articleSchema(post, {
+        abstract: override?.aiSummary,
+        keywords: [override?.focusKeyword, ...(override?.secondaryKeywords ?? [])],
+      }),
+      override?.structuredDataOverride,
+    ),
     breadcrumbSchema(crumbs),
     // The Blog the post declares itself part of, so isPartOf resolves to a
     // real node rather than dangling.
@@ -97,7 +107,12 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     <>
       <JsonLd data={jsonLd} />
       <Breadcrumbs items={crumbs} className="mx-auto max-w-3xl px-4 pt-24" />
-      <BlogPostClient slug={params.slug} initialPost={post} />
+      <BlogPostClient
+        slug={params.slug}
+        initialPost={post}
+        aiSummary={override?.aiSummary}
+        imageAlt={override?.imageAltOverrides}
+      />
       {/* Visible, server-rendered — the same entries the FAQPage JSON-LD
           advertises, so there is no hidden-content markup. */}
       <SeoFaq faqs={faqs} />

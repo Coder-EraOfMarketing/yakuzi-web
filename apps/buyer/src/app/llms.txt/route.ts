@@ -1,4 +1,5 @@
-import { getCategories, getProducts } from '@yukizi/api-client';
+import { getBlogs, getCategories, getProducts } from '@yukizi/api-client';
+import { fetchSeoOverride } from '@/lib/seo/overrides';
 import {
   SITE_NAME,
   SITE_URL,
@@ -45,6 +46,8 @@ import { GUIDES } from '@/lib/seo/data/guides';
 export const revalidate = 3600;
 
 const MAX_PRODUCTS = 200;
+/** One SeoMeta read per post, so the list is bounded rather than unbounded. */
+const MAX_BLOG_POSTS = 100;
 
 export async function GET() {
   const support = await fetchSupportContact();
@@ -216,6 +219,43 @@ export async function GET() {
   ).join('\n');
 
   /**
+   * Blog posts, each with its own one-line answer — the same shape as the
+   * guides above, and for the same reason.
+   *
+   * Until now this file pointed an assistant at /blogs and stopped, so every
+   * post the store wrote was invisible to the one document written for
+   * language models: they had to discover, crawl and summarise each article
+   * themselves, and whatever they extracted is what got quoted. The line here
+   * is the admin's own AI summary when there is one, the excerpt otherwise, so
+   * what an assistant repeats about an article is what the store said about
+   * it — and it matches the "In short" block on the post itself.
+   *
+   * Fail-open like everything else here: no posts, a blog API blip, or a
+   * missing SeoMeta costs the section or a summary, never the file.
+   */
+  let blogLines = '';
+  let blogCount = 0;
+  try {
+    const posts = (await getBlogs({ status: 'PUBLISHED', limit: MAX_BLOG_POSTS })).data ?? [];
+    const published = posts
+      .filter((p) => p?.slug && p?.title && p.status !== 'DRAFT')
+      .slice(0, MAX_BLOG_POSTS);
+    blogCount = published.length;
+    const lines = await Promise.all(
+      published.map(async (p) => {
+        // fetchSeoOverride is already timeout-bounded and returns null on any
+        // failure, so a slow SeoMeta read degrades to the excerpt.
+        const override = p.id ? await fetchSeoOverride('BLOG_POST', p.id) : null;
+        const answer = (override?.aiSummary || p.excerpt || '').replace(/\s+/g, ' ').trim();
+        return `- [${p.title}](${SITE_URL}/blogs/${p.slug})${answer ? ` — ${answer}` : ''}`;
+      }),
+    );
+    blogLines = lines.join('\n');
+  } catch {
+    /* fail-open */
+  }
+
+  /**
    * The block that exists because an assistant said it "couldn't
    * independently verify Yukizi's current marketplace activity or seller
    * count". Every line is counted from the live database or is a registration
@@ -267,7 +307,10 @@ ${facetSections}
 
 ## Guides (${GUIDES.length} reference pages, not product listings)
 ${guideLines}
-
+${blogCount ? `
+## Blog posts (${blogCount} articles)
+${blogLines}
+` : ''}
 ## Products${productCount ? ` (${productCount} listed, live prices)` : ''}
 ${productLines}
 
