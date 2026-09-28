@@ -451,3 +451,25 @@ export async function generateAiSummary(input: {
   );
   return data.data?.summary ?? "";
 }
+
+export type AiWriteKind = "summary" | "meta_description" | "excerpt" | "keywords";
+
+/**
+ * Draft one SEO field from a post's content, without saving it.
+ *
+ * Each field is published somewhere different — the summary on the post and
+ * in llms.txt, the description in a search result, the excerpt on the blog
+ * index — so the API writes each one to its own brief and its own length.
+ * Everything comes back as an editable draft.
+ */
+export async function aiWrite(input: {
+  kind: AiWriteKind;
+  title?: string;
+  content: string;
+}): Promise<{ text: string; keywords: string[] }> {
+  const { data } = await apiClient.post<{ data: { text: string; keywords?: string[] } }>(
+    "/admin/seo/ai-write",
+    input,
+  );
+  return { text: data.data?.text ?? "", keywords: data.data?.keywords ?? [] };
+}
