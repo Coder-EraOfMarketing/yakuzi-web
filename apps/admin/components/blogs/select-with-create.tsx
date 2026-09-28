@@ -29,6 +29,24 @@ export function SelectWithCreate({ label, options, value, onChange, onCreate, pl
   const submit = async () => {
     const name = draft.trim();
     if (!name) return;
+
+    // Typing a name that is already in the list is a selection, not a
+    // creation. Sending it produced "Unique constraint failed on the fields:
+    // (`name`)" — and for authors, where nothing is unique, four rows called
+    // some case of "Yukizi". Case- and space-insensitive, because "Social"
+    // and "social " are the same category to everyone except the database.
+    const existing = options.find(
+      (o) => o.name.trim().toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) {
+      onChange(existing.id);
+      setDraft("");
+      setDetailDraft("");
+      setAdding(false);
+      toast.success(`Selected the existing ${label.toLowerCase()} "${existing.name}".`);
+      return;
+    }
+
     setSaving(true);
     try {
       const created = await onCreate(name, detailDraft.trim() || undefined);
