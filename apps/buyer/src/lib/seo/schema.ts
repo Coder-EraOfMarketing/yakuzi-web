@@ -329,20 +329,40 @@ export function personSchema(author: { name: string; bio?: string; avatar?: stri
   };
 }
 
-export function articleSchema(post: {
-  title: string; slug: string; excerpt?: string; featuredImage?: string;
-  createdAt?: string; updatedAt?: string; publishedAt?: string;
-  author?: { name?: string; bio?: string; avatar?: string } | null;
-  category?: { name?: string } | null;
-  tags?: string[];
-  content?: unknown;
-}) {
+export function articleSchema(
+  post: {
+    title: string; slug: string; excerpt?: string; featuredImage?: string;
+    createdAt?: string; updatedAt?: string; publishedAt?: string;
+    author?: { name?: string; bio?: string; avatar?: string } | null;
+    category?: { name?: string } | null;
+    tags?: string[];
+    content?: unknown;
+  },
+  /**
+   * What the admin said about the post in Advanced SEO. `abstract` is the
+   * same AI summary the page shows in its "In short" block, and `keywords`
+   * are the focus and secondary keywords — both are the post's own account of
+   * itself, which beats leaving an engine to infer one.
+   */
+  seo?: { abstract?: string | null; keywords?: Array<string | null | undefined> } | null,
+) {
   const url = absoluteUrl(`/blogs/${post.slug}`);
   // Rough but honest: strips tags, counts words. Google uses wordCount as one
   // signal of whether a page is substantial; guessing it would be worse than
   // omitting it, so it is only emitted when the content is really there.
   const text = typeof post.content === 'string' ? post.content.replace(/<[^>]+>/g, ' ') : '';
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+
+  // Admin keywords first, then the post's tags — deduped, since a focus
+  // keyword is very often also a tag and repeating it says nothing twice.
+  const keywords = Array.from(
+    new Set(
+      [...(seo?.keywords ?? []), ...(post.tags ?? [])]
+        .map((k) => (typeof k === 'string' ? k.trim() : ''))
+        .filter(Boolean),
+    ),
+  );
+  const abstract = seo?.abstract?.trim();
 
   return {
     '@context': 'https://schema.org',
@@ -356,13 +376,14 @@ export function articleSchema(post: {
     inLanguage: 'en-IN',
     isPartOf: { '@type': 'Blog', '@id': `${SITE_URL}/blogs#blog`, name: `${SITE_NAME} Blog` },
     ...(post.excerpt ? { description: post.excerpt } : {}),
+    ...(abstract ? { abstract } : {}),
     ...(post.featuredImage ? { image: [absoluteUrl(post.featuredImage)] } : {}),
     ...(post.publishedAt || post.createdAt ? { datePublished: post.publishedAt || post.createdAt } : {}),
     ...(post.updatedAt ? { dateModified: post.updatedAt } : {}),
     ...(post.author?.name ? { author: personSchema({ name: post.author.name, bio: post.author.bio, avatar: post.author.avatar }) } : {}),
     // What the piece is about, so a post sits in a topic rather than alone.
     ...(post.category?.name ? { articleSection: post.category.name } : {}),
-    ...(post.tags?.length ? { keywords: post.tags.join(', ') } : {}),
+    ...(keywords.length ? { keywords: keywords.join(', ') } : {}),
     ...(wordCount > 0 ? { wordCount } : {}),
     publisher: { '@id': `${SITE_URL}/#organization` },
   };

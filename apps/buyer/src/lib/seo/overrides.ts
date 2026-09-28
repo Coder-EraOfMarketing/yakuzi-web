@@ -34,6 +34,8 @@ export interface SeoOverride {
   twitterCard?: string | null;
   robots?: string | null;
   aiSummary?: string | null;
+  focusKeyword?: string | null;
+  secondaryKeywords?: string[] | null;
   faq?: SeoFaqEntry[] | null;
   structuredDataOverride?: Record<string, unknown> | null;
   imageAltOverrides?: Record<string, string> | null;
