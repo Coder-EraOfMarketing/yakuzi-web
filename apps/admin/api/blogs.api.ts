@@ -129,10 +129,22 @@ export async function deleteAdminBlogPost(id: string): Promise<void> {
 
 // ─── Authors ─────────────────────────────────────────
 
+/**
+ * A list that fails to load must not look like a list with nothing in it.
+ *
+ * `Array.isArray(body) ? body : []` turned a 400 from this endpoint into an
+ * empty dropdown, so the blog editor showed no authors and no categories for
+ * as long as the route was broken, with nothing anywhere to say why. An admin
+ * created the same author four times before anyone checked the database.
+ */
+function expectList<T>(body: unknown, what: string): T[] {
+  if (Array.isArray(body)) return body as T[];
+  throw new Error(`The API returned something that is not a list of ${what}.`);
+}
+
 export async function getBlogAuthors(): Promise<BlogAuthor[]> {
   const { data } = await apiClient.get("/admin/blogs/authors");
-  const body = data.data ?? data;
-  return Array.isArray(body) ? body : [];
+  return expectList<BlogAuthor>(data.data ?? data, "authors");
 }
 
 export async function createBlogAuthor(payload: { name: string; bio?: string; avatar?: string }): Promise<BlogAuthor> {
@@ -144,8 +156,7 @@ export async function createBlogAuthor(payload: { name: string; bio?: string; av
 
 export async function getAdminBlogCategories(): Promise<BlogCategory[]> {
   const { data } = await apiClient.get("/admin/blogs/categories");
-  const body = data.data ?? data;
-  return Array.isArray(body) ? body : [];
+  return expectList<BlogCategory>(data.data ?? data, "categories");
 }
 
 export async function createAdminBlogCategory(payload: { name: string; slug?: string }): Promise<BlogCategory> {
