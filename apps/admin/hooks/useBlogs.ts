@@ -3,8 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getAdminBlogPosts, getAdminBlogPost, createAdminBlogPost, updateAdminBlogPost,
   updateAdminBlogPostStatus, deleteAdminBlogPost,
-  getBlogAuthors, createBlogAuthor,
-  getAdminBlogCategories, createAdminBlogCategory,
+  getBlogAuthors, createBlogAuthor, updateBlogAuthor, deleteBlogAuthor,
+  getAdminBlogCategories, createAdminBlogCategory, updateAdminBlogCategory, deleteAdminBlogCategory,
   type BlogListQuery, type UpsertBlogPostPayload,
 } from "@/api/blogs.api";
 
@@ -71,6 +71,44 @@ export function useCreateBlogCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createAdminBlogCategory,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: [...KEY, "categories"] }),
+  });
+}
+
+// ─── Taxonomy editing ────────────────────────────────
+// The API has had these routes since the module shipped; nothing called them,
+// so a blog author or category could be created and never renamed or removed.
+
+export function useUpdateBlogAuthor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { name?: string; bio?: string | null; avatar?: string | null } }) =>
+      updateBlogAuthor(id, payload),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: [...KEY, "authors"] }),
+  });
+}
+
+export function useDeleteBlogAuthor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteBlogAuthor,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: [...KEY, "authors"] }),
+  });
+}
+
+export function useUpdateBlogCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { name?: string; slug?: string } }) =>
+      updateAdminBlogCategory(id, payload),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: [...KEY, "categories"] }),
+  });
+}
+
+export function useDeleteBlogCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteAdminBlogCategory,
     onSuccess: () => void qc.invalidateQueries({ queryKey: [...KEY, "categories"] }),
   });
 }

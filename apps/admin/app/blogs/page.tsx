@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Newspaper, Plus, Pencil, Trash2, Eye, ExternalLink, Search } from "lucide-react";
+import { Newspaper, Plus, Pencil, Trash2, Eye, ExternalLink, Search, Tags } from "lucide-react";
 import toast from "react-hot-toast";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Badge, Button, EmptyState, Input, Pagination, Select, Skeleton } from "@/components/ui";
@@ -52,9 +52,14 @@ export default function AdminBlogsPage() {
               {isLoading ? "Loading…" : `${data?.total ?? 0} posts`}
             </p>
           </div>
-          <Link href="/blogs/new">
-            <Button leftIcon={<Plus className="h-4 w-4" />}>New post</Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/blogs/taxonomy">
+              <Button variant="outline" leftIcon={<Tags className="h-4 w-4" />}>Authors &amp; categories</Button>
+            </Link>
+            <Link href="/blogs/new">
+              <Button leftIcon={<Plus className="h-4 w-4" />}>New post</Button>
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

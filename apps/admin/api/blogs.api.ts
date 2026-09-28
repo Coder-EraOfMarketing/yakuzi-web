@@ -10,12 +10,16 @@ export interface BlogAuthor {
   name: string;
   bio?: string | null;
   avatar?: string | null;
+  /** Posts written by this author — the API returns it, and it decides
+   *  whether deleting is allowed. */
+  _count?: { posts: number };
 }
 
 export interface BlogCategory {
   id: string;
   name: string;
   slug: string;
+  _count?: { posts: number };
 }
 
 export interface BlogPost {
@@ -152,6 +156,18 @@ export async function createBlogAuthor(payload: { name: string; bio?: string; av
   return data.data ?? data;
 }
 
+export async function updateBlogAuthor(
+  id: string,
+  payload: { name?: string; bio?: string | null; avatar?: string | null },
+): Promise<BlogAuthor> {
+  const { data } = await apiClient.put(`/admin/blogs/authors/${id}`, payload);
+  return data.data ?? data;
+}
+
+export async function deleteBlogAuthor(id: string): Promise<void> {
+  await apiClient.delete(`/admin/blogs/authors/${id}`);
+}
+
 // ─── Categories ──────────────────────────────────────
 
 export async function getAdminBlogCategories(): Promise<BlogCategory[]> {
@@ -162,6 +178,18 @@ export async function getAdminBlogCategories(): Promise<BlogCategory[]> {
 export async function createAdminBlogCategory(payload: { name: string; slug?: string }): Promise<BlogCategory> {
   const { data } = await apiClient.post("/admin/blogs/categories", payload);
   return data.data ?? data;
+}
+
+export async function updateAdminBlogCategory(
+  id: string,
+  payload: { name?: string; slug?: string },
+): Promise<BlogCategory> {
+  const { data } = await apiClient.put(`/admin/blogs/categories/${id}`, payload);
+  return data.data ?? data;
+}
+
+export async function deleteAdminBlogCategory(id: string): Promise<void> {
+  await apiClient.delete(`/admin/blogs/categories/${id}`);
 }
 
 // ─── Image upload ────────────────────────────────────
