@@ -7,7 +7,7 @@ import { useCart, useUpdateCartItem, useRemoveCartItem, useSyncCart, useClearCar
 import { usePlatformConfig } from '@/hooks/usePlatformConfig';
 import { useCreateOrder } from '@/hooks/useOrders';
 import { useBuyerProfile } from '@/hooks/useBuyerProfile';
-import { useAddToWishlist } from '@/hooks/useWishlist';
+import { useAddToWishlist, useWishlist } from '@/hooks/useWishlist';
 import { useToast } from '@/components/shared/Toast';
 import { useAuth } from '@yukizi/api-client';
 import { useRouter } from 'next/navigation';
@@ -29,6 +29,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
   const clearCart = useClearCart();
   const createOrder = useCreateOrder();
   const addToWishlist = useAddToWishlist();
+  const { data: wishlist } = useWishlist();
   const { data: profileData } = useBuyerProfile();
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
@@ -42,6 +43,27 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
   // stepper quantities (previously both showed the number of distinct
   // product lines, e.g. "1 item" even with a single line at quantity 2).
   const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+
+  // Every id a saved item can be recognised by, so this drawer can tell what is
+  // already saved. It previously read nothing at all, so the save control was
+  // stateless and kept offering to save items the buyer had already saved.
+  //
+  // Three ids per entry because a cart line and a saved item are not keyed the
+  // same way. A save is filed under the CATALOGUE product; a cart line only
+  // ever carries the SELLER OFFER id. `bestListingId` is the bridge — the
+  // wishlist API returns the listing that product currently sells at, which is
+  // the same offer the buyer added in the ordinary single-seller case.
+  //
+  // This can only ever fail to light up (when the buyer added a pricier
+  // seller's offer than the one the API calls "best"), never light up for the
+  // wrong product: if the ids match, it IS that product. A false negative
+  // leaves today's behaviour; a false positive would hide a real action.
+  const savedIds = new Set<string>();
+  for (const entry of (wishlist?.items ?? []) as any[]) {
+    for (const id of [entry?.productId, entry?.product?.id, entry?.product?.bestListingId]) {
+      if (typeof id === 'string' && id) savedIds.add(id);
+    }
+  }
 
   const handleCheckout = async () => {
     if (isAuthenticated) {
@@ -193,6 +215,13 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                     const itemName = item.product?.name ?? item.productName ?? item.name ?? 'Product';
                     const quantity = item.quantity ?? 1;
 
+                    // Checked against every id a save can be recognised by, so
+                    // the save control below shows the truth instead of always
+                    // offering to save.
+                    const alreadySaved = [item.productId, item.product?.id, item.id].some(
+                      (id: unknown) => typeof id === 'string' && savedIds.has(id),
+                    );
+
                     // Available stock, summed across in-stock batches by the API.
                     // Undefined means the API did not report it — treat as unbounded
                     // and let the server-side validation reject the update instead of
@@ -333,6 +362,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                          <button
                            onClick={async (e) => {
                              e.preventDefault();
+                             if (alreadySaved) return;
                              await addToWishlist.mutateAsync({
                                ...item,
                                id: item.product?.id || item.productId || item.id,
@@ -343,9 +373,23 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                              });
                              toast('Added to wishlist', 'success');
                            }}
-                           title="Save for later"
-                           aria-label="Save for later"
-                           className="flex h-7 w-7 items-center justify-center rounded-full border border-white/70 bg-white/55 transition-colors hover:bg-white/85"
+                           disabled={alreadySaved}
+                           title={alreadySaved ? 'Already saved' : 'Save for later'}
+                           aria-label={alreadySaved ? 'Already saved' : 'Save for later'}
+                           className={
+                             alreadySaved
+                               // Filled rather than merely dimmed: "saved" is a
+                               // state worth showing, not an unavailable action.
+                               //
+                               // Numbered shades, not `bg-primary/15`. The
+                               // DEFAULT primary is `hsl(var(--primary))` with
+                               // no <alpha-value> placeholder, so Tailwind
+                               // cannot derive opacity variants from it and
+                               // `bg-primary/15` compiles to nothing at all —
+                               // verified against the built stylesheet.
+                               ? 'flex h-7 w-7 cursor-default items-center justify-center rounded-full border border-primary-300 bg-primary-100 text-primary-600'
+                               : 'flex h-7 w-7 items-center justify-center rounded-full border border-white/70 bg-white/55 transition-colors hover:bg-white/85'
+                           }
                          >
                            {/* The product card's own save mark, not a lucide
                                bookmark — one action should not have two
