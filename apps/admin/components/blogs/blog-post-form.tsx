@@ -34,8 +34,8 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
   const router = useRouter();
   const isEdit = !!post;
 
-  const { data: authors } = useBlogAuthors();
-  const { data: categories } = useCategories();
+  const { data: authors, isError: authorsFailed } = useBlogAuthors();
+  const { data: categories, isError: categoriesFailed } = useCategories();
   const createAuthor = useCreateBlogAuthor();
   const createCategory = useCreateBlogCategory();
   const createPost = useCreateBlogPost();
@@ -248,6 +248,7 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
 
           <SelectWithCreate
             label="Category"
+            loadFailed={categoriesFailed}
             options={(categories ?? []).map((c) => ({ id: c.id, name: c.name }))}
             value={categoryId}
             onChange={setCategoryId}
@@ -256,6 +257,7 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
 
           <SelectWithCreate
             label="Author"
+            loadFailed={authorsFailed}
             options={(authors ?? []).map((a) => ({ id: a.id, name: a.name }))}
             value={authorId}
             onChange={setAuthorId}
