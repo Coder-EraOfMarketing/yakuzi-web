@@ -704,7 +704,14 @@ export async function getMerchantStatus(): Promise<MerchantStatus> {
 }
 
 export async function runMerchantSync(dryRun: boolean): Promise<MerchantSyncSummary> {
-  const { data } = await apiClient.post<{ data: MerchantSyncSummary }>("/admin/merchant/sync", { dryRun });
+  const { data } = await apiClient.post<{ data: MerchantSyncSummary }>("/admin/merchant/sync", { dryRun }, {
+    // One product per request to Google, ~1.2s each, so a full catalogue push
+    // runs well past the client's 30s default: 87 products took 103s on
+    // 2026-09-28. The server completed it and logged "87 pushed, 0 failed",
+    // but axios had already aborted, so the panel reported a failure that
+    // never happened. Give the request longer than the sync can take.
+    timeout: 600_000, // 10 minutes for a full catalogue push
+  });
   return data.data;
 }
 
