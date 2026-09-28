@@ -432,3 +432,22 @@ export async function renameProductImage(
   );
   return data.data?.newUrl ?? null;
 }
+
+/**
+ * Draft the AI-search summary for a piece of content, without saving it.
+ *
+ * The summary is published verbatim — as the post's "In short" block, as
+ * BlogPosting.abstract, and as the post's line in llms.txt — so it comes back
+ * as an editable draft rather than being written straight to the record.
+ */
+export async function generateAiSummary(input: {
+  title?: string;
+  content: string;
+  maxWords?: number;
+}): Promise<string> {
+  const { data } = await apiClient.post<{ data: { summary: string } }>(
+    "/admin/seo/ai-summary",
+    input,
+  );
+  return data.data?.summary ?? "";
+}

@@ -10,6 +10,9 @@ import { MetaEditor } from "@/components/seo/meta-editor";
 import { useSeoMetaOne } from "@/hooks/useSeo";
 import { RichTextEditor } from "./rich-text-editor";
 import { SelectWithCreate } from "./select-with-create";
+import { BlogStructure } from "./blog-structure";
+import { BlogPreview } from "./blog-preview";
+import { analyzeBlogHtml, blogStructureWarnings } from "@/lib/blog-html";
 import { uploadBlogImage } from "@/api/blogs.api";
 import {
   useBlogAuthors, useCreateBlogAuthor, useAdminBlogCategories as useCategories, useCreateBlogCategory,
@@ -59,6 +62,7 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
 
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [showAdvancedSeo, setShowAdvancedSeo] = useState(false);
   // Fetch any existing override so opening this doesn't wipe a previously-saved
   // AI summary/FAQ/keywords with a blank form (MetaEditor only pre-fills from `record`).
@@ -112,9 +116,26 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
     ogImage: ogImage.trim() || undefined,
   });
 
+  /**
+   * Publishing a post with no H2s, or with an H1 in the body, is the mistake
+   * that only shows up once Google has already seen the page. Warn at the
+   * last moment where it can still be fixed — and let it through, because the
+   * author is the one who knows whether a two-paragraph note needs headings.
+   */
+  const confirmStructure = (): boolean => {
+    const problems = blogStructureWarnings(analyzeBlogHtml(content)).filter(
+      (w) => w.severity === "error",
+    );
+    if (!problems.length) return true;
+    return window.confirm(
+      `Publish anyway?\n\n${problems.map((p) => `• ${p.message}`).join("\n\n")}`,
+    );
+  };
+
   const handleSave = async (nextStatus?: "DRAFT" | "PUBLISHED") => {
     const err = validate();
     if (err) { toast.error(err); return; }
+    if ((nextStatus ?? status) === "PUBLISHED" && !confirmStructure()) return;
     const payload = { ...buildPayload(), status: nextStatus ?? status };
     try {
       if (isEdit && post) {
@@ -179,6 +200,8 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
           <RichTextEditor value={content} onChange={setContent} onUploadImage={(f) => uploadBlogImage(f, title)} />
         </div>
 
+        <BlogStructure html={content} onPreview={() => setShowPreview(true)} />
+
         <div className="glass-card rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-foreground">SEO</h3>
@@ -236,7 +259,14 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
             options={(authors ?? []).map((a) => ({ id: a.id, name: a.name }))}
             value={authorId}
             onChange={setAuthorId}
-            onCreate={(name) => createAuthor.mutateAsync({ name })}
+            // The bio is published: it becomes the Person schema's description
+            // on the post and the byline on the author page. Created without
+            // one, an author is a name with nothing behind it.
+            detail={{
+              label: "Published on the author page and in the post's author schema.",
+              placeholder: "Short bio — e.g. Collects Demon Slayer figures, writing for Yukizi since 2025",
+            }}
+            onCreate={(name, bio) => createAuthor.mutateAsync({ name, bio })}
           />
 
           <ChipsInput label="Tags" values={tags} onChange={setTags} placeholder="Type and press Enter" />
@@ -278,6 +308,16 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
         </div>
       </div>
 
+      <BlogPreview
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        title={title}
+        content={content}
+        excerpt={excerpt}
+        authorName={(authors ?? []).find((a) => a.id === authorId)?.name}
+        featuredImage={featuredImage}
+      />
+
       {isEdit && post && (
         <MetaEditor
           open={showAdvancedSeo && !seoMetaLoading}
@@ -285,6 +325,9 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
           record={existingSeoMeta ?? null}
           presetType="BLOG_POST"
           presetId={post.id}
+          // Live form state, not the saved post: the summary should describe
+          // what is about to be published, not the last revision.
+          summarySource={{ title, content }}
         />
       )}
     </div>

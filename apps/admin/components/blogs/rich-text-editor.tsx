@@ -7,7 +7,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import toast from "react-hot-toast";
 import {
   Bold, Italic, Strikethrough, List, ListOrdered, Quote, Undo, Redo,
-  Link as LinkIcon, Image as ImageIcon, Heading2, Heading3,
+  Link as LinkIcon, Link2Off, Image as ImageIcon, Heading2, Heading3, Text,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +40,17 @@ export function RichTextEditor({ value, onChange, onUploadImage }: {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [2, 3] } }),
-      Link.configure({ openOnClick: false, autolink: true }),
+      // Tiptap's Link defaults to rel="noopener noreferrer nofollow" and
+      // target="_blank" on EVERY link. That quietly nofollowed every link a
+      // post ever made, including links to our own product pages and guides —
+      // the internal linking a shop's blog exists to do, passing no signal at
+      // all. Followed by default; setLink() below decides target and rel from
+      // the destination, and the toolbar can mark a single link nofollow.
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        HTMLAttributes: { target: null, rel: "noopener noreferrer" },
+      }),
       Image,
       Placeholder.configure({ placeholder: "Write your post…" }),
     ],
@@ -56,18 +66,55 @@ export function RichTextEditor({ value, onChange, onUploadImage }: {
 
   if (!editor) return null;
 
+  /** A link to our own site is followed and stays in the tab; anything else
+   *  opens in a new one and carries the usual safety rel. */
+  const isInternal = (url: string) =>
+    url.startsWith("/") || url.startsWith("#") || /^https?:\/\/(www\.)?yukizi\.com(\/|$)/i.test(url);
+
   const setLink = () => {
     const previous = editor.getAttributes("link").href as string | undefined;
     const url = window.prompt("Link URL", previous || "https://");
     if (url === null) return;
     if (url === "") { editor.chain().focus().extendMarkRange("link").unsetLink().run(); return; }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    const internal = isInternal(url.trim());
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({
+        href: url.trim(),
+        target: internal ? null : "_blank",
+        rel: internal ? null : "noopener noreferrer",
+      })
+      .run();
+  };
+
+  /**
+   * Alt text, asked for at insertion.
+   *
+   * Every in-body image shipped without any alt: setImage was only ever given
+   * a src. That is the one accessibility and image-search field a blog post
+   * has, and nothing in the editor could set it — not even after the fact.
+   */
+  const askAlt = (current?: string) =>
+    window.prompt(
+      "Describe this image for screen readers and image search (alt text)",
+      current ?? "",
+    );
+
+  const setAltOnSelection = () => {
+    const attrs = editor.getAttributes("image");
+    const alt = askAlt(typeof attrs.alt === "string" ? attrs.alt : "");
+    if (alt === null) return;
+    editor.chain().focus().updateAttributes("image", { alt: alt.trim() }).run();
   };
 
   const addImage = async () => {
     if (!onUploadImage) {
       const url = window.prompt("Image URL");
-      if (url) editor.chain().focus().setImage({ src: url }).run();
+      if (!url) return;
+      const alt = askAlt();
+      editor.chain().focus().setImage({ src: url, alt: alt?.trim() || undefined }).run();
       return;
     }
     const input = document.createElement("input");
@@ -78,7 +125,8 @@ export function RichTextEditor({ value, onChange, onUploadImage }: {
       if (!file) return;
       try {
         const url = await onUploadImage(file);
-        editor.chain().focus().setImage({ src: url }).run();
+        const alt = askAlt();
+        editor.chain().focus().setImage({ src: url, alt: alt?.trim() || undefined }).run();
       } catch {
         // Was window.alert(): a native modal blocks the editor and cannot be
         // styled, and this app has react-hot-toast mounted already.
@@ -86,6 +134,30 @@ export function RichTextEditor({ value, onChange, onUploadImage }: {
       }
     };
     input.click();
+  };
+
+  /**
+   * nofollow, for the one case a shop's blog actually meets it: a paid,
+   * sponsored or affiliate destination. Internal links and ordinary citations
+   * should stay followed, so this is a toggle on the selected link rather
+   * than anything applied by default.
+   */
+  const toggleNofollow = () => {
+    const attrs = editor.getAttributes("link");
+    const href = attrs.href as string | undefined;
+    if (!href) return;
+    const rel = typeof attrs.rel === "string" ? attrs.rel : "";
+    const isNofollow = /\bnofollow\b/.test(rel);
+    const nextRel = isNofollow
+      ? rel.replace(/\bnofollow\b/g, "").replace(/\s+/g, " ").trim()
+      : `${rel} nofollow`.trim();
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({ href, rel: nextRel || null, target: attrs.target ?? null })
+      .run();
+    toast.success(isNofollow ? "Link is followed again." : "Link marked nofollow.");
   };
 
   return (
@@ -103,7 +175,18 @@ export function RichTextEditor({ value, onChange, onUploadImage }: {
         <ToolbarButton title="Quote" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}><Quote className="h-4 w-4" /></ToolbarButton>
         <span className="mx-1 h-5 w-px bg-border" />
         <ToolbarButton title="Link" active={editor.isActive("link")} onClick={setLink}><LinkIcon className="h-4 w-4" /></ToolbarButton>
+        <ToolbarButton
+          title="Mark link nofollow (paid or sponsored destinations)"
+          disabled={!editor.isActive("link")}
+          active={/\bnofollow\b/.test(String(editor.getAttributes("link").rel ?? ""))}
+          onClick={toggleNofollow}
+        ><Link2Off className="h-4 w-4" /></ToolbarButton>
         <ToolbarButton title="Image" onClick={addImage}><ImageIcon className="h-4 w-4" /></ToolbarButton>
+        <ToolbarButton
+          title="Alt text for the selected image"
+          disabled={!editor.isActive("image")}
+          onClick={setAltOnSelection}
+        ><Text className="h-4 w-4" /></ToolbarButton>
         <span className="mx-1 h-5 w-px bg-border" />
         <ToolbarButton title="Undo" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()}><Undo className="h-4 w-4" /></ToolbarButton>
         <ToolbarButton title="Redo" disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()}><Redo className="h-4 w-4" /></ToolbarButton>

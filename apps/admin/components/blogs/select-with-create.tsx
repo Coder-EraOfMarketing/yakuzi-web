@@ -3,16 +3,24 @@ import { useState } from "react";
 import { Plus, X, Check } from "lucide-react";
 import { Select, Input, Button } from "@/components/ui";
 
-export function SelectWithCreate({ label, options, value, onChange, onCreate, placeholder }: {
+export function SelectWithCreate({ label, options, value, onChange, onCreate, placeholder, detail }: {
   label: string;
   options: Array<{ id: string; name: string }>;
   value: string;
   onChange: (id: string) => void;
-  onCreate: (name: string) => Promise<{ id: string } | void>;
+  onCreate: (name: string, detail?: string) => Promise<{ id: string } | void>;
   placeholder?: string;
+  /**
+   * An optional second field captured with the name. Authors were created
+   * name-only even though the API accepts a bio, so every byline published as
+   * a bare name with no credentials behind it — and this inline form is the
+   * only place an author can be created at all.
+   */
+  detail?: { label: string; placeholder: string };
 }) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
+  const [detailDraft, setDetailDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
@@ -20,9 +28,10 @@ export function SelectWithCreate({ label, options, value, onChange, onCreate, pl
     if (!name) return;
     setSaving(true);
     try {
-      const created = await onCreate(name);
+      const created = await onCreate(name, detailDraft.trim() || undefined);
       if (created && "id" in created) onChange(created.id);
       setDraft("");
+      setDetailDraft("");
       setAdding(false);
     } finally {
       setSaving(false);
@@ -42,8 +51,17 @@ export function SelectWithCreate({ label, options, value, onChange, onCreate, pl
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submit(); } if (e.key === "Escape") setAdding(false); }}
           />
           <Button type="button" size="sm" loading={saving} onClick={submit} className="px-2.5"><Check className="h-4 w-4" /></Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => { setAdding(false); setDraft(""); }} className="px-2.5"><X className="h-4 w-4" /></Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => { setAdding(false); setDraft(""); setDetailDraft(""); }} className="px-2.5"><X className="h-4 w-4" /></Button>
         </div>
+        {detail && (
+          <Input
+            value={detailDraft}
+            onChange={(e) => setDetailDraft(e.target.value)}
+            placeholder={detail.placeholder}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submit(); } if (e.key === "Escape") setAdding(false); }}
+          />
+        )}
+        {detail && <p className="text-xs text-muted-foreground">{detail.label}</p>}
       </div>
     );
   }
