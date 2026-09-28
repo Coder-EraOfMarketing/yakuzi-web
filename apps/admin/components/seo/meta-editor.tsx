@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { History, RotateCcw, Save } from "lucide-react";
+import { History, RotateCcw, Save, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
 import { Badge, Button, Input, Modal, Select, Skeleton, Tabs, Textarea } from "@/components/ui";
 import { useRestoreSeoRevision, useSeoRevisions, useSeoProductSlug, useUpdateSeoProductSlug, useUpsertSeoMeta } from "@/hooks/useSeo";
@@ -9,7 +9,7 @@ import { CharCounter, OgPreview, ScoreChip, SerpPreview } from "./serp-preview";
 import { ChipsInput } from "./chips-input";
 import { FaqEditor } from "./faq-editor";
 import { EntityPicker, ENTITY_TYPE_LABELS } from "./entity-picker";
-import { META_EDITOR_ENTITY_TYPES } from "@/api/seo.api";
+import { META_EDITOR_ENTITY_TYPES, generateAiSummary } from "@/api/seo.api";
 
 const ROBOTS_PRESETS = ["", "index,follow", "noindex,follow", "noindex,nofollow"];
 
@@ -64,16 +64,23 @@ const TABS = [
   { label: "Advanced", value: "advanced" },
 ];
 
-export function MetaEditor({ open, onClose, record, presetType, presetId }: {
+export function MetaEditor({ open, onClose, record, presetType, presetId, summarySource }: {
   open: boolean;
   onClose: () => void;
   /** Existing record to edit; null/undefined = create flow with the entity picker. */
   record?: SeoMetaRecord | null;
   presetType?: SeoEntityType;
   presetId?: string;
+  /**
+   * The content behind this record, when the caller has it — the blog editor
+   * does. Turns "AI summary" from a blank box nobody fills in into a draft
+   * generated from the post, which is the only version that gets written.
+   */
+  summarySource?: { title?: string; content?: string };
 }) {
   const upsert = useUpsertSeoMeta();
   const restore = useRestoreSeoRevision();
+  const [generating, setGenerating] = useState(false);
 
   const [tab, setTab] = useState("basic");
   const [entityType, setEntityType] = useState<SeoEntityType>(record?.entityType ?? presetType ?? "STATIC_PAGE");
@@ -113,6 +120,23 @@ export function MetaEditor({ open, onClose, record, presetType, presetId }: {
   const { data: revisions, isLoading: revisionsLoading } = useSeoRevisions(showHistory ? savedRecord?.id : undefined);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
+
+  /** Draft, never save: the text is published verbatim, so an admin reads it
+   *  first. Nothing is persisted until Save, like every other field here. */
+  const generateSummary = async () => {
+    const content = summarySource?.content ?? "";
+    if (!content.trim()) return;
+    setGenerating(true);
+    try {
+      const summary = await generateAiSummary({ title: summarySource?.title, content });
+      set("aiSummary", summary);
+      toast.success("Draft summary written — edit it before saving.");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message ?? "Could not write a summary.");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!entityId.trim()) { toast.error("Pick the page/entity this record is for first."); return; }
@@ -358,9 +382,30 @@ export function MetaEditor({ open, onClose, record, presetType, presetId }: {
             <Textarea label="Entity description" rows={3}
               placeholder="Factual description of this entity, written for knowledge graphs (who/what it is, consistent naming)."
               value={form.entityDescription} onChange={(e) => set("entityDescription", e.target.value)} />
-            <Textarea label="AI summary" rows={4}
-              placeholder="Concise, factual summary for AI search engines (ChatGPT, Gemini, Perplexity…). Plain statements, no marketing fluff."
-              value={form.aiSummary} onChange={(e) => set("aiSummary", e.target.value)} />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <label className="block text-sm font-medium text-foreground">AI summary</label>
+                {summarySource?.content ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    loading={generating}
+                    leftIcon={<Sparkles className="h-3.5 w-3.5" />}
+                    onClick={generateSummary}
+                  >
+                    {form.aiSummary ? "Regenerate" : "Generate from the post"}
+                  </Button>
+                ) : null}
+              </div>
+              <Textarea rows={4}
+                placeholder="Concise, factual summary for AI search engines (ChatGPT, Gemini, Perplexity…). Plain statements, no marketing fluff."
+                value={form.aiSummary} onChange={(e) => set("aiSummary", e.target.value)} />
+              <p className="text-xs text-muted-foreground">
+                Published as the post&apos;s &ldquo;In short&rdquo; block, as its Article abstract, and as its
+                line in llms.txt — read it before saving.
+              </p>
+            </div>
           </div>
         )}
 
