@@ -7,9 +7,10 @@ import Placeholder from "@tiptap/extension-placeholder";
 import toast from "react-hot-toast";
 import {
   Bold, Italic, Strikethrough, List, ListOrdered, Quote, Undo, Redo,
-  Link as LinkIcon, Link2Off, Image as ImageIcon, Heading2, Heading3, Text,
+  Link as LinkIcon, Link2Off, Image as ImageIcon, Heading2, Heading3, Text, Eraser,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { cleanPastedHtml, needsCleanup } from "@/lib/paste-cleanup";
 
 function ToolbarButton({ onClick, active, disabled, title, children }: {
   onClick: () => void; active?: boolean; disabled?: boolean; title: string; children: React.ReactNode;
@@ -60,6 +61,10 @@ export function RichTextEditor({ value, onChange, onUploadImage }: {
       attributes: {
         class: "prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[280px] px-4 py-3",
       },
+      // Google Docs pastes blank paragraphs for every empty line and cuts
+      // sentences where they wrapped; both survive into the saved content and
+      // publish as the double-spaced wall authors report. See lib/paste-cleanup.
+      transformPastedHTML: (html) => cleanPastedHtml(html),
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
@@ -107,6 +112,21 @@ export function RichTextEditor({ value, onChange, onUploadImage }: {
     const alt = askAlt(typeof attrs.alt === "string" ? attrs.alt : "");
     if (alt === null) return;
     editor.chain().focus().updateAttributes("image", { alt: alt.trim() }).run();
+  };
+
+  /**
+   * The same repair, run over what is already in the editor — for everything
+   * pasted before transformPastedHTML existed. Goes through the normal
+   * update path, so one Ctrl+Z puts it back.
+   */
+  const cleanUpDocument = () => {
+    const current = editor.getHTML();
+    if (!needsCleanup(current)) {
+      toast("Nothing to clean up — no blank lines or split sentences found.");
+      return;
+    }
+    editor.chain().focus().setContent(cleanPastedHtml(current), true).run();
+    toast.success("Removed blank lines and rejoined split sentences.");
   };
 
   const addImage = async () => {
@@ -187,6 +207,11 @@ export function RichTextEditor({ value, onChange, onUploadImage }: {
           disabled={!editor.isActive("image")}
           onClick={setAltOnSelection}
         ><Text className="h-4 w-4" /></ToolbarButton>
+        <span className="mx-1 h-5 w-px bg-border" />
+        <ToolbarButton
+          title="Clean up pasted text — remove blank lines and rejoin split sentences"
+          onClick={cleanUpDocument}
+        ><Eraser className="h-4 w-4" /></ToolbarButton>
         <span className="mx-1 h-5 w-px bg-border" />
         <ToolbarButton title="Undo" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()}><Undo className="h-4 w-4" /></ToolbarButton>
         <ToolbarButton title="Redo" disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()}><Redo className="h-4 w-4" /></ToolbarButton>
