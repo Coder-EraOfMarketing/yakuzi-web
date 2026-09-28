@@ -7,6 +7,7 @@ import { Button, Input, Select, Textarea } from "@/components/ui";
 import { ChipsInput } from "@/components/seo/chips-input";
 import { CharCounter, SerpPreview, OgPreview } from "@/components/seo/serp-preview";
 import { MetaEditor } from "@/components/seo/meta-editor";
+import { AiFillButton } from "@/components/seo/ai-fill-button";
 import { useSeoMetaOne } from "@/hooks/useSeo";
 import { RichTextEditor } from "./rich-text-editor";
 import { SelectWithCreate } from "./select-with-create";
@@ -192,7 +193,13 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
               </label>
             )}
           </div>
-          <Textarea label="Excerpt" rows={2} maxLength={500} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} placeholder="Short summary shown on the blog list page." />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-foreground">Excerpt</label>
+              <AiFillButton kind="excerpt" title={title} content={content} hasValue={!!excerpt} onText={setExcerpt} />
+            </div>
+            <Textarea rows={2} maxLength={500} value={excerpt} onChange={(e) => setExcerpt(e.target.value)} placeholder="Short summary shown on the blog list page." />
+          </div>
         </div>
 
         <div className="glass-card rounded-2xl p-5 space-y-2">
@@ -223,13 +230,34 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
             <Input maxLength={60} placeholder={title || "Falls back to the post title"} value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <label className="block text-sm font-medium text-foreground">Meta description</label>
-              <CharCounter value={metaDescription} max={160} />
+              <div className="flex items-center gap-2">
+                <AiFillButton
+                  kind="meta_description"
+                  title={title}
+                  content={content}
+                  hasValue={!!metaDescription}
+                  onText={setMetaDescription}
+                />
+                <CharCounter value={metaDescription} max={160} />
+              </div>
             </div>
             <Textarea maxLength={160} rows={3} placeholder={excerpt || "Falls back to the excerpt"} value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} />
           </div>
-          <ChipsInput label="Meta keywords" values={metaKeywords} onChange={setMetaKeywords} placeholder="Type and press Enter" />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-foreground">Meta keywords</label>
+              <AiFillButton
+                kind="keywords"
+                title={title}
+                content={content}
+                hasValue={metaKeywords.length > 0}
+                onKeywords={setMetaKeywords}
+              />
+            </div>
+            <ChipsInput values={metaKeywords} onChange={setMetaKeywords} placeholder="Type and press Enter" />
+          </div>
           <Input label="Canonical URL" placeholder={`https://yukizi.com/blogs/${slug || "…"}`} value={canonicalUrl} onChange={(e) => setCanonicalUrl(e.target.value)} />
           <Input label="OG image URL (1200×630)" placeholder="Falls back to the featured image" value={ogImage} onChange={(e) => setOgImage(e.target.value)} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
