@@ -10,7 +10,7 @@ import { MetaEditor } from "@/components/seo/meta-editor";
 import { AiFillButton } from "@/components/seo/ai-fill-button";
 import { useSeoMetaOne } from "@/hooks/useSeo";
 import { RichTextEditor } from "./rich-text-editor";
-import { SelectWithCreate } from "./select-with-create";
+import { MultiSelectWithCreate } from "./multi-select-with-create";
 import { BlogStructure } from "./blog-structure";
 import { BlogPreview } from "./blog-preview";
 import { analyzeBlogHtml, blogStructureWarnings } from "@/lib/blog-html";
@@ -50,8 +50,19 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
   const [excerpt, setExcerpt] = useState(post?.excerpt ?? "");
   const [content, setContent] = useState(post?.content ?? "");
   const [featuredImage, setFeaturedImage] = useState(post?.featuredImage ?? "");
-  const [authorId, setAuthorId] = useState(post?.authorId ?? "");
-  const [categoryId, setCategoryId] = useState(post?.categoryId ?? "");
+  // Arrays now, primary first. Seeded from the sets when the API sends them,
+  // and from the single ids otherwise — a post saved before co-authors
+  // existed has only authorId/categoryId.
+  const [authorIds, setAuthorIds] = useState<string[]>(() =>
+    post?.authors?.length
+      ? [...post.authors].sort((a, b) => a.position - b.position).map((a) => a.authorId)
+      : post?.authorId ? [post.authorId] : [],
+  );
+  const [categoryIds, setCategoryIds] = useState<string[]>(() =>
+    post?.categories?.length
+      ? [...post.categories].sort((a, b) => a.position - b.position).map((c) => c.categoryId)
+      : post?.categoryId ? [post.categoryId] : [],
+  );
   const [tags, setTags] = useState<string[]>(post?.tags ?? []);
   const [status, setStatus] = useState<"DRAFT" | "PUBLISHED">(post?.status ?? "DRAFT");
 
@@ -71,8 +82,10 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
 
   // Default to the first available author once loaded, for a fresh post.
   useEffect(() => {
-    if (!isEdit && !authorId && authors && authors.length > 0) setAuthorId(authors[0].id);
-  }, [authors, authorId, isEdit]);
+    if (!isEdit && authorIds.length === 0 && authors && authors.length > 0) {
+      setAuthorIds([authors[0].id]);
+    }
+  }, [authors, authorIds.length, isEdit]);
 
   useEffect(() => {
     if (!slugTouched) setSlug(slugify(title));
@@ -94,8 +107,8 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
 
   const validate = (): string | null => {
     if (!title.trim()) return "Title is required.";
-    if (!authorId) return "Pick or create an author.";
-    if (!categoryId) return "Pick or create a category.";
+    if (!authorIds.length) return "Pick or create at least one author.";
+    if (!categoryIds.length) return "Pick or create at least one category.";
     if (!content || content === "<p></p>") return "Write some content before saving.";
     return null;
   };
@@ -106,8 +119,12 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
     excerpt: excerpt.trim() || undefined,
     content,
     featuredImage: featuredImage || undefined,
-    authorId,
-    categoryId,
+    // The first of each is the primary — sent as the single id too, so the
+    // storefront byline and articleSection keep reading one value.
+    authorId: authorIds[0],
+    categoryId: categoryIds[0],
+    authorIds,
+    categoryIds,
     tags,
     status,
     metaTitle: metaTitle.trim() || undefined,
@@ -274,21 +291,21 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
             <option value="PUBLISHED">Published</option>
           </Select>
 
-          <SelectWithCreate
-            label="Category"
+          <MultiSelectWithCreate
+            label="Categories"
+            singular="category"
             loadFailed={categoriesFailed}
             options={(categories ?? []).map((c) => ({ id: c.id, name: c.name }))}
-            value={categoryId}
-            onChange={setCategoryId}
+            values={categoryIds}
+            onChange={setCategoryIds}
             onCreate={(name) => createCategory.mutateAsync({ name })}
+            helpText="The primary category owns this post's URL grouping and its articleSection. Tags are the lighter way to cross-file a post."
           />
 
-          <SelectWithCreate
-            label="Author"
+          <MultiSelectWithCreate
+            label="Authors"
+            singular="author"
             loadFailed={authorsFailed}
-            options={(authors ?? []).map((a) => ({ id: a.id, name: a.name }))}
-            value={authorId}
-            onChange={setAuthorId}
             // The bio is published: it becomes the Person schema's description
             // on the post and the byline on the author page. Created without
             // one, an author is a name with nothing behind it.
@@ -297,6 +314,10 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
               placeholder: "Short bio — e.g. Collects Demon Slayer figures, writing for Yukizi since 2025",
             }}
             onCreate={(name, bio) => createAuthor.mutateAsync({ name, bio })}
+            options={(authors ?? []).map((a) => ({ id: a.id, name: a.name }))}
+            values={authorIds}
+            onChange={setAuthorIds}
+            helpText="Everyone here is credited in the byline; the primary is the one the author page and Article schema name first."
           />
 
           <ChipsInput label="Tags" values={tags} onChange={setTags} placeholder="Type and press Enter" />
@@ -344,7 +365,11 @@ export function BlogPostForm({ post }: { post?: BlogPost }) {
         title={title}
         content={content}
         excerpt={excerpt}
-        authorName={(authors ?? []).find((a) => a.id === authorId)?.name}
+        // The whole byline, in order, as the storefront will print it.
+        authorName={authorIds
+          .map((id) => (authors ?? []).find((a) => a.id === id)?.name)
+          .filter(Boolean)
+          .join(", ")}
         featuredImage={featuredImage}
       />
 

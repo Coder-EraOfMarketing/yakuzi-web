@@ -46,6 +46,13 @@ export interface BlogPost {
   updatedAt: string;
   author?: BlogAuthor;
   category?: BlogCategory | null;
+  /**
+   * Every credited author / filed category, byline order, primary first.
+   * `authorId` and `categoryId` above remain the primary of each — the
+   * storefront reads those — so these are the full sets, not extras.
+   */
+  authors?: Array<{ authorId: string; position: number; author?: BlogAuthor }>;
+  categories?: Array<{ categoryId: string; position: number; category?: BlogCategory }>;
 }
 
 export interface UpsertBlogPostPayload {
@@ -57,6 +64,9 @@ export interface UpsertBlogPostPayload {
   images?: string[];
   authorId: string;
   categoryId: string;
+  /** Full sets; the API takes the first of each as the primary. */
+  authorIds?: string[];
+  categoryIds?: string[];
   tags?: string[];
   status?: "DRAFT" | "PUBLISHED";
   metaTitle?: string;
