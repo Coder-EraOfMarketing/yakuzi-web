@@ -326,6 +326,22 @@ export async function adminCreateProductForSeller(payload: Record<string, any>) 
   return data.data;
 }
 
+/**
+ * Edit a seller's listing on their behalf — the counterpart to creating one.
+ *
+ * Not the same as updateAdminProduct below: that one edits the CATALOGUE
+ * entry (shared name, slug and its 301). This edits the SELLER'S LISTING —
+ * stock, variants, images, pricing, packaging — and the API runs it through
+ * the seller's own update path, so the rules are identical whoever saves.
+ */
+export async function adminUpdateProductForSeller(productId: string, payload: Record<string, any>) {
+  const { data } = await apiClient.patch<{ data: any }>(
+    `/admin/products/${productId}/as-seller`,
+    payload,
+  );
+  return data.data;
+}
+
 export async function updateUser(userId: string, payload: Record<string, any>) {
   const { data } = await apiClient.patch<{ data: any }>(`/admin/users/${userId}`, payload);
   return data.data;
