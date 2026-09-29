@@ -47,6 +47,12 @@ export default function EditProductPage() {
   const resolvedSku = productAny?.sku || activeVariant?.sku || activeVariant?.options?.sku || activeListing?.sku || productAny?.variant?.sku || "";
   const resolvedSerialNo = productAny?.serialNo || activeVariant?.serialNo || activeVariant?.options?.serialNo || activeListing?.serialNo || productAny?.variant?.serialNo || "";
   const resolvedSpecifications = productAny?.specifications || activeVariant?.specifications || activeVariant?.options?.specifications || activeListing?.specifications || "";
+  // Packaging belongs to the listing, so read that first. Prefilling matters
+  // more than it looks: the field is required, so without this a seller
+  // editing an unrelated field (a price, say) would be blocked until they
+  // re-answered a question they had already answered. Falls back to undefined
+  // rather than a guess, which leaves the radio group genuinely unanswered.
+  const resolvedBoxCondition = activeListing?.boxCondition || productAny?.boxCondition || undefined;
 
   return (
         <ErrorBoundary>
@@ -107,6 +113,7 @@ export default function EditProductPage() {
                 sku: resolvedSku,
                 serialNo: resolvedSerialNo,
                 specifications: resolvedSpecifications,
+                box_condition: resolvedBoxCondition,
                 delivery_text: (product as any).deliveryText ? String(parseInt(String((product as any).deliveryText).match(/\d+/)?.[0] || "0") || "") : "",
                 image_list: Array.isArray((product as any).images) ? (product as any).images.map((img: any) => typeof img === 'string' ? img : img.url).filter(Boolean) : [],
                 custom_extra_fields: (product as any).extraFields || [],

@@ -476,6 +476,11 @@ export function ProductForm({
           ...(data.sku && { sku: data.sku }),
           ...(data.serialNo && { serialNo: data.serialNo }),
           ...(data.specifications && { specifications: data.specifications }),
+        // Unconditional, not a `&&` spread like the optional fields above: the
+        // schema will not let the form submit without a choice, so an absent
+        // value here would mean something has gone wrong rather than that the
+        // seller skipped it.
+        boxCondition: data.box_condition,
         categoryId: data.categories[0],
         ...(data.sub_categories?.length && { subCategoryId: data.sub_categories[0] }),
         stock: payloadStock,
@@ -603,6 +608,38 @@ export function ProductForm({
                 </>
               )}
               <Input label="Product Specification" placeholder="e.g. 500mg, Cotton, etc." error={errors.specifications?.message} {...register("specifications")} disabled={!!selectedMasterId} />
+
+              {/* Required, and nothing is preselected — an untouched form
+                  fails validation, which is what makes the choice mandatory.
+
+                  Deliberately NOT disabled by selectedMasterId, unlike the
+                  fields above. Those describe the catalogue product, which a
+                  seller listing an existing item must not rewrite. Packaging
+                  is a fact about THIS seller's stock: two sellers can list the
+                  same figure, one boxed and one not, so it has to stay
+                  answerable even when the rest of the form is locked. */}
+              <div className="space-y-1.5">
+                <span className="block text-sm font-medium text-foreground">Packaging *</span>
+                <div className="flex items-center gap-5 rounded-xl border border-input bg-background px-3 py-2.5">
+                  {([
+                    ["WITH_BOX", "With box"],
+                    ["WITHOUT_BOX", "Without box"],
+                  ] as const).map(([value, text]) => (
+                    <label key={value} className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                      <input
+                        type="radio"
+                        value={value}
+                        className="h-4 w-4 accent-primary"
+                        {...register("box_condition")}
+                      />
+                      {text}
+                    </label>
+                  ))}
+                </div>
+                {errors.box_condition && (
+                  <p className="text-sm text-red-500">{errors.box_condition.message as string}</p>
+                )}
+              </div>
             </div>
           </div>
 
