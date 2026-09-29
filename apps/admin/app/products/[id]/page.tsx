@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, Trash2, PencilLine } from "lucide-react";
+import { ArrowLeft, Package, Trash2, PencilLine, Store } from "lucide-react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Badge, Skeleton, Modal } from "@/components/ui";
 import { formatCurrency } from "@yukizi/utils";
@@ -72,11 +72,16 @@ export default function ProductDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Products is a read-only overview of what sellers have listed —
-                the catalog itself (details, SEO, URL, images) is edited in
-                Suggestions, the single authoring surface. */}
+            {/* Two different things live on this row and are edited in two
+                different places. The CATALOGUE entry — shared name, SEO, URL,
+                images — is authored in Suggestions. THIS SELLER'S LISTING —
+                price, stock, variants, packaging — is edited below, on their
+                behalf and under their own rules. */}
             <Button variant="outline" leftIcon={<PencilLine className="h-4 w-4" />} onClick={() => router.push("/suggestions")}>
               Edit in Suggestions
+            </Button>
+            <Button leftIcon={<Store className="h-4 w-4" />} onClick={() => router.push(`/products/${id}/edit-for-seller`)}>
+              Edit listing for seller
             </Button>
             <Button variant="danger" size="icon" onClick={() => setShowDeleteModal(true)}><Trash2 className="h-4 w-4" /></Button>
           </div>
