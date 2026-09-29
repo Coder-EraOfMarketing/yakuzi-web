@@ -584,7 +584,27 @@ function ComparisonOffersList({
               </span>
             </div>
 
-            {/* 3. Discount Badge */}
+            {/* 3. Packaging — whether this seller ships the item boxed.
+
+                Renders nothing at all unless the listing says one of the two
+                things. A listing with no answer, or an API too old to send
+                one, shows no tag: a missing tag is a visible gap someone can
+                fix, whereas a wrong one is a false claim about a physical
+                item that looks perfectly correct.
+
+                Matched explicitly rather than on truthiness so an unexpected
+                value produces nothing instead of an empty pill. Muted on
+                purpose — this is a fact, not an offer, and should not compete
+                with the purple discount badge beside it. */}
+            {(listing.boxCondition === 'WITH_BOX' || listing.boxCondition === 'WITHOUT_BOX') && (
+              <div className="flex-shrink-0 min-w-0">
+                <span className="inline-block whitespace-nowrap rounded border border-gray-300 bg-white/70 px-1.5 py-0.5 text-2xs font-semibold text-gray-700 sm:px-2 sm:text-xs">
+                  {listing.boxCondition === 'WITH_BOX' ? 'With Box' : 'Without Box'}
+                </span>
+              </div>
+            )}
+
+            {/* 4. Discount Badge */}
             <div className="flex-shrink-0 min-w-0">
               {discountText ? (
                 <div className="bg-[#854cbc] text-white px-1.5 py-0.5 sm:px-2.5 sm:py-0.5 xl:px-3 xl:py-1 2xl:px-3.5 2xl:py-1 rounded font-bold tracking-wide whitespace-nowrap flex items-center justify-center gap-0.5 sm:gap-1 shadow-sm">
