@@ -119,6 +119,19 @@ export const productFormSchema = z.object({
   sku: z.string().optional(),
   serialNo: z.string().optional(),
   specifications: z.string().optional(),
+  // Required, with no default and nothing preselected in the form: an
+  // untouched form must fail, and that is what makes the choice mandatory.
+  //
+  // This schema is currently the ONLY enforcement. The database column is
+  // nullable on purpose, and the API's create DTO accepts a missing value
+  // until the form is live everywhere (the two deploy separately, so
+  // demanding it server-side first would 400 every product creation). Weaken
+  // this and a listing can be created with no answer, with nothing anywhere
+  // to object.
+  box_condition: z.enum(['WITH_BOX', 'WITHOUT_BOX'], {
+    required_error: 'Select whether this item ships with its box',
+    invalid_type_error: 'Select whether this item ships with its box',
+  }),
   chemical_combination: z.string().optional(),
   categories: z.array(z.string()).min(1, 'Select at least one category'),
   sub_categories: z.array(z.string()).min(1, 'Select at least one sub-category'),
