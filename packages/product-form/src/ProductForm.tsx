@@ -619,11 +619,16 @@ export function ProductForm({
                   same figure, one boxed and one not, so it has to stay
                   answerable even when the rest of the form is locked. */}
               <div className="space-y-1.5">
-                <span className="block text-sm font-medium text-foreground">Packaging *</span>
+                <span className="block text-sm font-medium text-foreground">Edition *</span>
                 <div className="flex items-center gap-5 rounded-xl border border-input bg-background px-3 py-2.5">
+                  {/* The wording buyers see on the product page, so a seller is
+                      choosing the exact words that will appear on their
+                      listing rather than a paraphrase. The stored values stay
+                      WITH_BOX / WITHOUT_BOX — renaming those would mean a
+                      migration to change nothing a buyer ever reads. */}
                   {([
-                    ["WITH_BOX", "With box"],
-                    ["WITHOUT_BOX", "Without box"],
+                    ["WITH_BOX", "Boxed edition"],
+                    ["WITHOUT_BOX", "Unboxed edition"],
                   ] as const).map(([value, text]) => (
                     <label key={value} className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
                       <input
