@@ -1,4 +1,5 @@
 import { COMPANY } from '@/config/company';
+import { postAuthors, postCategories } from './blog-taxonomy';
 import { realManufacturer } from './manufacturer';
 import {
   SITE_NAME,
@@ -355,6 +356,16 @@ export function articleSchema(
 
   // Admin keywords first, then the post's tags — deduped, since a focus
   // keyword is very often also a tag and repeating it says nothing twice.
+  // Read through the shared helpers so the schema, the byline and the author
+  // pages cannot disagree about who wrote this. Both fall back to the single
+  // author/category field when the sets are absent.
+  const authors = postAuthors(post).map((a) => ({
+    name: a.name,
+    bio: a.bio ?? undefined,
+    avatar: a.avatar ?? undefined,
+  }));
+  const sections = postCategories(post).map((c) => c.name);
+
   const keywords = Array.from(
     new Set(
       [...(seo?.keywords ?? []), ...(post.tags ?? [])]
@@ -380,9 +391,23 @@ export function articleSchema(
     ...(post.featuredImage ? { image: [absoluteUrl(post.featuredImage)] } : {}),
     ...(post.publishedAt || post.createdAt ? { datePublished: post.publishedAt || post.createdAt } : {}),
     ...(post.updatedAt ? { dateModified: post.updatedAt } : {}),
-    ...(post.author?.name ? { author: personSchema({ name: post.author.name, bio: post.author.bio, avatar: post.author.avatar }) } : {}),
+    // Everyone credited. schema.org takes an array for `author`, and a
+    // co-written post that names one person is a wrong answer, not a partial
+    // one. Single-author posts keep emitting a bare object rather than a
+    // one-element array, so nothing changes for the overwhelming majority.
+    ...(authors.length
+      ? {
+          author:
+            authors.length === 1
+              ? personSchema(authors[0])
+              : authors.map((a) => personSchema(a)),
+        }
+      : {}),
     // What the piece is about, so a post sits in a topic rather than alone.
-    ...(post.category?.name ? { articleSection: post.category.name } : {}),
+    // Same rule: one section stays a string, several become a list.
+    ...(sections.length
+      ? { articleSection: sections.length === 1 ? sections[0] : sections }
+      : {}),
     ...(keywords.length ? { keywords: keywords.join(', ') } : {}),
     ...(wordCount > 0 ? { wordCount } : {}),
     publisher: { '@id': `${SITE_URL}/#organization` },
