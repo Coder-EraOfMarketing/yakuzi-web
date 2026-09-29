@@ -215,7 +215,11 @@ export default function BlogDetailPage({
 
             {blog.content ? (
               <div
-                className="prose prose-gray max-w-none prose-headings:font-bold prose-a:text-lime-600 prose-img:rounded-xl prose-headings:scroll-mt-24"
+                // prose-a:text-lime-600 is a utility on the container, so it
+                // beats the --tw-prose-links value the dark theme sets and no
+                // remap can reach it. Lime 600 goes muddy on the dark ground;
+                // 300 is the same hue at a step that reads on it.
+                className="prose prose-gray max-w-none prose-headings:font-bold prose-a:text-lime-600 dark:prose-a:text-lime-300 prose-img:rounded-xl prose-headings:scroll-mt-24"
                 // Anchors and image ALT are added first, then the whole lot —
                 // author markup and ours alike — goes through the sanitiser.
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(prepared.html) }}
