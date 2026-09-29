@@ -147,13 +147,26 @@ export default function AdminProductsPage() {
                     </td>
                     <td className="px-5 py-4 text-sm text-muted-foreground">{p.manufacturer ?? "—"}</td>
                     <td className="px-5 py-4">
-                      <div className="text-sm font-medium text-foreground">{p.sellerCount ?? 1}</div>
-                      {p.sellers && p.sellers.length > 0 && (
+                      {/* Each row is ONE seller's listing. When several
+                          sellers carry the same product there is a row each,
+                          and they previously showed an identical joined list
+                          of every seller — so nothing on screen said whose
+                          listing a given row was, while the actions on it
+                          edit exactly one of them. Name this row's seller
+                          first; the rest are context. */}
+                      <div className="text-sm font-medium text-foreground truncate max-w-[180px]" title={p.seller?.companyName ?? undefined}>
+                        {p.seller?.companyName ?? "—"}
+                      </div>
+                      {(p.sellerCount ?? 1) > 1 && (
                         <div
-                          className="text-xs text-muted-foreground truncate max-w-[160px]"
-                          title={p.sellers.map((s: any) => s.companyName).join(", ")}
+                          className="text-xs text-muted-foreground truncate max-w-[180px]"
+                          title={`Also listed by ${(p.sellers ?? [])
+                            .filter((s: any) => s.id !== p.seller?.id)
+                            .map((s: any) => s.companyName)
+                            .join(", ")}`}
                         >
-                          {p.sellers.map((s: any) => s.companyName).join(", ")}
+                          +{(p.sellerCount ?? 1) - 1} other seller
+                          {(p.sellerCount ?? 1) - 1 === 1 ? "" : "s"}
                         </div>
                       )}
                     </td>

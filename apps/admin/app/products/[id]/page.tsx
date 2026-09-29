@@ -68,7 +68,16 @@ export default function ProductDetailPage() {
             </button>
             <div>
               <h1 className="font-semibold text-2xl text-foreground">{product.name}</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{product.manufacturer ?? "Unknown manufacturer"}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {product.manufacturer ?? "Unknown manufacturer"}
+                {/* Whose listing this is. The page is one seller's offer, and
+                    the same product can have one per seller — without this,
+                    two of them are indistinguishable from the header, and
+                    "Edit listing for seller" acts on whichever you opened. */}
+                {product.seller?.companyName && (
+                  <> · listed by <span className="text-foreground">{product.seller.companyName}</span></>
+                )}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
