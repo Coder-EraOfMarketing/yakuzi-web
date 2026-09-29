@@ -23,6 +23,11 @@
 
 @layer base {
   :root {
+    /* Tells the browser which way to paint what CSS does not own —
+       scrollbars, native form controls, the space beyond the page. Without
+       it a dark site keeps a white scrollbar and light date pickers. */
+    color-scheme: light;
+
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -46,6 +51,8 @@
   }
 
   .dark {
+    color-scheme: dark;
+
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
     --card: 222.2 84% 4.9%;
@@ -505,10 +512,14 @@
    DARK MODE
    ═══════════════════════════════════════════════════════════════════════════
 
-   Opt-in only: nothing here applies until `.dark` is on <html>, so the site
-   ships in the light theme exactly as before. The toggle writes the class and
-   persists the choice; an inline script in layout.tsx applies it before first
-   paint so there is no white flash on reload.
+   Dark is the DEFAULT. <html> is server-rendered with `.dark` already on it,
+   and the inline script in layout.tsx only REMOVES it for a visitor who has
+   explicitly chosen light. That direction matters: with dark as the default,
+   markup that starts light and is darkened by JS shows a white frame on every
+   cold load. The toggle writes the choice to localStorage under
+   `yukizi-theme`; light remains a complete, first-class theme — everything
+   below is still scoped to `.dark`, so removing the class restores it
+   exactly.
 
    Two layers, deliberately:
 
