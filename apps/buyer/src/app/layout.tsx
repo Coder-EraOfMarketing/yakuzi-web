@@ -131,21 +131,35 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   })();
 
   return (
-    <html lang="en" className={inter.variable}>
+    // `dark` is rendered ON the server, not added by the script below.
+    // With dark as the default the flash runs the other way: markup that
+    // starts light and is darkened by JS shows a white frame on every cold
+    // load. Starting dark and letting the script REMOVE it for the minority
+    // who chose light means neither theme ever flashes the other.
+    // suppressHydrationWarning because the inline script below legitimately
+    // edits this exact className before React hydrates.
+    <html lang="en" className={`${inter.variable} dark`} suppressHydrationWarning>
       <head>
         {apiOrigin && <link rel="preconnect" href={apiOrigin} crossOrigin="" />}
         <link rel="preconnect" href="https://storage.googleapis.com" crossOrigin="" />
         {/* dns-prefetch as the fallback for anything that ignores preconnect. */}
         {apiOrigin && <link rel="dns-prefetch" href={apiOrigin} />}
         <link rel="dns-prefetch" href="https://storage.googleapis.com" />
-        {/* Applies the saved theme BEFORE first paint. Without this, a reload
-            in dark mode renders the light page for a frame and flashes white.
-            Deliberately does not consult prefers-color-scheme: a visitor whose
-            OS is dark still gets the brand's light default until they opt in. */}
+        {/* Applies the saved theme BEFORE first paint, so a reload never
+            flashes the other theme for a frame.
+
+            Dark is the default: <html> ships with the class and this only
+            takes it off for a visitor who explicitly chose light. A storage
+            failure (private mode, storage disabled) therefore lands on dark
+            rather than on nothing.
+
+            Deliberately does not consult prefers-color-scheme: a visitor
+            whose OS is light still gets the brand's dark default until they
+            opt out, which is the same reasoning as before, inverted. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if(localStorage.getItem('yukizi-theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}",
+              "try{if(localStorage.getItem('yukizi-theme')==='light'){document.documentElement.classList.remove('dark')}}catch(e){}",
           }}
         />
       </head>

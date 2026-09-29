@@ -5,12 +5,13 @@
  *
  * The theme is a single `dark` class on <html>, which is what the dark block in
  * globals.css keys off. The choice is stored in localStorage under
- * `yukizi-theme` and re-applied by an inline script in layout.tsx before first
- * paint, so a reload in dark mode never flashes white.
+ * `yukizi-theme`; <html> is server-rendered with `dark` already on it and an
+ * inline script in layout.tsx strips it before first paint for anyone who
+ * chose light, so neither theme ever flashes the other.
  *
- * Light is the default on purpose: a first-time visitor with no stored
- * preference gets the light site. System preference is deliberately NOT
- * followed — a shopper whose laptop happens to be in dark mode should still
+ * Dark is the default on purpose: a first-time visitor with no stored
+ * preference gets the dark site. System preference is deliberately NOT
+ * followed — a shopper whose laptop happens to be in light mode should still
  * land on the brand's default look unless they choose otherwise.
  */
 
