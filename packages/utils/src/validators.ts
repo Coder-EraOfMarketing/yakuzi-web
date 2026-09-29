@@ -129,8 +129,8 @@ export const productFormSchema = z.object({
   // this and a listing can be created with no answer, with nothing anywhere
   // to object.
   box_condition: z.enum(['WITH_BOX', 'WITHOUT_BOX'], {
-    required_error: 'Select whether this item ships with its box',
-    invalid_type_error: 'Select whether this item ships with its box',
+    required_error: 'Choose Boxed edition or Unboxed edition',
+    invalid_type_error: 'Choose Boxed edition or Unboxed edition',
   }),
   chemical_combination: z.string().optional(),
   categories: z.array(z.string()).min(1, 'Select at least one category'),

@@ -584,7 +584,7 @@ function ComparisonOffersList({
               </span>
             </div>
 
-            {/* 3. Packaging — whether this seller ships the item boxed.
+            {/* 3. Edition — whether this seller ships the item boxed.
 
                 Renders nothing at all unless the listing says one of the two
                 things. A listing with no answer, or an API too old to send
@@ -599,7 +599,7 @@ function ComparisonOffersList({
             {(listing.boxCondition === 'WITH_BOX' || listing.boxCondition === 'WITHOUT_BOX') && (
               <div className="flex-shrink-0 min-w-0">
                 <span className="inline-block whitespace-nowrap rounded border border-gray-300 bg-white/70 px-1.5 py-0.5 text-2xs font-semibold text-gray-700 sm:px-2 sm:text-xs">
-                  {listing.boxCondition === 'WITH_BOX' ? 'With Box' : 'Without Box'}
+                  {listing.boxCondition === 'WITH_BOX' ? 'Boxed Edition' : 'Unboxed Edition'}
                 </span>
               </div>
             )}
