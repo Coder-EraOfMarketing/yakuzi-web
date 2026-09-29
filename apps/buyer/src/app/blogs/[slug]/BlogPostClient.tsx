@@ -11,6 +11,7 @@ import { useBlogBySlug } from '@/hooks/useBlogs';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { prepareBlogContent } from '@/lib/seo/blog-content';
 import { authorSlug } from '@/lib/seo/schema';
+import { postAuthors } from '@/lib/seo/blog-taxonomy';
 
 export default function BlogDetailPage({
   slug,
@@ -126,20 +127,33 @@ export default function BlogDetailPage({
             </h1>
 
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-6">
-              {blog.author && (() => {
-                // A byline that goes somewhere. The author page carries the
-                // bio and their other posts, and is the URL the Person schema
-                // points at, so the two agree.
-                const name = typeof blog.author === 'string' ? blog.author : blog.author?.name;
-                if (!name) return null;
+              {(() => {
+                // Everyone credited, in byline order, each going somewhere:
+                // the author page carries the bio and their other posts, and
+                // is the URL the Person schema points at, so the two agree.
+                const authors = postAuthors(blog);
+                if (!authors.length) return null;
                 return (
-                  <Link
-                    href={`/blogs/author/${authorSlug(name)}`}
-                    className="flex items-center gap-1.5 hover:text-gray-900 hover:underline"
-                  >
+                  <span className="flex items-center gap-1.5">
                     <User className="w-4 h-4" />
-                    {name}
-                  </Link>
+                    <span className="flex flex-wrap items-center gap-x-1">
+                      {authors.map((a, i) => (
+                        <span key={a.name} className="flex items-center">
+                          <Link
+                            href={`/blogs/author/${authorSlug(a.name)}`}
+                            className="hover:text-gray-900 hover:underline"
+                          >
+                            {a.name}
+                          </Link>
+                          {i < authors.length - 1 && (
+                            <span aria-hidden className="mr-1">
+                              {i === authors.length - 2 ? ' and' : ','}
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                    </span>
+                  </span>
                 );
               })()}
               {blog.publishedAt && (

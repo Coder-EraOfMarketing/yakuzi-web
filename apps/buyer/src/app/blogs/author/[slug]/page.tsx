@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 import { getBlogs } from '@yukizi/api-client';
 import { absoluteUrl, SITE_NAME } from '@/lib/seo/site';
 import { authorSlug, personSchema, breadcrumbSchema } from '@/lib/seo/schema';
+import { isCreditedAuthor, postAuthors } from '@/lib/seo/blog-taxonomy';
 import { graph } from '@/lib/seo/schema';
 import JsonLd from '@/components/seo/JsonLd';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
@@ -27,9 +28,19 @@ export const revalidate = 3600;
 async function findAuthor(slug: string) {
   try {
     const res = await getBlogs({ limit: 100, status: 'PUBLISHED' });
-    const posts = (res.data ?? []).filter((p) => p.author?.name && authorSlug(p.author.name) === slug);
+    // Every post they are CREDITED on, not only the ones they are primary
+    // author of. Filtering on `post.author` alone hid a co-written piece
+    // from the page that exists to collect someone's work.
+    const posts = (res.data ?? []).filter((p) =>
+      isCreditedAuthor(p, (name) => authorSlug(name) === slug),
+    );
     if (!posts.length) return null;
-    return { author: posts[0].author!, posts };
+    // Take the author record from this person's own entry, not from the
+    // post's primary author — on a co-written post those are different
+    // people, and the bio and avatar would be someone else's.
+    const author =
+      postAuthors(posts[0]).find((a) => authorSlug(a.name) === slug) ?? posts[0].author!;
+    return { author, posts };
   } catch {
     return null;
   }
@@ -74,7 +85,13 @@ export default async function AuthorPage({ params }: { params: { slug: string } 
     <>
       <JsonLd
         data={graph(
-          personSchema({ name: author.name, bio: author.bio, avatar: author.avatar }),
+          personSchema({
+            name: author.name,
+            // The API sends null for an unset bio/avatar; personSchema omits
+            // the field only for undefined.
+            bio: author.bio ?? undefined,
+            avatar: author.avatar ?? undefined,
+          }),
           breadcrumbSchema(crumbs),
         )}
       />
