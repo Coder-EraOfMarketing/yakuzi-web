@@ -18,6 +18,10 @@ export const WishlistItemSchema = z.object({
     // The listing "Add" puts in the bag — a save is filed against a product,
     // but a cart line is a listing.
     bestListingId: z.string().nullable().optional(),
+    // False when the product has gone back to Draft or nobody is selling it.
+    // Optional, and read as available when missing, so an API that predates
+    // the field does not grey out every saved card.
+    available: z.boolean().optional(),
   }).optional(),
   createdAt: z.string().optional(),
 });
@@ -56,6 +60,9 @@ function mapBackendWishlist(responseData: any): Wishlist {
         manufacturer: product.manufacturer || raw.manufacturer,
         stock: product.stock ?? raw.stock,
         bestListingId: product.bestListingId ?? raw.bestListingId ?? null,
+        // Absent means available: only an explicit false greys the card, so
+        // nothing changes until the API that sends this is deployed.
+        available: product.available ?? raw.available,
       },
       createdAt: raw.createdAt,
     };
