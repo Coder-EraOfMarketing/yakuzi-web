@@ -194,6 +194,13 @@ export default function WishlistDrawer({ isOpen, onClose }: { isOpen: boolean; o
 
                     const bestListingId = productObj?.bestListingId;
                     const catalogProductId = productObj?.id || item.productId;
+
+                    // A save outlives what it points at: the product can go
+                    // back to Draft, or its last seller can delist. Rather than
+                    // deleting the item out from under the buyer, the card
+                    // stays and stops being actionable. Only an explicit false
+                    // counts, so an API that predates the field changes nothing.
+                    const isUnavailable = productObj?.available === false;
                     
                     const inCartItem = cartData?.items?.find((ci: any) => {
                       const ciProductIds = [
@@ -252,7 +259,9 @@ export default function WishlistDrawer({ isOpen, onClose }: { isOpen: boolean; o
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -50 }}
-                        className="glass-panel relative mt-3 flex gap-3 p-3 transition-all hover:bg-white/70"
+                        className={`glass-panel relative mt-3 flex gap-3 p-3 transition-all ${
+                          isUnavailable ? 'opacity-60' : 'hover:bg-white/70'
+                        }`}
                       >
                         {isYukiziChoice && (
                           <span className="absolute -top-[10px] left-3 z-20 flex items-center justify-center rounded-full bg-[#7B2FBE] px-2.5 py-0.5 text-2xs font-semibold tracking-wide text-white shadow-sm">
@@ -263,7 +272,7 @@ export default function WishlistDrawer({ isOpen, onClose }: { isOpen: boolean; o
                         {/* Remove sits on the image here too, so both drawers
                             read identically. */}
                         <div className="relative flex h-[104px] w-[92px] flex-shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-white/70 bg-white/55">
-                          <img src={itemImage} alt={itemName} loading="lazy" decoding="async" className="h-[84px] w-[84px] object-contain mix-blend-multiply" />
+                          <img src={itemImage} alt={itemName} loading="lazy" decoding="async" className={`h-[84px] w-[84px] object-contain mix-blend-multiply ${isUnavailable ? 'grayscale' : ''}`} />
                           <button
                             onClick={() => removeFromWishlist.mutate(item.productId || item.product?.id || item.id, {
                               onSuccess: () => toast('Removed from saved items', 'info'),
@@ -299,7 +308,14 @@ export default function WishlistDrawer({ isOpen, onClose }: { isOpen: boolean; o
                         {/* Quantity on top, reset beneath — the same column the
                             cart drawer uses for quantity + save. */}
                         <div className="flex flex-shrink-0 flex-col items-end gap-2">
-                          {cartQty === 0 ? (
+                          {isUnavailable ? (
+                            // No Add and no quantity stepper: the API refuses
+                            // this product now, so offering the control would
+                            // only produce an error toast.
+                            <span className="flex h-7 items-center rounded-full border border-gray-200 bg-gray-100 px-2.5 text-2xs font-bold tracking-wide text-gray-500">
+                              Unavailable
+                            </span>
+                          ) : cartQty === 0 ? (
                             <button
                               onClick={handleIncrement}
                               aria-label="Add to cart"
