@@ -66,7 +66,7 @@ export function ProductForm({
     retry: 1,
   });
 
-  const { register, control, handleSubmit, setValue, getValues, formState: { errors, isSubmitting, isDirty }, watch } = useForm<FormValues>({
+  const { register, control, handleSubmit, setValue, getValues, getFieldState, formState, watch } = useForm<FormValues>({
     mode: "onChange",
     resolver: zodResolver(productFormSchema) as any,
     defaultValues: defaultValues || {
@@ -90,6 +90,10 @@ export function ProductForm({
       discount_form_details: { type: "none" } as DiscountFormDetails,
     },
   });
+
+  // Read during render so react-hook-form's formState proxy still subscribes to
+  // exactly the fields this component uses.
+  const { errors, isSubmitting, isDirty } = formState;
 
   const [options, setOptions] = useState<VariantOption[]>(() => {
     if (initialOptions.length === 0 && initialVariants.length > 0) {
@@ -275,8 +279,19 @@ export function ProductForm({
     const finalShip = (suggestion as any).finalShippingPrice !== undefined && (suggestion as any).finalShippingPrice !== null 
       ? (suggestion as any).finalShippingPrice 
       : computedFinalShip;
-    if (finalShip !== undefined) {
-      setValue("shipping_charges", finalShip, { shouldDirty: true });
+    // The catalogue supplies a DEFAULT shipping charge, it does not dictate
+    // one. Shipping is per-seller, and this used to overwrite whatever the
+    // seller had typed the moment they picked the product from the lookup --
+    // silently, with no indication. A seller who set 0 for free delivery got
+    // the catalogue's charge back, and every listing of a given product ended
+    // up with an identical shipping figure none of them chose.
+    //
+    // `shouldDirty: false` below is what makes this work: filling the field
+    // programmatically must not look like the seller typed it, so isDirty
+    // means a human set it and must be left alone.
+    const sellerSetTheirOwnShipping = getFieldState("shipping_charges", formState).isDirty;
+    if (finalShip !== undefined && !sellerSetTheirOwnShipping) {
+      setValue("shipping_charges", finalShip, { shouldDirty: false });
     }
     if ((suggestion as any).isTaxIncluded !== undefined) {
       setValue("is_tax_included", (suggestion as any).isTaxIncluded, { shouldDirty: true });
@@ -424,7 +439,7 @@ export function ProductForm({
     
     setShowSuggestions(false);
     setSearchQuery("");
-  }, [setValue]);
+  }, [setValue, getFieldState, formState]);
 
   const onSubmit = async (data: FormValues) => {
     try {
