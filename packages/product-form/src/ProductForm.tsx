@@ -550,8 +550,20 @@ export function ProductForm({
             id: v.id && v.id.includes('-') ? v.id : undefined,
             name: v.name, 
             variantName: v.name,
-            price: Number(v.price), 
-            available: Number(v.available),
+            price: Number(v.price),
+            // Zeroed for a pre-order for the same reason as the top-level
+            // stock above, and NOT covered by that one. The API's variants
+            // create branch calls
+            //   createDefaultBatch(product.id, v.available > 0 ? v.available : normalized.stock)
+            // and `v.available > 0` wins, so a per-variant figure overrides
+            // the zero we just forced and seeds a real sellable batch on a
+            // listing that never had stock. The greyed-out column still holds
+            // whatever was typed or prefilled — disabling an input does not
+            // clear the React state behind it — so the value really does
+            // arrive. Sending 0 rather than omitting the key leaves the batch
+            // row to exist at zero, which is what unticking pre-order later
+            // needs something to update.
+            available: data.is_pre_order ? 0 : Number(v.available),
             image: v.image,
             sku: v.sku,
             serialNo: v.serialNo,
