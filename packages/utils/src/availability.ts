@@ -6,6 +6,23 @@
  * buyable. The test lived inline as `(stock ?? 0) > 0` in the product page,
  * the quick view, the carousel and the review modal, and four copies of a
  * rule drift. This is the one copy.
+ *
+ * WARNING — every member of ListingAvailability is optional, so TypeScript
+ * will NOT stop you passing a type that has no `preOrderDeliveryDate` at all.
+ * Weak-type detection only fires when the argument shares NO property with
+ * the interface; a type carrying `stock` and `maximumOrderQuantity` overlaps,
+ * compiles clean, and then `isPreOrderListing` answers `false` forever and
+ * every pre-order silently reads as out of stock. Nothing errors.
+ *
+ * The API's equivalent helper takes an interface with a single optional
+ * member, so there a row missing the field overlaps nothing and fails the
+ * build (TS2559). This richer interface is the LESS protected one — exactly
+ * backwards from how it reads, and not something you would guess.
+ *
+ * So: any type fed to these helpers must actually DECLARE
+ * `preOrderDeliveryDate`. `Product` and `MarketplaceListing` in ./types do.
+ * A new caller means adding the field to its type first, not relying on the
+ * compiler to ask for it.
  */
 
 export interface ListingAvailability {

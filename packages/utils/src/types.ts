@@ -88,6 +88,12 @@ export interface Product {
   stock?: number;
   minimumOrderQuantity?: number;
   maximumOrderQuantity?: number;
+  /**
+   * Non-null means this is a pre-order: no stock, a promised delivery date.
+   * Read it through the helpers in ./availability, never inline — and see the
+   * weak-type warning there before feeding a new type to them.
+   */
+  preOrderDeliveryDate?: string | null;
   gstPercent?: number;
   shippingGstPercent?: number;
   expiryDate?: string;
@@ -140,6 +146,12 @@ export interface MarketplaceListing {
   discountType?: string;
   discountMeta?: any;
   stock: number;
+  /**
+   * Non-null means this listing is a pre-order: no stock, a promised delivery
+   * date. Read it through the helpers in ./availability, never inline — and
+   * see the weak-type warning there before feeding a new type to them.
+   */
+  preOrderDeliveryDate?: string | null;
   expiryDate?: string;
   seller: {
     id: string;
