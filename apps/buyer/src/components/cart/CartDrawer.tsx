@@ -10,6 +10,13 @@ import { useBuyerProfile } from '@/hooks/useBuyerProfile';
 import { useAddToWishlist, useWishlist } from '@/hooks/useWishlist';
 import { useToast } from '@/components/shared/Toast';
 import { useAuth } from '@yukizi/api-client';
+import {
+  formatDate,
+  isPreOrderListing,
+  isPurchasable,
+  maxOrderableQty,
+  type ListingAvailability,
+} from '@yukizi/utils';
 import { useRouter } from 'next/navigation';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { useState } from 'react';
@@ -17,6 +24,31 @@ import { QuickViewModal } from '@/components/products/QuickViewModal';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
 
 
+
+/**
+ * What a cart line says about its own availability, in the shape the shared
+ * availability helpers take.
+ *
+ * A cart line carries these on itself (every add-to-cart surface passes them)
+ * and sometimes on `.product` — which is the SELLER OFFER, not a catalogue
+ * product, so nothing here is looked up by id.
+ *
+ * Unreported stock stays Infinity, the convention this drawer already used: it
+ * means "the API did not say", so let the server-side validation reject an
+ * update rather than wrongly blocking a legitimate purchase. Passing it through
+ * keeps every ordinary line's ceiling and label exactly what they were.
+ */
+function lineAvailability(item: any): ListingAvailability {
+  return {
+    stock: item?.stock ?? item?.product?.stock ?? Infinity,
+    maximumOrderQuantity:
+      (item?.maximumOrderQuantity || item?.product?.maximumOrderQuantity) || Infinity,
+    // Without this a pre-order reads as an ordinary line with zero stock —
+    // labelled "Out of stock" and with its stepper pinned to the MOQ.
+    preOrderDeliveryDate:
+      item?.preOrderDeliveryDate ?? item?.product?.preOrderDeliveryDate,
+  };
+}
 
 export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { data: cart, isLoading, isError } = useCart();
@@ -43,6 +75,14 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
   // stepper quantities (previously both showed the number of distinct
   // product lines, e.g. "1 item" even with a single line at quantity 2).
   const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+
+  // The API refuses an order that holds both a pre-order and an in-stock item:
+  // orderStatus lives on the Order and settlement fires per order, so a mixed
+  // order would strand a paid in-stock item for however many months the
+  // pre-order takes. The server's refusal is still the authority — this is here
+  // so the buyer learns it in the bag instead of being ambushed at payment.
+  const preOrderLines = items.filter((item: any) => isPreOrderListing(lineAvailability(item)));
+  const hasMixedBag = preOrderLines.length > 0 && preOrderLines.length !== items.length;
 
   // Every id a saved item can be recognised by, so this drawer can tell what is
   // already saved. It previously read nothing at all, so the save control was
@@ -222,17 +262,17 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                       (id: unknown) => typeof id === 'string' && savedIds.has(id),
                     );
 
-                    // Available stock, summed across in-stock batches by the API.
-                    // Undefined means the API did not report it — treat as unbounded
-                    // and let the server-side validation reject the update instead of
-                    // wrongly blocking a legitimate purchase.
-                    const availableStock = item.stock ?? item.product?.stock ?? Infinity;
-                    const perOrderLimit =
-                      (item.maximumOrderQuantity || item.product?.maximumOrderQuantity) || Infinity;
+                    // Availability, summed across in-stock batches by the API —
+                    // or, for a pre-order, no stock at all and a promised date.
+                    // Both the ceiling and the label come from the shared rule,
+                    // so this drawer can no longer disagree with the product
+                    // page about whether the line can be bought.
+                    const availability = lineAvailability(item);
+                    const isPreOrder = isPreOrderListing(availability);
                     const minQuantity =
                       item.moq || item.product?.moq || item.product?.minimumOrderQuantity || 1;
-                    const maxQuantity = Math.max(minQuantity, Math.min(availableStock, perOrderLimit));
-                    const isOutOfStock = availableStock <= 0;
+                    const maxQuantity = Math.max(minQuantity, maxOrderableQty(availability));
+                    const isOutOfStock = !isPurchasable(availability);
                     const rawPrice = item.product?.price ?? item.price;
                     const rawOriginalPrice = item.product?.originalPrice ?? item.product?.mrp ?? item.originalPrice ?? item.mrp;
                     const itemPrice = rawPrice != null ? rawPrice : 0;
@@ -322,9 +362,21 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                            <span className="text-xs font-bold text-gray-700">{item.rating ? item.rating : 'NA'}</span>
                          </div>
 
-                         {isOutOfStock && (
+                         {/* Mutually exclusive by construction: isPurchasable
+                             is true for every pre-order, so isOutOfStock can
+                             never be true for one. Written as a ternary so it
+                             stays that way. Numbered primary shades, not
+                             `bg-primary/15` — the DEFAULT primary is
+                             `hsl(var(--primary))` with no <alpha-value>
+                             placeholder, so opacity variants compile to
+                             nothing and the badge renders unstyled. */}
+                         {isPreOrder ? (
+                           <span className="mt-1 inline-flex w-fit items-center rounded-full bg-primary-100 px-2 py-0.5 text-2xs font-semibold text-primary-700">
+                             Pre-order · expected {formatDate(availability.preOrderDeliveryDate!)}
+                           </span>
+                         ) : isOutOfStock ? (
                            <span className="mt-1 text-2xs font-bold uppercase tracking-wide text-red-600">Out of stock</span>
-                         )}
+                         ) : null}
                        </div>
 
                        {/* Actions column: quantity on top, save beneath it —
@@ -437,6 +489,19 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                 </p>
               )}
 
+              {hasMixedBag && (
+                <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                  <p className="text-sm font-bold text-amber-900">
+                    Pre-order items need their own order
+                  </p>
+                  <p className="mt-0.5 text-xs leading-snug text-amber-800">
+                    A pre-order ships on its promised date, so it can&apos;t be ordered
+                    alongside items that are in stock — those would be held back with it.
+                    Order one kind now and the rest separately.
+                  </p>
+                </div>
+              )}
+
               {/* Primary: Go to Checkout */}
               <button
                 onClick={() => {
@@ -447,7 +512,7 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                   onClose();
                   router.push('/checkout');
                 }}
-                disabled={items.length === 0}
+                disabled={items.length === 0 || hasMixedBag}
                 className="w-full bg-[#854cbc] hover:bg-[#6f3ea5] active:scale-[0.98] text-white rounded-2xl py-5 text-xl font-bold shadow-lg transition-all flex justify-center items-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed mb-2"
               >
                 <ShoppingCart className="w-6 h-6" />
