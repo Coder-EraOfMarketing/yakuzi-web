@@ -497,8 +497,13 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({
                 </tbody>
               </table>
             </div>
+            {/* For a pre-order this is the only inventory sentence on screen,
+                sitting right under the stock column it greys out — and a bare
+                "0 available" there reads as "you have nothing to sell". */}
             <div className="p-4 bg-gray-50 text-sm text-gray-600 border-t border-gray-200">
-              Total inventory at Shop location: {variants.reduce((acc, v) => acc + (parseInt(v.available) || 0), 0)} available
+              {preOrder
+                ? "Pre-order: no stock is counted for these variants, and buyers are not limited by it."
+                : `Total inventory at Shop location: ${variants.reduce((acc, v) => acc + (parseInt(v.available) || 0), 0)} available`}
             </div>
           </div>
       </div>

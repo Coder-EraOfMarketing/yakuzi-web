@@ -515,7 +515,15 @@ export function ProductForm({
         boxCondition: data.box_condition,
         categoryId: data.categories[0],
         ...(data.sub_categories?.length && { subCategoryId: data.sub_categories[0] }),
-        stock: payloadStock,
+        // Zero for a pre-order, not whatever the greyed-out field still holds.
+        // Not cosmetic: on CREATE the API calls createDefaultBatch(offer,
+        // stock) unguarded, so ticking pre-order with 50 left in the box seeds
+        // a real 50-unit batch on a listing that never had stock. The
+        // purchasability rules ignore it while the date is set, so it stays
+        // invisible until someone unticks pre-order — and then the seller has
+        // 50 phantom units. The update path guards that write, but one rule
+        // here beats two rules split across create and update.
+        stock: data.is_pre_order ? 0 : payloadStock,
         // Null, not omitted. Omitting it would mean "leave whatever is stored
         // alone", which is the one thing it must not mean when a seller has
         // just UNTICKED pre-order.
@@ -761,9 +769,13 @@ export function ProductForm({
                 />
                 Pre-order
               </label>
+              {/* Careful with this wording. A pre-order is not limited by
+                  stock, but the per-order maximum still applies to it and this
+                  form has no field for that, so "any quantity" would be untrue
+                  for every listing carrying the default. */}
               <p className="text-xs text-muted-foreground">
-                For an item you do not have yet. Buyers can order any quantity, and you give the
-                date you expect to deliver by.
+                For an item you do not have yet. Buyers are not limited by your stock, and you
+                give the date you expect to deliver by.
               </p>
             </div>
 
@@ -783,8 +795,11 @@ export function ProductForm({
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50">
                 <div className="space-y-1">
+                  {/* No asterisk while it is disabled: a required marker on a
+                      field the seller cannot fill in is a small lie, and the
+                      schema does not ask for a stock count on a pre-order. */}
                   <Input
-                    label="Current Stock *"
+                    label={preOrder ? "Current Stock" : "Current Stock *"}
                     type="number"
                     min={0}
                     placeholder="0"
@@ -796,7 +811,7 @@ export function ProductForm({
                   {preOrder && (
                     <p className="text-xs text-muted-foreground">
                       A pre-order has no stock to count, so there is nothing to enter here — buyers
-                      can order as many as they like and you deliver by the date above.
+                      are not limited by your stock and you deliver by the date above.
                     </p>
                   )}
                 </div>

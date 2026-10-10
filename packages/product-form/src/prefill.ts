@@ -101,6 +101,13 @@ export function buildProductFormPrefill(
 
   const realVariants = hasRealVariants(product);
 
+  // The promised date belongs to the SellerOffer, exactly like boxCondition
+  // above, so the listing is read first and the product is the fallback. `??`
+  // rather than `||`: an empty string is a stored answer, and falling through
+  // it would reach for a different row's date.
+  const preOrderSource =
+    activeListing?.preOrderDeliveryDate ?? product?.preOrderDeliveryDate ?? null;
+
   // ONE normalized string, read twice below. The schema's future-date rule
   // compares pre_order_delivery_date with pre_order_original_date by exact
   // string equality, so the two must be character-identical or every edit of a
@@ -110,9 +117,7 @@ export function buildProductFormPrefill(
   //
   // YYYY-MM-DD is also the only thing `<input type="date">` will render;
   // a full ISO timestamp leaves the field blank.
-  const preOrderDate = product?.preOrderDeliveryDate
-    ? String(product.preOrderDeliveryDate).slice(0, 10)
-    : '';
+  const preOrderDate = preOrderSource ? String(preOrderSource).slice(0, 10) : '';
 
   return {
     activeVariantId,
@@ -127,7 +132,7 @@ export function buildProductFormPrefill(
       // Presence of a date IS the flag — there is no separate boolean stored.
       // Both date fields read the one `preOrderDate` binding above; see the
       // comment there before changing either of them.
-      is_pre_order: product?.preOrderDeliveryDate != null,
+      is_pre_order: preOrderSource != null,
       pre_order_delivery_date: preOrderDate,
       pre_order_original_date: preOrderDate,
       min_order_qty: product?.minimumOrderQuantity || 1,
