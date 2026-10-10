@@ -1,3 +1,4 @@
+import { isPreOrderListing, isPurchasable } from '@yukizi/utils';
 import type { CatalogProduct } from './catalog';
 import { SERIES, seriesPattern, type SeriesDef } from './data/series';
 import {
@@ -118,14 +119,35 @@ function priceOf(p: CatalogProduct): number | null {
   return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : null;
 }
 
-export function inStock(p: CatalogProduct): boolean {
-  return (p.stock ?? 0) > 0;
+/**
+ * Can a visitor buy this, today?
+ *
+ * Was `(p.stock ?? 0) > 0` — a second copy of the rule the shared helper was
+ * written to be the only copy of, and the copy that answered for every hub
+ * grid, every hub sentence and both sitemaps. A pre-order has no stock and is
+ * perfectly buyable, so that copy demoted one to the bottom of every grid and
+ * counted it as unavailable in prose.
+ */
+function purchasable(p: CatalogProduct): boolean {
+  return isPurchasable(p);
+}
+
+/**
+ * In stock and dispatchable now — buyable AND not a pre-order.
+ *
+ * `purchasable` is the right question for "can this be ordered"; it is the
+ * wrong one for a sentence that says "ready to dispatch" or a table row
+ * labelled "In stock now", because a pre-order is neither. Identical to the
+ * old rule for any listing that is not a pre-order.
+ */
+export function readyToDispatch(p: CatalogProduct): boolean {
+  return isPurchasable(p) && !isPreOrderListing(p);
 }
 
 /**
  * Display order for a hub grid.
  *
- * In-stock first, because a landing page whose first row is unbuyable wastes
+ * Buyable first, because a landing page whose first row is unbuyable wastes
  * the click it worked to earn. Then most-recently-updated, which is both a
  * useful freshness proxy and — unlike a random or a relevance sort — stable
  * between renders, so the CDN-cached HTML and the JSON-LD ItemList cannot
@@ -133,8 +155,8 @@ export function inStock(p: CatalogProduct): boolean {
  */
 export function hubSort(products: CatalogProduct[]): CatalogProduct[] {
   return [...products].sort((a, b) => {
-    const stock = Number(inStock(b)) - Number(inStock(a));
-    if (stock !== 0) return stock;
+    const buyable = Number(purchasable(b)) - Number(purchasable(a));
+    if (buyable !== 0) return buyable;
     const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0;
     const tb = b.updatedAt ? Date.parse(b.updatedAt) : 0;
     return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);

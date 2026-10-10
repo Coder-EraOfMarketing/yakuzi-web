@@ -1,5 +1,6 @@
 import type { CatalogProduct } from './catalog';
-import { inStock, priceRange, priceOf, selectProducts, typeMatcher, characterMatcher } from './hub';
+import { isPreOrderListing } from '@yukizi/utils';
+import { readyToDispatch, priceRange, priceOf, selectProducts, typeMatcher, characterMatcher } from './hub';
 import { PRODUCT_TYPES, type ProductTypeDef } from './data/product-types';
 import { charactersOfSeries, type CharacterDef } from './data/characters';
 import { type SeriesDef } from './data/series';
@@ -120,12 +121,20 @@ export function hubSpecs(
   extra: SpecRow[] = [],
 ): SpecRow[] {
   const range = priceRange(products);
-  const available = products.filter(inStock).length;
+  // readyToDispatch, not purchasable: the row is labelled "In stock now" and a
+  // pre-order is not in stock. It gets its own row instead of being folded into
+  // this count — one is a thing you can have this week, the other is a thing
+  // you are promised, and a table a model reads must not merge them.
+  const available = products.filter(readyToDispatch).length;
+  const preOrderable = products.filter(isPreOrderListing).length;
   const formats = typesPresent(products);
 
   const rows: Array<SpecRow | null> = [
     { label: 'Products listed', value: String(products.length) },
     available > 0 ? { label: 'In stock now', value: String(available) } : null,
+    preOrderable > 0
+      ? { label: 'Available to pre-order', value: String(preOrderable) }
+      : null,
     range ? { label: 'Price range', value: rangeText(products) as string } : null,
     range && range.min !== range.max
       ? { label: 'Starting from', value: inr(range.min) }
@@ -217,10 +226,24 @@ export function seriesSummary(def: SeriesDef, products: CatalogProduct[]): strin
     );
   }
 
-  const available = products.filter(inStock).length;
+  const available = products.filter(readyToDispatch).length;
   if (available > 0) {
     sentences.push(
       `${available} ${plural(available, 'item is', 'items are')} in stock and ready to dispatch.`,
+    );
+  }
+
+  // Said separately, never folded into the count above: "ready to dispatch" is
+  // precisely what a pre-order is not. Absent for a hub with no pre-orders, so
+  // the ordinary page reads exactly as before.
+  const preOrderable = products.filter(isPreOrderListing).length;
+  if (preOrderable > 0) {
+    sentences.push(
+      `${preOrderable} ${plural(
+        preOrderable,
+        'item is',
+        'items are',
+      )} available to pre-order, each shipped for the delivery date its seller promises.`,
     );
   }
 
@@ -333,12 +356,32 @@ export function characterSummary(
     );
   }
 
-  const available = products.filter(inStock).length;
-  sentences.push(
-    available > 0
-      ? `${available} ${plural(available, 'listing is', 'listings are')} in stock now, sold by verified sellers and shipped across India.`
-      : `Every ${def.short} listing is currently out of stock; new listings appear on this page automatically as sellers restock.`,
-  );
+  const available = products.filter(readyToDispatch).length;
+  const preOrderable = products.filter(isPreOrderListing).length;
+  // The out-of-stock sentence is the one statement on these pages that can be
+  // flatly false: a hub whose listings are all buyable pre-orders published
+  // "Every X listing is currently out of stock" in prose, on an indexed page,
+  // about items a buyer could order that minute. It now needs BOTH counts to be
+  // zero. The two positive sentences stay separate — a pre-order is buyable but
+  // not in stock, and merging them would just move the false claim.
+  if (available > 0) {
+    sentences.push(
+      `${available} ${plural(available, 'listing is', 'listings are')} in stock now, sold by verified sellers and shipped across India.`,
+    );
+  } else if (preOrderable === 0) {
+    sentences.push(
+      `Every ${def.short} listing is currently out of stock; new listings appear on this page automatically as sellers restock.`,
+    );
+  }
+  if (preOrderable > 0) {
+    sentences.push(
+      `${preOrderable} ${plural(
+        preOrderable,
+        'listing is',
+        'listings are',
+      )} open for pre-order, with the seller's promised delivery date shown on the product page.`,
+    );
+  }
 
   return sentences.join(' ');
 }

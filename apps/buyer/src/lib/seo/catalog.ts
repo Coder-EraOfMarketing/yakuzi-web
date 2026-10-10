@@ -35,6 +35,22 @@ export interface CatalogProduct {
   price?: number | null;
   mrp?: number | null;
   stock?: number;
+  /**
+   * Non-null means pre-order: no stock, and still for sale.
+   *
+   * This field has to be DECLARED here, not merely present at runtime. The
+   * shared availability helpers take an interface whose every member is
+   * optional, so a type carrying `stock` overlaps it enough to compile — and
+   * `isPreOrderListing` would then answer `false` for every product in the
+   * catalogue, silently, with no error anywhere. Every hub grid, every hub
+   * sentence and both sitemaps read availability through those helpers, so
+   * omitting it here would quietly keep the old answer.
+   *
+   * The value is real: the grid endpoint sends it alongside `price`/`stock`,
+   * taken from the same offer those come from, so the date and the stock
+   * figure beside it describe one listing.
+   */
+  preOrderDeliveryDate?: string | null;
   image?: string | null;
   images?: unknown;
   manufacturer?: string | null;

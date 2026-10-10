@@ -1,4 +1,5 @@
 import { getBlogs, getCategories, getProducts } from '@yukizi/api-client';
+import { formatDate, isPreOrderListing, isPurchasable } from '@yukizi/utils';
 import { fetchSeoOverride } from '@/lib/seo/overrides';
 import {
   SITE_NAME,
@@ -86,6 +87,11 @@ export async function GET() {
     price?: number | null;
     mrp?: number | null;
     stock?: number;
+    // Declared, or the availability helpers below silently answer "ordinary,
+    // out of stock" for every pre-order: every member of the interface they
+    // take is optional, so a row type carrying only `stock` compiles clean and
+    // the predicate never fires. The grid endpoint does send the field.
+    preOrderDeliveryDate?: string | null;
     createdAt?: string;
   };
   let recentRows: CatalogueRow[] = [];
@@ -104,7 +110,16 @@ export async function GET() {
       .map((p) => {
         const price = p.price ?? p.mrp;
         const priceText = price != null ? ` — ₹${Math.round(Number(price))}` : '';
-        const stockText = (p.stock ?? 0) > 0 ? '' : ' (out of stock)';
+        // A pre-order has no stock and is on sale, so the stock number alone
+        // advertised every one of them to an assistant as "(out of stock)" —
+        // the one annotation that makes a model stop recommending the item.
+        // The promised date goes in: an assistant asked "can I get this" can
+        // then answer "yes, arriving X" instead of "no".
+        const stockText = isPreOrderListing(p)
+          ? ` (pre-order — expected ${formatDate(p.preOrderDeliveryDate!)})`
+          : isPurchasable(p)
+            ? ''
+            : ' (out of stock)';
         return `- [${p.name}](${SITE_URL}/products/${p.slug ?? p.id})${priceText}${stockText}`;
       })
       .join('\n');

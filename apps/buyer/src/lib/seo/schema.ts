@@ -1,3 +1,4 @@
+import { isPreOrderListing, isPurchasable } from '@yukizi/utils';
 import { COMPANY } from '@/config/company';
 import { postAuthors, postCategories } from './blog-taxonomy';
 import { realManufacturer } from './manufacturer';
@@ -151,6 +152,13 @@ export function productSchema(p: {
   image?: string | null; images?: Array<{ url?: string } | string> | null;
   manufacturer?: string; price?: number | null; mrp?: number | null;
   stock?: number; hasSellers?: boolean; shippingPrice?: number | null;
+  // Declared, not optional-by-accident: isPreOrderListing() below takes a type
+  // whose every member is optional, so a caller type that merely carries
+  // `stock` overlaps enough to compile and the predicate would then answer
+  // `false` forever. The field has to be ON this type for the check to mean
+  // anything. Must come from the SAME listing as price/stock/sellerName —
+  // buildSchemaInput() in the product page is what guarantees that.
+  preOrderDeliveryDate?: string | Date | null;
   sku?: string | null; mpn?: string | null; gtin?: string | null;
   updatedAt?: string | Date | null;
   category?: { name?: string } | null;
@@ -201,10 +209,24 @@ export function productSchema(p: {
             priceValidUntil: new Date(Date.now() + 30 * 86_400_000)
               .toISOString()
               .slice(0, 10),
-            availability:
-              (p.stock ?? 0) > 0
+            // A pre-order has no stock and is on sale, so deciding this from
+            // the stock number alone published every pre-order to Google as
+            // OutOfStock — "no fake availability" above, broken on the one
+            // field that decides whether the item appears at all. schema.org
+            // has PreOrder for exactly this case, with availabilityStarts for
+            // the date the buyer is actually promised.
+            availability: isPreOrderListing(p)
+              ? 'https://schema.org/PreOrder'
+              : isPurchasable(p)
                 ? 'https://schema.org/InStock'
                 : 'https://schema.org/OutOfStock',
+            ...(isPreOrderListing(p)
+              ? {
+                  availabilityStarts: new Date(
+                    p.preOrderDeliveryDate!,
+                  ).toISOString(),
+                }
+              : {}),
             ...(p.sellerName ? { seller: { '@type': 'Organization', name: p.sellerName } } : {}),
             // The platform has no used/refurbished concept — every listing is new.
             itemCondition: 'https://schema.org/NewCondition',
