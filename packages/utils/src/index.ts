@@ -12,6 +12,10 @@ export type {
   DiscountDetails,
   DiscountFormDetails,
   ProductPayload,
+  // A per-seller offer on a product. Exported because availability.ts points
+  // callers at it as a type that declares preOrderDeliveryDate, and that
+  // pointer has to resolve from the package root, not just the /types subpath.
+  MarketplaceListing,
   Suggestion,
   CategoryItem,
   SubCategoryItem,

@@ -145,6 +145,23 @@ export const productFormSchema = z.object({
    * The date this listing was loaded with, so the future-date rule below can
    * tell a date the seller is CHANGING from one that was already stored.
    * Empty for a new listing. Never submitted.
+   *
+   * READ THIS BEFORE WIRING THE FORM. The rule compares the two values with
+   * EXACT STRING EQUALITY, not date equality. '2020-01-15T00:00:00.000Z' and
+   * '2020-01-15T00:00:00Z' are the same instant and are NOT equal here, so
+   * the second reads as a fresh promise and gets rejected for being past.
+   *
+   * The entire no-lockout property therefore rests on this field being
+   * populated from the SAME NORMALIZED STRING as pre_order_delivery_date.
+   * Omit it, or hydrate it as a full ISO timestamp while the
+   * `<input type="date">` emits YYYY-MM-DD, and every edit of an expired
+   * pre-order fails with "must be in the future" — about a date the seller
+   * never touched and cannot fix by leaving alone. That is precisely the
+   * lockout this field exists to prevent, reintroduced with a message that
+   * sends the seller looking at the wrong field.
+   *
+   * Normalize both through one helper, and cover an untouched past date with
+   * a test (see 'accepts an unchanged past date' in validators.spec.ts).
    */
   pre_order_original_date: z.string().optional(),
   shipping_charges: z.preprocess((val) => (val === '' || val === null || isNaN(Number(val))) ? undefined : Number(val), z.number().min(0).optional()),

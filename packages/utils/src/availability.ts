@@ -2,10 +2,22 @@
  * Can this listing be bought, and is it a pre-order?
  *
  * "In stock" stopped being the same question as "for sale" when pre-orders
- * arrived: a pre-order listing has no stock at all and is perfectly
- * buyable. The test lived inline as `(stock ?? 0) > 0` in the product page,
- * the quick view, the carousel and the review modal, and four copies of a
- * rule drift. This is the one copy.
+ * arrived: a pre-order listing has no stock at all and is perfectly buyable.
+ *
+ * Do not come here looking for the one expression this replaces — there were
+ * four surfaces and they disagreed four different ways, which is the actual
+ * reason this file exists:
+ *
+ *   - ProductPageClient  `(listing.stock ?? 0) > 0`      — null stock = OUT
+ *   - QuickViewModal     `(listing.stock ?? 9999) > 0`   — null stock = IN
+ *   - ProductCarousel    a "notify me" bell, inverted, shown only when
+ *                        `stock !== undefined && stock <= 0`, so an absent
+ *                        stock reads as available there too
+ *   - QuickReviewModal   `const inStock = true;`         — hardcoded
+ *
+ * So the same listing could be out of stock on the product page and in stock
+ * in the quick view. That is not drift, it is four different rules, and one of
+ * them was not a rule at all. This is the one copy.
  *
  * WARNING — every member of ListingAvailability is optional, so TypeScript
  * will NOT stop you passing a type that has no `preOrderDeliveryDate` at all.
@@ -19,10 +31,15 @@
  * build (TS2559). This richer interface is the LESS protected one — exactly
  * backwards from how it reads, and not something you would guess.
  *
- * So: any type fed to these helpers must actually DECLARE
+ * But at three of the four call sites above the listing is typed `any`, so the
+ * compiler was never going to help there in the first place. The practical
+ * risk at those sites is not the type: it is the FETCH LAYER not asking for
+ * `preOrderDeliveryDate`. A query that omits the field yields `undefined`,
+ * every pre-order reads as ordinary and out of stock, and no type anywhere can
+ * catch it. When a pre-order renders wrong, check the request before the types.
+ *
+ * Where types do apply: a type fed to these helpers must actually DECLARE
  * `preOrderDeliveryDate`. `Product` and `MarketplaceListing` in ./types do.
- * A new caller means adding the field to its type first, not relying on the
- * compiler to ask for it.
  */
 
 export interface ListingAvailability {

@@ -135,6 +135,33 @@ describe('productFormSchema — pre-order listings', () => {
     expect(paths).toEqual([]);
   });
 
+  it('compares the two dates as STRINGS, so the form must normalize both', () => {
+    // Documenting a sharp edge rather than endorsing it. These two spellings
+    // are the same instant, and the second is still rejected — so the
+    // no-lockout behaviour above holds only while the form populates
+    // pre_order_original_date from the same normalized string as
+    // pre_order_delivery_date. A full ISO original against a YYYY-MM-DD
+    // `<input type="date">` value locks the seller out of an expired
+    // pre-order with a message about a date they never touched.
+    const rejected = errorPaths({
+      ...completeForm,
+      stock: 0,
+      is_pre_order: true,
+      pre_order_delivery_date: '2020-01-15T00:00:00.000Z',
+      pre_order_original_date: '2020-01-15T00:00:00Z',
+    });
+    expect(rejected).toContain('pre_order_delivery_date');
+
+    const accepted = errorPaths({
+      ...completeForm,
+      stock: 0,
+      is_pre_order: true,
+      pre_order_delivery_date: '2020-01-15T00:00:00.000Z',
+      pre_order_original_date: '2020-01-15T00:00:00.000Z',
+    });
+    expect(accepted).toEqual([]);
+  });
+
   it('rejects moving a stored past date to a different past date', () => {
     // Editing a date is a fresh promise, and it may not be a promise about
     // a day that has already gone.
