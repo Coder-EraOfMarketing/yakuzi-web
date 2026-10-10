@@ -39,6 +39,10 @@ export { formatCurrency, parseCurrency, formatNumber, formatCompact } from './fo
 // Date formatting
 export { formatDate, formatRelativeTime, toISODateString, formatDateTime } from './formatDate';
 
+// Availability — "for sale" is not the same question as "in stock"
+export { isPreOrderListing, isPurchasable, maxOrderableQty } from './availability';
+export type { ListingAvailability } from './availability';
+
 // Pagination
 export {
   calculatePagination,
