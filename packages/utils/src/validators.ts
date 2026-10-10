@@ -139,6 +139,14 @@ export const productFormSchema = z.object({
   min_order_qty: z.preprocess((val) => Number(val) || 0, z.number().int().min(1)),
   max_order_qty: z.preprocess((val) => Number(val) || 0, z.number().int().min(1)),
   delivery_text: z.string().optional(),
+  is_pre_order: z.boolean().default(false),
+  pre_order_delivery_date: z.string().optional(),
+  /**
+   * The date this listing was loaded with, so the future-date rule below can
+   * tell a date the seller is CHANGING from one that was already stored.
+   * Empty for a new listing. Never submitted.
+   */
+  pre_order_original_date: z.string().optional(),
   shipping_charges: z.preprocess((val) => (val === '' || val === null || isNaN(Number(val))) ? undefined : Number(val), z.number().min(0).optional()),
   image_list: z.array(z.string()).optional().default([]),
   custom_extra_fields: z.array(z.object({ key: z.string().min(1), value: z.string().min(1) })),
@@ -148,7 +156,7 @@ export const productFormSchema = z.object({
 }).superRefine((data, ctx) => {
   const hasVariants = data.variants && data.variants.length > 0;
   
-  if (!hasVariants && data.product_price > 0) {
+  if (!hasVariants && !data.is_pre_order && data.product_price > 0) {
     if (data.stock < 0) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Stock cannot be negative', path: ['stock'] });
     }
@@ -181,6 +189,7 @@ export const productFormSchema = z.object({
   path: ['max_order_qty'],
 }).refine((data) => {
   if (data.variants && data.variants.length > 0) return true;
+  if (data.is_pre_order) return true;
   if (data.product_price <= 0) return true;
   return data.stock >= data.min_order_qty;
 }, {
@@ -188,6 +197,7 @@ export const productFormSchema = z.object({
   path: ['stock'],
 }).refine((data) => {
   if (data.variants && data.variants.length > 0) return true;
+  if (data.is_pre_order) return true;
   if (data.product_price <= 0) return true;
   return data.min_order_qty <= data.stock;
 }, {
@@ -233,6 +243,18 @@ export const productFormSchema = z.object({
 }, {
   message: 'Special price is required',
   path: ['discount_form_details', 'specialPrice'],
+}).refine((data) => !data.is_pre_order || !!data.pre_order_delivery_date, {
+  message: 'Give the date you expect to deliver this pre-order by',
+  path: ['pre_order_delivery_date'],
+}).refine((data) => {
+  if (!data.is_pre_order) return true;
+  const chosen = data.pre_order_delivery_date;
+  if (!chosen) return true;                                  // reported above
+  if (chosen === data.pre_order_original_date) return true;  // unchanged
+  return new Date(chosen).getTime() > Date.now();
+}, {
+  message: 'The expected delivery date must be in the future',
+  path: ['pre_order_delivery_date'],
 });
 
 export type ProductFormValues = z.infer<typeof productFormSchema>;
