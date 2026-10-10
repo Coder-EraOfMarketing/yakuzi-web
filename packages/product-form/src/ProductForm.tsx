@@ -97,6 +97,9 @@ export function ProductForm({
       min_order_qty: 1,
       max_order_qty: 100,
       delivery_text: "",
+      is_pre_order: false,
+      pre_order_delivery_date: "",
+      pre_order_original_date: "",
       shipping_charges: 0,
       image_list: [],
       custom_extra_fields: [],
@@ -154,6 +157,7 @@ export function ProductForm({
   const watchGst = watch("gst_percent") || 0;
   const watchMinMoq = watch("min_order_qty");
   const watchStock = watch("stock");
+  const preOrder = watch("is_pre_order");
   const watchMaxMoq = watch("max_order_qty");
   const watchDiscount = watch("discount_form_details");
   const watchShippingCharges = watch("shipping_charges") || 0;
@@ -512,6 +516,13 @@ export function ProductForm({
         categoryId: data.categories[0],
         ...(data.sub_categories?.length && { subCategoryId: data.sub_categories[0] }),
         stock: payloadStock,
+        // Null, not omitted. Omitting it would mean "leave whatever is stored
+        // alone", which is the one thing it must not mean when a seller has
+        // just UNTICKED pre-order.
+        preOrderDeliveryDate:
+          data.is_pre_order && data.pre_order_delivery_date
+            ? new Date(data.pre_order_delivery_date).toISOString()
+            : null,
         expiryDate: new Date('2099-12-31').toISOString(),
         minimumOrderQuantity: data.min_order_qty,
         maximumOrderQuantity: data.max_order_qty,
@@ -731,15 +742,64 @@ export function ProductForm({
                   {...register("discount_form_details.discountPercent", { valueAsNumber: true })}
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                <Input
-                  label="Current Stock *"
-                  type="number"
-                  min={0}
-                  placeholder="0"
-                  error={errors.stock?.message}
-                  {...register("stock", { valueAsNumber: true })}
+            </>
+          )}
+
+          {/* Pre-order. Outside the variants check, like Shipping Charges
+              below, and for the same kind of reason: a seller can tick this
+              with no variants and then add some, at which point the Current
+              Stock field here disappears and the per-variant stock column
+              greys out instead. This checkbox is then the only thing on screen
+              that explains why that column cannot be typed in. */}
+          <div className="pt-4 border-t border-border/50 space-y-3">
+            <div className="space-y-1">
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primary"
+                  {...register("is_pre_order")}
                 />
+                Pre-order
+              </label>
+              <p className="text-xs text-muted-foreground">
+                For an item you do not have yet. Buyers can order any quantity, and you give the
+                date you expect to deliver by.
+              </p>
+            </div>
+
+            {preOrder && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Expected delivery date *"
+                  type="date"
+                  error={errors.pre_order_delivery_date?.message}
+                  {...register("pre_order_delivery_date")}
+                />
+              </div>
+            )}
+          </div>
+
+          {variants.length === 0 && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                <div className="space-y-1">
+                  <Input
+                    label="Current Stock *"
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    readOnly={preOrder}
+                    disabled={preOrder}
+                    error={errors.stock?.message}
+                    {...register("stock", { valueAsNumber: true })}
+                  />
+                  {preOrder && (
+                    <p className="text-xs text-muted-foreground">
+                      A pre-order has no stock to count, so there is nothing to enter here — buyers
+                      can order as many as they like and you deliver by the date above.
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -823,6 +883,7 @@ export function ProductForm({
             isSuggestedProductSelected={!!selectedMasterId}
             activeVariantId={activeVariantId}
             isEditMode={isEditing}
+            preOrder={preOrder}
           />
         </div>
 
