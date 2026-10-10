@@ -53,9 +53,56 @@ import { NotifyStockAlertModal } from '@/components/shared/NotifyStockAlertModal
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { renderBuyerOfferBadge, GridProductCard } from '@/components/landing/ProductCarousel';
 
-const SHIPPING_RETURN_INFO =
-  'Shipping: Orders are shipped within 3–7 business days.\n\n' +
+const SHIPPING_INFO = 'Shipping: Orders are shipped within 3–7 business days.';
+
+const RETURN_INFO =
   'Returns/Refunds: Returns or refunds are accepted only if the product delivered is wrong or damaged. A ticket must be raised within 48 hours of delivery, along with a clear unboxing video as proof.';
+
+const SHIPPING_RETURN_INFO = `${SHIPPING_INFO}\n\n${RETURN_INFO}`;
+
+/**
+ * The SHIPPING & RETURN INFO panel, told the truth about a pre-order.
+ *
+ * "Orders are shipped within 3–7 business days" was a module constant rendered
+ * unconditionally, directly below the Pre-order badge on the seller list — the
+ * same promise the checkout copy already stopped making, missed here only
+ * because it is a constant rather than an inline string. A pre-order has not
+ * been made yet; what the buyer is owed is the date the seller promised.
+ *
+ * Phrased off the listings actually shown, so a product offered both ways says
+ * both things and neither statement is false. Returns the old constant
+ * unchanged when nothing on the page is a pre-order.
+ */
+function shippingReturnInfo(listings: any[]): string {
+  const preOrders = (listings ?? []).filter((l) => isPreOrderListing(l));
+  if (preOrders.length === 0) return SHIPPING_RETURN_INFO;
+
+  // Several sellers can promise several dates. Reported as a span rather than a
+  // list so the sentence stays short however many there are; each listing's own
+  // date is on the badge beside its price regardless.
+  const dates = Array.from(
+    new Set(preOrders.map((l) => Date.parse(String(l.preOrderDeliveryDate)))),
+  )
+    .filter((t) => !Number.isNaN(t))
+    .sort((a, b) => a - b);
+  const span =
+    dates.length === 0
+      ? null
+      : dates.length === 1
+        ? formatDate(new Date(dates[0]))
+        : `${formatDate(new Date(dates[0]))} to ${formatDate(new Date(dates[dates.length - 1]))}`;
+
+  const allPreOrder = preOrders.length === (listings ?? []).length;
+  const promise = span
+    ? ` Expected delivery: ${span}, as promised by the seller on the listing.`
+    : ' The seller states the expected delivery date on the listing.';
+
+  const shipping = allPreOrder
+    ? `Shipping: This is a pre-order and has not been released yet, so the 3–7 business day dispatch window does not apply.${promise}`
+    : `${SHIPPING_INFO} Pre-order listings on this page are an exception and are not dispatched on that timeline.${promise}`;
+
+  return `${shipping}\n\n${RETURN_INFO}`;
+}
 
 function Accordion({
   title,
@@ -1220,6 +1267,10 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
     displayMrp = displayPrice / (1 - discountPercent / 100);
   }
 
+  // The listings on screen decide the shipping copy, so a pre-order is never
+  // told it ships in 3–7 business days.
+  const shippingInfo = shippingReturnInfo(comparisonListings);
+
   // Calculate active discount percent dynamically for header badge
   const activeListing = comparisonListings[0];
   const activeDiscountPercent = 
@@ -1425,7 +1476,7 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
               title="PRODUCT SPECIFICATIONS"
               content={product.specifications || 'No specifications available for this product.'}
             />
-            <Accordion title="SHIPPING & RETURN INFO" content={SHIPPING_RETURN_INFO} />
+            <Accordion title="SHIPPING & RETURN INFO" content={shippingInfo} />
             <FaqAccordion faqs={faqs} />
           </div>
 
@@ -1597,7 +1648,7 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
                   title="PRODUCT SPECIFICATIONS"
                   content={product.specifications || 'No specifications available for this product.'}
                 />
-                <Accordion title="SHIPPING & RETURN INFO" content={SHIPPING_RETURN_INFO} />
+                <Accordion title="SHIPPING & RETURN INFO" content={shippingInfo} />
                 <FaqAccordion faqs={faqs} />
               </div>
 
