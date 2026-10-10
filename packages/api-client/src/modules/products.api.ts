@@ -223,9 +223,25 @@ export async function getManufacturers(): Promise<{ id: string; name: string; pr
 // the cart was deleted," silently wiping a buyer's cart on a flaky request
 // instead of leaving it untouched. Let it throw; callers decide what "the
 // request itself failed" should mean for them.
+//
+// `preOrderDeliveryDate` is part of what the endpoint returns, and has been
+// since the pre-order API shipped — the declared type was simply behind, and
+// since this returns `data?.data` raw the value already arrived at runtime.
+// Declaring it is what lets the cart tell a pre-order (no stock, perfectly
+// buyable) apart from a line that has genuinely sold out. The endpoint omits
+// offers that are neither in stock nor pre-order, so "absent from the result"
+// still means "no longer purchasable".
 export async function validateProductIds(
   ids: string[],
-): Promise<{ id: string; price: number; mrp: number; stock: number }[]> {
+): Promise<
+  {
+    id: string;
+    price: number;
+    mrp: number;
+    stock: number;
+    preOrderDeliveryDate?: string | null;
+  }[]
+> {
   const { data } = await api.post('/products/validate-ids', { ids });
   return data?.data ?? [];
 }

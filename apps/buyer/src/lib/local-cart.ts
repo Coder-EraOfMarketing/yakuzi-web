@@ -1,25 +1,56 @@
 import { type Cart, type CartItem } from '@yukizi/api-client';
+import { type ListingAvailability, maxOrderableQty } from '@yukizi/utils';
 
 const STORAGE_KEY = 'yukizi_local_cart';
 
 /** Fired in this tab whenever the local cart is written. */
 export const CART_CHANGED_EVENT = 'yukizi:cart-changed';
 
+/** A limit we can actually use; anything else counts as "not reported". */
+const asLimit = (n: unknown): number | undefined =>
+  typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : undefined;
+
+/**
+ * What a cart line says about its own availability. A line carries these on
+ * itself (every add-to-cart surface passes them) and sometimes on `.product`.
+ *
+ * `preOrderDeliveryDate` has to be read here too, not just stock: a pre-order
+ * has no stock at all, so a line that looked at stock alone read every
+ * pre-order as a sold-out ordinary listing.
+ */
+const availabilityOf = (item: any): ListingAvailability => ({
+  stock: asLimit(item?.stock ?? item?.product?.stock),
+  maximumOrderQuantity: asLimit(
+    item?.maximumOrderQuantity ?? item?.product?.maximumOrderQuantity,
+  ),
+  preOrderDeliveryDate:
+    item?.preOrderDeliveryDate ?? item?.product?.preOrderDeliveryDate,
+});
+
 /**
  * Highest quantity an item may be raised to, given whatever we know about its
  * availability. Returns Infinity when nothing is known, so callers that never
  * supplied stock keep working exactly as before.
+ *
+ * The rule itself lives in maxOrderableQty — which is what makes a pre-order
+ * addable: it ignores stock for a pre-order and applies the seller's per-order
+ * maximum instead. Reading stock here directly meant a pre-order's `stock: 0`
+ * produced a ceiling of 0, and `addItem` below drops anything that clamps to
+ * zero, so the line was never pushed and the button did nothing at all.
  */
 const ceilingFor = (item: any): number => {
-  const stock = item?.stock ?? item?.product?.stock;
-  const perOrderLimit =
-    item?.maximumOrderQuantity ?? item?.product?.maximumOrderQuantity;
+  const availability = availabilityOf(item);
 
-  const limits = [stock, perOrderLimit].filter(
-    (n): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0,
-  );
+  // Nothing reported at all: unbounded, exactly as before. (Kept out of
+  // maxOrderableQty's hands because its own fallback is a finite 9999.)
+  if (
+    availability.stock === undefined &&
+    availability.maximumOrderQuantity === undefined
+  ) {
+    return Infinity;
+  }
 
-  return limits.length > 0 ? Math.min(...limits) : Infinity;
+  return maxOrderableQty(availability);
 };
 
 export const localCart = {
@@ -84,7 +115,9 @@ export const localCart = {
       }
     } else if (itemData.quantity > 0) {
       // Adding something already out of stock clamps to zero, and a
-      // zero-quantity line would go on to be synced and ordered.
+      // zero-quantity line would go on to be synced and ordered. A pre-order
+      // is NOT that case — ceilingFor gives it the seller's per-order maximum
+      // rather than its (always zero) stock, so it survives this guard.
       const quantity = Math.min(itemData.quantity, ceilingFor(itemData));
       if (quantity > 0) {
         cart.items.push({
