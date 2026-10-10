@@ -38,7 +38,15 @@ import { useProductReviews, useCreateReview, useReviewEligibility } from '@/hook
 import { useBuyerProfile } from '@/hooks/useBuyerProfile';
 import { uploadReviewImage, useAuth } from '@yukizi/api-client';
 import Navbar from '@/components/landing/Navbar';
-import { generateProductSlug, parseProductIdFromSlug, calculatePricing } from '@yukizi/utils';
+import {
+  generateProductSlug,
+  parseProductIdFromSlug,
+  calculatePricing,
+  formatDate,
+  isPreOrderListing,
+  isPurchasable,
+  maxOrderableQty,
+} from '@yukizi/utils';
 import { ShareButton } from '@/components/shared/ShareButton';
 import WishlistIcon from '@/components/shared/WishlistIcon';
 import { NotifyStockAlertModal } from '@/components/shared/NotifyStockAlertModal';
@@ -455,7 +463,10 @@ function ComparisonOffersList({
   return (
     <div className={isDesktop ? "flex flex-col gap-2 w-full max-h-[340px] overflow-y-auto overflow-x-hidden pr-1 purple-scrollbar" : "flex flex-col gap-3 w-full"}>
       {comparisonListings.map((listing: any, index: number) => {
-        const inStock = (listing.stock ?? 0) > 0;
+        // One rule, shared with the quick view, the carousel and the quick
+        // review modal. A pre-order has no stock and is still for sale.
+        const canBuy = isPurchasable(listing);
+        const isPreOrder = isPreOrderListing(listing);
         const cartItem = cartItemMap.get(listing.id);
         const itemQty = cartItem?.quantity || 0;
         const sellerMoq = listing.moq || listing.minimumOrderQuantity || 1;
@@ -479,10 +490,9 @@ function ComparisonOffersList({
           }
         );
 
+        const max = maxOrderableQty(listing);
+
         const handleQtyChange = (newQty: number) => {
-          const stock = listing.stock ?? 9999;
-          const maxLimit = listing.maximumOrderQuantity ?? stock;
-          const max = Math.min(stock, maxLimit);
           if (newQty > max) {
             toast(`Only ${max} units available`, 'error');
             return;
@@ -511,6 +521,10 @@ function ComparisonOffersList({
                 // lets the quantity be raised past the stock that exists.
                 stock: listing.stock,
                 maximumOrderQuantity: listing.maximumOrderQuantity,
+                // And without this a pre-order arrives in the cart looking
+                // like an ordinary line with zero stock, which is the one
+                // shape the cart's ceiling reads as "unbuyable".
+                preOrderDeliveryDate: listing.preOrderDeliveryDate,
               });
             }
           }
@@ -574,6 +588,11 @@ function ComparisonOffersList({
                   {subText}
                 </span>
               )}
+              {isPreOrder && (
+                <span className="mt-1 inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">
+                  Pre-order · expected {formatDate(listing.preOrderDeliveryDate)}
+                </span>
+              )}
             </div>
 
             {/* 2. Star Rating */}
@@ -628,13 +647,24 @@ function ComparisonOffersList({
 
             {/* 4. Actions (Plus / Incremental / Reset) */}
             <div className="flex items-center justify-end flex-shrink-0">
-              {inStock ? (
+              {canBuy ? (
                 itemQty === 0 ? (
                   <button
                     onClick={() => handleQtyChange(minQty)}
+                    title={isPreOrder ? 'Pre-order' : 'Add to bag'}
+                    aria-label={isPreOrder ? 'Pre-order' : 'Add to bag'}
                     className="text-black hover:text-black/80 focus:outline-none transition-transform active:scale-90 p-0.5"
                   >
-                    <Plus className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 xl:w-6.5 xl:h-6.5 2xl:w-7 2xl:h-7" strokeWidth={3} />
+                    {/* A pre-order says so in words. The bare "+" reads as
+                        "another one of these, now", which is exactly what a
+                        pre-order is not. */}
+                    {isPreOrder ? (
+                      <span className="whitespace-nowrap rounded-full bg-primary-100 px-2.5 py-1 text-2xs font-bold text-primary-700 sm:text-xs">
+                        Pre-order
+                      </span>
+                    ) : (
+                      <Plus className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 xl:w-6.5 xl:h-6.5 2xl:w-7 2xl:h-7" strokeWidth={3} />
+                    )}
                   </button>
                 ) : (
                   <div className="flex items-center gap-1.5 sm:gap-3 xl:gap-4">
@@ -661,7 +691,7 @@ function ComparisonOffersList({
                       <span className="font-bold text-2xs sm:text-sm xl:text-base 2xl:text-lg tracking-wide">{String(itemQty).padStart(2, '0')}</span>
                       <button
                         className="w-4 sm:w-8 h-full flex items-center justify-center hover:bg-black/10 active:scale-95 transition-all text-white font-bold text-2xs sm:text-lg xl:text-xl 2xl:text-2xl pb-0.5 disabled:opacity-50"
-                        disabled={itemQty >= (listing.stock ?? 9999)}
+                        disabled={itemQty >= max}
                         onClick={() => handleQtyChange(itemQty + 1)}
                       >
                         +

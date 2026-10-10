@@ -29,6 +29,10 @@ import {
   getSellingPrice,
   getEffectiveDiscountPercent,
   generateProductSlug,
+  formatDate,
+  isPreOrderListing,
+  isPurchasable,
+  maxOrderableQty,
 } from '@yukizi/utils';
 import { renderBuyerOfferBadge } from '@/components/landing/ProductCarousel';
 import type { Product } from '@yukizi/utils';
@@ -146,6 +150,10 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
       // quantity be raised past the stock that exists.
       stock: listing.stock,
       maximumOrderQuantity: listing.maximumOrderQuantity,
+      // And without this a pre-order arrives in the cart looking like an
+      // ordinary line with zero stock — the one shape the cart's ceiling
+      // reads as "unbuyable".
+      preOrderDeliveryDate: listing.preOrderDeliveryDate,
     });
   };
 
@@ -309,7 +317,11 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
               <div className="flex w-full flex-col gap-3">
                 {comparisonListings.length > 0 ? (
                   comparisonListings.map((listing: any) => {
-                    const inStock = (listing.stock ?? 9999) > 0;
+                    // Same rule as the product page, the carousel and the
+                    // quick review modal. This used to read a null stock as IN
+                    // stock while the product page read it as OUT.
+                    const canBuy = isPurchasable(listing);
+                    const isPreOrder = isPreOrderListing(listing);
                     const cartItem = cartData?.items?.find(
                       (item: any) => item.productId === listing.id,
                     );
@@ -330,14 +342,19 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                         ? discountMeta.discountPercent
                         : 0;
 
+                    // Two separate ceilings, deliberately kept apart: the
+                    // availability one (stock, or none at all for a pre-order,
+                    // plus the seller's per-order cap) comes from the shared
+                    // helper; the platform-wide cap is policy and still applies
+                    // on top. Folding the platform cap into the helper call is
+                    // what keeps a listing with no seller cap from quietly
+                    // losing it.
+                    const max = Math.min(
+                      maxOrderableQty(listing),
+                      listing.maxOrderQty || config?.max_order_qty || 100,
+                    );
+
                     const handleQtyChange = (newQty: number) => {
-                      const stock = listing.stock ?? 9999;
-                      const maxLimit =
-                        listing.maximumOrderQuantity ||
-                        listing.maxOrderQty ||
-                        config?.max_order_qty ||
-                        100;
-                      const max = Math.min(stock, maxLimit);
                       if (newQty > max) {
                         toast(`Only ${max} units available`, 'error');
                         return;
@@ -364,6 +381,11 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                           {listing.moq > 1 && (
                             <span className="mt-1 truncate text-2xs font-medium leading-none text-gray-500 sm:text-xs">
                               {listing.moq * 10}% off on purchase of {listing.moq}
+                            </span>
+                          )}
+                          {isPreOrder && (
+                            <span className="mt-1 inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">
+                              Pre-order · expected {formatDate(listing.preOrderDeliveryDate)}
                             </span>
                           )}
                         </div>
@@ -394,7 +416,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
                         {/* 5. Actions */}
                         <div className="flex flex-shrink-0 items-center justify-end min-w-[32px]">
-                          {inStock ? (
+                          {canBuy ? (
                             itemQty > 0 ? (
                               <div className="flex h-7 w-20 select-none items-center justify-between overflow-hidden rounded-[8px] bg-[#48286b] text-2xs font-bold text-white shadow-sm sm:h-8">
                                 <button
@@ -408,7 +430,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                                 </span>
                                 <button
                                   className="h-full px-2 sm:px-2.5 text-xs font-bold text-white/80 transition-all hover:bg-black/10 hover:text-white active:scale-95 disabled:opacity-50"
-                                  disabled={itemQty >= (listing.stock ?? 9999)}
+                                  disabled={itemQty >= max}
                                   onClick={() => {
                                     handleQtyChange(itemQty + 1);
                                   }}
