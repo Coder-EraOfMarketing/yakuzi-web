@@ -12,6 +12,10 @@ export type {
   DiscountDetails,
   DiscountFormDetails,
   ProductPayload,
+  // A per-seller offer on a product. Exported because availability.ts points
+  // callers at it as a type that declares preOrderDeliveryDate, and that
+  // pointer has to resolve from the package root, not just the /types subpath.
+  MarketplaceListing,
   Suggestion,
   CategoryItem,
   SubCategoryItem,
@@ -38,6 +42,10 @@ export { formatCurrency, parseCurrency, formatNumber, formatCompact } from './fo
 
 // Date formatting
 export { formatDate, formatRelativeTime, toISODateString, formatDateTime } from './formatDate';
+
+// Availability — "for sale" is not the same question as "in stock"
+export { isPreOrderListing, isPurchasable, maxOrderableQty } from './availability';
+export type { ListingAvailability } from './availability';
 
 // Pagination
 export {

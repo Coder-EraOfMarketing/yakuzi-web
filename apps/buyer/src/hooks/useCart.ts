@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCart, addToCart, updateCartItem, removeCartItem, clearCart, useAuth, validateProductIds } from '@yukizi/api-client';
+import { isPreOrderListing, maxOrderableQty } from '@yukizi/utils';
 import { localCart, CART_CHANGED_EVENT } from '@/lib/local-cart';
 import { track } from '@/lib/analytics/tracker';
 import { useEffect, useState } from 'react';
@@ -37,10 +38,12 @@ export function useCart() {
         const liveById = new Map(live.map((l) => [l.id, l]));
 
         // Anything not in the live response is no longer purchasable (deactivated,
-        // deleted, or out of stock) — drop it silently. Anything that survives gets
-        // its price/mrp/stock refreshed and its quantity clamped to live stock, so a
-        // seller's price change or a stock drop shows up on the very next cart open
-        // without the buyer needing to do anything.
+        // deleted, or out of stock — the endpoint still returns a pre-order, which
+        // has no stock and is perfectly buyable) — drop it silently. Anything that
+        // survives gets its price/mrp/stock/pre-order date refreshed and its quantity
+        // clamped to whatever it may still be ordered in, so a seller's price change
+        // or a stock drop shows up on the very next cart open without the buyer
+        // needing to do anything.
         //
         // Only actually write back (and only then) when something changed. This
         // isn't just an optimization: localCart.set() dispatches a cart-changed event
@@ -57,16 +60,35 @@ export function useCart() {
           })
           .map((item: any) => {
             const liveOffer = liveById.get(item.productId)!;
-            const quantity = Math.min(item.quantity, liveOffer.stock);
+
+            // A pre-order reports no stock, so clamping it to live stock
+            // emptied the line to zero and the filter below then dropped it —
+            // a pre-order could not survive 15 seconds in the bag. Its ceiling
+            // comes from maxOrderableQty instead (stock is not one for a
+            // pre-order). An ordinary line is still clamped to live stock
+            // exactly as before, so a genuine stock drop still bites.
+            const ceiling = isPreOrderListing(liveOffer)
+              ? maxOrderableQty(liveOffer)
+              : liveOffer.stock;
+            const quantity = Math.min(item.quantity, ceiling);
+
+            // Normalised to null on both sides: a line holding `null` against
+            // a response omitting the key would otherwise read as changed on
+            // every single poll, and every poll writes — which is the
+            // set -> event -> invalidate -> refetch loop the comment above
+            // exists to prevent.
+            const preOrderDeliveryDate = liveOffer.preOrderDeliveryDate ?? null;
+
             if (
               item.price !== liveOffer.price ||
               item.mrp !== liveOffer.mrp ||
               item.stock !== liveOffer.stock ||
+              (item.preOrderDeliveryDate ?? null) !== preOrderDeliveryDate ||
               item.quantity !== quantity
             ) {
               changed = true;
             }
-            return { ...item, price: liveOffer.price, mrp: liveOffer.mrp, stock: liveOffer.stock, quantity };
+            return { ...item, price: liveOffer.price, mrp: liveOffer.mrp, stock: liveOffer.stock, preOrderDeliveryDate, quantity };
           })
           .filter((item: any) => {
             if (item.quantity > 0) return true;

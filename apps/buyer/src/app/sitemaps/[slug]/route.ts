@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getBlogs } from '@yukizi/api-client';
+import { isPurchasable } from '@yukizi/utils';
 import { getCategoriesCachedShared } from '@/lib/server-cache';
 import {
   renderUrlSet,
@@ -131,8 +132,11 @@ async function handleProducts(chunk: number): Promise<Response> {
     lastModified: p.updatedAt ?? p.createdAt,
     changeFrequency: 'daily',
     // A product with a live seller is the one that can convert, so it earns
-    // the crawler's attention ahead of one that cannot be bought.
-    priority: (p.stock ?? 0) > 0 ? 0.8 : 0.5,
+    // the crawler's attention ahead of one that cannot be bought. Decided by
+    // "can this be bought", not by the stock number: a pre-order has no stock
+    // and converts perfectly well, and reading stock alone de-prioritised the
+    // crawl of every one of them.
+    priority: isPurchasable(p) ? 0.8 : 0.5,
   }));
 
   guardEmpty(urls, `products-${chunk}`);

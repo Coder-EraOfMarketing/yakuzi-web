@@ -13,7 +13,20 @@ import { useIsDesktop } from '@/hooks/useIsDesktop';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { QuickViewModal } from '@/components/products/QuickViewModal';
-import { calculatePricing } from '@yukizi/utils';
+import { calculatePricing, formatDate, isPreOrderListing } from '@yukizi/utils';
+
+/**
+ * The promised delivery date of a saved item, or null if it is not a pre-order.
+ *
+ * Read off the line as well as its `product`, because a save has two shapes: a
+ * signed-out save keeps whatever the card handed it, while an account save is
+ * rebuilt field-by-field by the wishlist mapper and carries it on `product`.
+ */
+function preOrderDateOf(item: any): string | null {
+  return (
+    item?.product?.preOrderDeliveryDate ?? item?.preOrderDeliveryDate ?? null
+  );
+}
 
 export default function WishlistDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { data: wishlist, isLoading, isError } = useWishlist();
@@ -50,6 +63,14 @@ export default function WishlistDrawer({ isOpen, onClose }: { isOpen: boolean; o
       imageUrl: imgUrl,
       images: imgUrl ? [imgUrl] : [],
       ...(item.product || {}),
+      // AFTER the spread, not left to it. The spread carries the saved product
+      // — which for an account save is whatever the wishlist mapper chose to
+      // rebuild — so the date can simply not be in there, while `stock: 0`
+      // reliably is. Lose the date and local-cart derives this line's ceiling
+      // from that zero stock, clamps the quantity to 0, and drops the line
+      // instead of pushing it: the Add button does nothing at all, with no
+      // error and no toast.
+      preOrderDeliveryDate: preOrderDateOf(item) ?? undefined,
     };
     addToCart.mutate(cartItem, {
       onSuccess: () => {
@@ -201,7 +222,13 @@ export default function WishlistDrawer({ isOpen, onClose }: { isOpen: boolean; o
                     // stays and stops being actionable. Only an explicit false
                     // counts, so an API that predates the field changes nothing.
                     const isUnavailable = productObj?.available === false;
-                    
+
+                    // A pre-order has no stock and a promised date, so without
+                    // this it reads as an ordinary item and the card says
+                    // nothing about when it would actually arrive.
+                    const preOrderDate = preOrderDateOf(item);
+                    const isPreOrder = isPreOrderListing({ preOrderDeliveryDate: preOrderDate });
+
                     const inCartItem = cartData?.items?.find((ci: any) => {
                       const ciProductIds = [
                         ci.productId,
@@ -303,6 +330,16 @@ export default function WishlistDrawer({ isOpen, onClose }: { isOpen: boolean; o
                             <Star className="h-3.5 w-3.5 fill-[#f5a623] text-[#f5a623]" />
                             <span className="text-xs font-bold text-gray-700">{itemRating}</span>
                           </div>
+
+                          {/* Numbered primary shades, never `bg-primary/15` —
+                              primary.DEFAULT is `hsl(var(--primary))` with no
+                              <alpha-value> placeholder, so an opacity variant
+                              compiles to nothing and renders unstyled. */}
+                          {isPreOrder && (
+                            <span className="mt-1.5 inline-flex w-fit items-center rounded-full bg-primary-100 px-2 py-0.5 text-2xs font-semibold text-primary-700">
+                              Pre-order · expected {formatDate(preOrderDate!)}
+                            </span>
+                          )}
                         </div>
 
                         {/* Quantity on top, reset beneath — the same column the

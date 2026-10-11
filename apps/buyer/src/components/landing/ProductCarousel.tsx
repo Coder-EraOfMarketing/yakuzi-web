@@ -7,7 +7,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getProducts, useAuth } from '@yukizi/api-client';
 import { trackProductImpression, trackProductClick } from '@/lib/analytics/tracker';
-import { generateProductSlug, calculatePricing } from '@yukizi/utils';
+import {
+  generateProductSlug,
+  calculatePricing,
+  formatDate,
+  isPreOrderListing,
+  isPurchasable,
+  maxOrderableQty,
+} from '@yukizi/utils';
 import QuickReviewModal from './QuickReviewModal';
 import { useAddToCart, useCart, useUpdateCartItem, useRemoveCartItem } from '@/hooks/useCart';
 import { useAddToWishlist, useWishlist, useRemoveFromWishlist } from '@/hooks/useWishlist';
@@ -166,9 +173,7 @@ export function GridProductCard({ product, index, onOpenReview, showFullTitle }:
   const handlePlusClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    const stock = product?.stock ?? 9999;
-    const maxLimit = product?.maximumOrderQuantity ?? stock;
-    const max = Math.min(stock, maxLimit);
+    const max = maxOrderableQty(product);
     if (cartQuantity >= max) {
       toast(`Only ${max} units available`, 'error');
       return;
@@ -267,7 +272,14 @@ export function GridProductCard({ product, index, onOpenReview, showFullTitle }:
   const rating = hasRating ? product.rating : null;
   const hasNoSellers = product?.sellerCount === 0 || product?.hasSellers === false;
   const isNotAvailable = hasNoSellers && finalPrice <= 0 && mrpVal <= 0;
-  const showBellIcon = hasNoSellers || (product?.stock !== undefined && product.stock <= 0);
+  const isPreOrder = isPreOrderListing(product);
+  // Same rule as the product page, the quick view and the quick review modal.
+  // Two things changed: the stock half was `stock !== undefined && stock <= 0`,
+  // so an absent stock read as available here and out of stock on the product
+  // page; and `hasNoSellers` is a SEPARATE condition that !isPurchasable does
+  // not cover, so a pre-order needs the explicit guard — a waitlist for
+  // something already buyable is nonsense.
+  const showBellIcon = !isPreOrder && (hasNoSellers || !isPurchasable(product));
 
   const isWaitlisted = waitlistData?.some((item: any) => item.productId === currentProductId) || false;
 
@@ -411,7 +423,7 @@ export function GridProductCard({ product, index, onOpenReview, showFullTitle }:
                     onClick={handlePlusClick}
                     aria-label="Increase quantity"
                     className="text-white/90 hover:text-white hover:bg-white/20 w-5 h-5 flex items-center justify-center rounded-full transition-colors active:scale-90 disabled:opacity-40 disabled:hover:bg-transparent"
-                    disabled={cartQuantity >= (product?.stock ?? 9999)}
+                    disabled={cartQuantity >= maxOrderableQty(product)}
                   >
                     <Plus className="w-3 h-3" strokeWidth={3} />
                   </button>
@@ -423,7 +435,10 @@ export function GridProductCard({ product, index, onOpenReview, showFullTitle }:
             // reflows when you tap it. Surface only appears on hover, so the
             // card stays as clean as it was.
             <button
-              aria-label="Add to cart"
+              // The card has no room for a word, but the control should still
+              // announce what it does: the badge below says "Pre-order".
+              aria-label={isPreOrder ? 'Pre-order' : 'Add to cart'}
+              title={isPreOrder ? 'Pre-order' : 'Add to cart'}
               // #2f1b4d is a near-black purple — correct on a light card,
               // invisible on a dark one. The hover tint moves too: #854cbc is
               // a mid purple that barely separates from the dark surface.
@@ -512,6 +527,17 @@ export function GridProductCard({ product, index, onOpenReview, showFullTitle }:
                  <span className="text-2xs sm:text-sm font-medium leading-none text-[#333333]">{hasRating ? rating : 'NA'}</span>
               </div>
            </div>
+
+           {/* Pre-order. Its own row rather than squeezed into the price line:
+               that line already carries price, strike-through and the offer
+               badge, and the cards are 2-up on a phone. */}
+           {isPreOrder && (
+              <div>
+                 <span className="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">
+                    Pre-order · expected {formatDate(product.preOrderDeliveryDate)}
+                 </span>
+              </div>
+           )}
         </div>
       </div>
     </div>

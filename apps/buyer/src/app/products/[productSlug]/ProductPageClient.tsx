@@ -38,16 +38,71 @@ import { useProductReviews, useCreateReview, useReviewEligibility } from '@/hook
 import { useBuyerProfile } from '@/hooks/useBuyerProfile';
 import { uploadReviewImage, useAuth } from '@yukizi/api-client';
 import Navbar from '@/components/landing/Navbar';
-import { generateProductSlug, parseProductIdFromSlug, calculatePricing } from '@yukizi/utils';
+import {
+  generateProductSlug,
+  parseProductIdFromSlug,
+  calculatePricing,
+  formatDate,
+  isPreOrderListing,
+  isPurchasable,
+  maxOrderableQty,
+} from '@yukizi/utils';
 import { ShareButton } from '@/components/shared/ShareButton';
 import WishlistIcon from '@/components/shared/WishlistIcon';
 import { NotifyStockAlertModal } from '@/components/shared/NotifyStockAlertModal';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import { renderBuyerOfferBadge, GridProductCard } from '@/components/landing/ProductCarousel';
 
-const SHIPPING_RETURN_INFO =
-  'Shipping: Orders are shipped within 3–7 business days.\n\n' +
+const SHIPPING_INFO = 'Shipping: Orders are shipped within 3–7 business days.';
+
+const RETURN_INFO =
   'Returns/Refunds: Returns or refunds are accepted only if the product delivered is wrong or damaged. A ticket must be raised within 48 hours of delivery, along with a clear unboxing video as proof.';
+
+const SHIPPING_RETURN_INFO = `${SHIPPING_INFO}\n\n${RETURN_INFO}`;
+
+/**
+ * The SHIPPING & RETURN INFO panel, told the truth about a pre-order.
+ *
+ * "Orders are shipped within 3–7 business days" was a module constant rendered
+ * unconditionally, directly below the Pre-order badge on the seller list — the
+ * same promise the checkout copy already stopped making, missed here only
+ * because it is a constant rather than an inline string. A pre-order has not
+ * been made yet; what the buyer is owed is the date the seller promised.
+ *
+ * Phrased off the listings actually shown, so a product offered both ways says
+ * both things and neither statement is false. Returns the old constant
+ * unchanged when nothing on the page is a pre-order.
+ */
+function shippingReturnInfo(listings: any[]): string {
+  const preOrders = (listings ?? []).filter((l) => isPreOrderListing(l));
+  if (preOrders.length === 0) return SHIPPING_RETURN_INFO;
+
+  // Several sellers can promise several dates. Reported as a span rather than a
+  // list so the sentence stays short however many there are; each listing's own
+  // date is on the badge beside its price regardless.
+  const dates = Array.from(
+    new Set(preOrders.map((l) => Date.parse(String(l.preOrderDeliveryDate)))),
+  )
+    .filter((t) => !Number.isNaN(t))
+    .sort((a, b) => a - b);
+  const span =
+    dates.length === 0
+      ? null
+      : dates.length === 1
+        ? formatDate(new Date(dates[0]))
+        : `${formatDate(new Date(dates[0]))} to ${formatDate(new Date(dates[dates.length - 1]))}`;
+
+  const allPreOrder = preOrders.length === (listings ?? []).length;
+  const promise = span
+    ? ` Expected delivery: ${span}, as promised by the seller on the listing.`
+    : ' The seller states the expected delivery date on the listing.';
+
+  const shipping = allPreOrder
+    ? `Shipping: This is a pre-order and has not been released yet, so the 3–7 business day dispatch window does not apply.${promise}`
+    : `${SHIPPING_INFO} Pre-order listings on this page are an exception and are not dispatched on that timeline.${promise}`;
+
+  return `${shipping}\n\n${RETURN_INFO}`;
+}
 
 function Accordion({
   title,
@@ -455,7 +510,10 @@ function ComparisonOffersList({
   return (
     <div className={isDesktop ? "flex flex-col gap-2 w-full max-h-[340px] overflow-y-auto overflow-x-hidden pr-1 purple-scrollbar" : "flex flex-col gap-3 w-full"}>
       {comparisonListings.map((listing: any, index: number) => {
-        const inStock = (listing.stock ?? 0) > 0;
+        // One rule, shared with the quick view, the carousel and the quick
+        // review modal. A pre-order has no stock and is still for sale.
+        const canBuy = isPurchasable(listing);
+        const isPreOrder = isPreOrderListing(listing);
         const cartItem = cartItemMap.get(listing.id);
         const itemQty = cartItem?.quantity || 0;
         const sellerMoq = listing.moq || listing.minimumOrderQuantity || 1;
@@ -479,10 +537,9 @@ function ComparisonOffersList({
           }
         );
 
+        const max = maxOrderableQty(listing);
+
         const handleQtyChange = (newQty: number) => {
-          const stock = listing.stock ?? 9999;
-          const maxLimit = listing.maximumOrderQuantity ?? stock;
-          const max = Math.min(stock, maxLimit);
           if (newQty > max) {
             toast(`Only ${max} units available`, 'error');
             return;
@@ -511,6 +568,10 @@ function ComparisonOffersList({
                 // lets the quantity be raised past the stock that exists.
                 stock: listing.stock,
                 maximumOrderQuantity: listing.maximumOrderQuantity,
+                // And without this a pre-order arrives in the cart looking
+                // like an ordinary line with zero stock, which is the one
+                // shape the cart's ceiling reads as "unbuyable".
+                preOrderDeliveryDate: listing.preOrderDeliveryDate,
               });
             }
           }
@@ -574,6 +635,11 @@ function ComparisonOffersList({
                   {subText}
                 </span>
               )}
+              {isPreOrder && (
+                <span className="mt-1 inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">
+                  Pre-order · expected {formatDate(listing.preOrderDeliveryDate)}
+                </span>
+              )}
             </div>
 
             {/* 2. Star Rating */}
@@ -628,13 +694,24 @@ function ComparisonOffersList({
 
             {/* 4. Actions (Plus / Incremental / Reset) */}
             <div className="flex items-center justify-end flex-shrink-0">
-              {inStock ? (
+              {canBuy ? (
                 itemQty === 0 ? (
                   <button
                     onClick={() => handleQtyChange(minQty)}
+                    title={isPreOrder ? 'Pre-order' : 'Add to bag'}
+                    aria-label={isPreOrder ? 'Pre-order' : 'Add to bag'}
                     className="text-black hover:text-black/80 focus:outline-none transition-transform active:scale-90 p-0.5"
                   >
-                    <Plus className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 xl:w-6.5 xl:h-6.5 2xl:w-7 2xl:h-7" strokeWidth={3} />
+                    {/* A pre-order says so in words. The bare "+" reads as
+                        "another one of these, now", which is exactly what a
+                        pre-order is not. */}
+                    {isPreOrder ? (
+                      <span className="whitespace-nowrap rounded-full bg-primary-100 px-2.5 py-1 text-2xs font-bold text-primary-700 sm:text-xs">
+                        Pre-order
+                      </span>
+                    ) : (
+                      <Plus className="w-4.5 h-4.5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6 xl:w-6.5 xl:h-6.5 2xl:w-7 2xl:h-7" strokeWidth={3} />
+                    )}
                   </button>
                 ) : (
                   <div className="flex items-center gap-1.5 sm:gap-3 xl:gap-4">
@@ -661,7 +738,7 @@ function ComparisonOffersList({
                       <span className="font-bold text-2xs sm:text-sm xl:text-base 2xl:text-lg tracking-wide">{String(itemQty).padStart(2, '0')}</span>
                       <button
                         className="w-4 sm:w-8 h-full flex items-center justify-center hover:bg-black/10 active:scale-95 transition-all text-white font-bold text-2xs sm:text-lg xl:text-xl 2xl:text-2xl pb-0.5 disabled:opacity-50"
-                        disabled={itemQty >= (listing.stock ?? 9999)}
+                        disabled={itemQty >= max}
                         onClick={() => handleQtyChange(itemQty + 1)}
                       >
                         +
@@ -1190,6 +1267,10 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
     displayMrp = displayPrice / (1 - discountPercent / 100);
   }
 
+  // The listings on screen decide the shipping copy, so a pre-order is never
+  // told it ships in 3–7 business days.
+  const shippingInfo = shippingReturnInfo(comparisonListings);
+
   // Calculate active discount percent dynamically for header badge
   const activeListing = comparisonListings[0];
   const activeDiscountPercent = 
@@ -1395,7 +1476,7 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
               title="PRODUCT SPECIFICATIONS"
               content={product.specifications || 'No specifications available for this product.'}
             />
-            <Accordion title="SHIPPING & RETURN INFO" content={SHIPPING_RETURN_INFO} />
+            <Accordion title="SHIPPING & RETURN INFO" content={shippingInfo} />
             <FaqAccordion faqs={faqs} />
           </div>
 
@@ -1567,7 +1648,7 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
                   title="PRODUCT SPECIFICATIONS"
                   content={product.specifications || 'No specifications available for this product.'}
                 />
-                <Accordion title="SHIPPING & RETURN INFO" content={SHIPPING_RETURN_INFO} />
+                <Accordion title="SHIPPING & RETURN INFO" content={shippingInfo} />
                 <FaqAccordion faqs={faqs} />
               </div>
 

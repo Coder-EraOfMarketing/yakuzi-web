@@ -15,6 +15,12 @@ export const WishlistItemSchema = z.object({
     images: z.array(z.string()).optional(),
     manufacturer: z.string().optional(),
     stock: z.number().optional(),
+    // Non-null means pre-order: the listing has no stock at all and is still
+    // perfectly buyable. Declared here because this schema is what gives
+    // `WishlistItem` its type — without the field a saved pre-order reads as
+    // an ordinary zero-stock listing, which the saved-items page refuses
+    // outright and the saved-items drawer swallows in silence.
+    preOrderDeliveryDate: z.string().nullable().optional(),
     // The listing "Add" puts in the bag — a save is filed against a product,
     // but a cart line is a listing.
     bestListingId: z.string().nullable().optional(),
@@ -59,6 +65,11 @@ function mapBackendWishlist(responseData: any): Wishlist {
         images: Array.isArray(product.images) ? product.images : (raw.image ? [raw.image] : []),
         manufacturer: product.manufacturer || raw.manufacturer,
         stock: product.stock ?? raw.stock,
+        // `product` is rebuilt field-by-field, so anything not named here is
+        // gone before any page sees it. That is how the pre-order date was
+        // lost: no type catches it, because the row arrives as `any`.
+        preOrderDeliveryDate:
+          product.preOrderDeliveryDate ?? raw.preOrderDeliveryDate ?? null,
         bestListingId: product.bestListingId ?? raw.bestListingId ?? null,
         // Absent means available: only an explicit false greys the card, so
         // nothing changes until the API that sends this is deployed.

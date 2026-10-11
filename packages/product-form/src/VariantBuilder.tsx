@@ -53,6 +53,8 @@ interface VariantBuilderProps {
   isSuggestedProductSelected?: boolean;
   activeVariantId?: string;
   isEditMode?: boolean;
+  /** A pre-order has no stock to count, so the stock column is not typeable. */
+  preOrder?: boolean;
 }
 
 // Helper to generate cartesian product
@@ -95,7 +97,8 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({
   isTaxIncluded,
   isSuggestedProductSelected = false,
   activeVariantId,
-  isEditMode = false
+  isEditMode = false,
+  preOrder = false
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
@@ -483,8 +486,8 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({
                             type="number"
                             value={variant.available}
                             onChange={(e) => updateVariant(variant.id, "available", e.target.value)}
-                            disabled={isDisabled}
-                            className={`block w-24 px-3 sm:text-sm border-gray-300 rounded-md py-1.5 border ${isDisabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+                            disabled={isDisabled || preOrder}
+                            className={`block w-24 px-3 sm:text-sm border-gray-300 rounded-md py-1.5 border ${isDisabled || preOrder ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
                             placeholder="0"
                           />
                       </td>
@@ -494,8 +497,13 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({
                 </tbody>
               </table>
             </div>
+            {/* For a pre-order this is the only inventory sentence on screen,
+                sitting right under the stock column it greys out — and a bare
+                "0 available" there reads as "you have nothing to sell". */}
             <div className="p-4 bg-gray-50 text-sm text-gray-600 border-t border-gray-200">
-              Total inventory at Shop location: {variants.reduce((acc, v) => acc + (parseInt(v.available) || 0), 0)} available
+              {preOrder
+                ? "Pre-order: no stock is counted for these variants, and buyers are not limited by it."
+                : `Total inventory at Shop location: ${variants.reduce((acc, v) => acc + (parseInt(v.available) || 0), 0)} available`}
             </div>
           </div>
       </div>

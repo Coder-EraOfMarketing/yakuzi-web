@@ -2,7 +2,7 @@ import { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getProductById, getProducts, getProductReviews } from '@yukizi/api-client';
-import { parseProductIdFromSlug } from '@yukizi/utils';
+import { isPurchasable, parseProductIdFromSlug } from '@yukizi/utils';
 import { absoluteUrl, metaTruncate, SITE_NAME } from '@/lib/seo/site';
 import { productSchema, breadcrumbSchema, faqPageSchema, graph, organizationSchema, webSiteSchema } from '@/lib/seo/schema';
 import { applySeoOverride, fetchSeoOverride, mergeStructuredData, validFaqs } from '@/lib/seo/overrides';
@@ -69,15 +69,27 @@ function overrideKey(p: { id: string; masterProductId?: string }): string {
 }
 
 // Adapt the detail payload (formatMasterDetail) to what productSchema() expects.
-// price/stock/sellerName MUST all come from the same listing — mixing the cheapest
-// listing's price with a different (in-stock) listing's seller would misattribute
-// the Offer. Choose the cheapest in-stock listing; if none is in stock, fall back
-// to the top-level (cheapest overall) price/stock and report OutOfStock, no seller.
+// price/stock/sellerName/preOrderDeliveryDate MUST all come from the same listing
+// — mixing the cheapest listing's price with a different (in-stock) listing's
+// seller would misattribute the Offer. Choose the cheapest BUYABLE listing; if
+// none can be bought, fall back to the top-level (cheapest overall) price/stock
+// and report OutOfStock, no seller.
+//
+// `isPurchasable`, not a stock comparison: filtering on stock dropped every
+// pre-order out of the candidate set, so a product sold only as a pre-order fell
+// through to the no-seller branch and published an Offer with its seller stripped
+// AND stock 0. A pre-order is buyable, so it is a candidate.
+//
+// The date is overridden in BOTH branches rather than inherited from `...p`: the
+// payload's top-level preOrderDeliveryDate belongs to whichever listing IT chose,
+// and letting that survive would pair an ordinary listing's price and seller with
+// someone else's promised date — the same misattribution the rule above exists to
+// prevent, in the one field a buyer would act on.
 function buildSchemaInput(p: any) {
   const listings: any[] = Array.isArray(p.listings) ? p.listings : [];
-  const inStock = listings.filter((l) => (l?.stock ?? 0) > 0);
-  const chosen = inStock.length
-    ? inStock.reduce((a, b) => ((a.price ?? Infinity) <= (b.price ?? Infinity) ? a : b))
+  const buyable = listings.filter((l) => isPurchasable(l));
+  const chosen = buyable.length
+    ? buyable.reduce((a, b) => ((a.price ?? Infinity) <= (b.price ?? Infinity) ? a : b))
     : undefined;
   return {
     ...p,
@@ -86,6 +98,7 @@ function buildSchemaInput(p: any) {
           price: chosen.price ?? p.price,
           stock: chosen.stock,
           sellerName: chosen.sellerName || undefined,
+          preOrderDeliveryDate: chosen.preOrderDeliveryDate ?? null,
           // Same-listing rule applies to shipping too: prefer the chosen
           // listing's own shipping price, fall back to the top-level one.
           shippingPrice:
@@ -94,6 +107,7 @@ function buildSchemaInput(p: any) {
       : {
           stock: 0,
           sellerName: undefined,
+          preOrderDeliveryDate: null,
           shippingPrice: p.finalShippingPrice ?? p.shippingCharges ?? null,
         }),
   };

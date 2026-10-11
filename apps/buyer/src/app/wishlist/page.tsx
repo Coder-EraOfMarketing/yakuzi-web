@@ -13,7 +13,35 @@ import { SkeletonCard } from '@/components/shared/LoaderSkeleton';
 import { useWishlist, useRemoveFromWishlist } from '@/hooks/useWishlist';
 import { useAddToCart } from '@/hooks/useCart';
 import { useToast } from '@/components/shared/Toast';
-import { formatCurrency, generateProductSlug } from '@yukizi/utils';
+import {
+  formatCurrency,
+  formatDate,
+  generateProductSlug,
+  isPreOrderListing,
+  isPurchasable,
+  type ListingAvailability,
+} from '@yukizi/utils';
+
+/**
+ * What a saved card says about its own availability, in the shape the shared
+ * availability helpers take.
+ *
+ * Unreported stock deliberately becomes Infinity rather than being passed
+ * through as `undefined`, and that is the whole reason this adapter exists:
+ * this surface has always read an absent stock as AVAILABLE (its test was
+ * `stock !== undefined && stock <= 0`), whereas `isPurchasable` reads an
+ * absent stock as NOT available. The wishlist endpoint does not send stock at
+ * all today, so handing `undefined` straight to the shared rule would grey out
+ * and disable every ordinary saved card on the page. Infinity preserves
+ * today's behaviour exactly and leaves the pre-order branch as the only
+ * change.
+ */
+function savedAvailability(product: any): ListingAvailability {
+  return {
+    stock: product?.stock ?? Infinity,
+    preOrderDeliveryDate: product?.preOrderDeliveryDate,
+  };
+}
 
 export default function WishlistPage() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -46,6 +74,12 @@ export default function WishlistPage() {
       image: imgUrl,
       imageUrl: imgUrl,
       images: imgUrl ? [imgUrl] : [],
+      // Carried onto the cart line, like every other add-to-cart payload. A
+      // pre-order that reaches the bag without its date is an ordinary line
+      // as far as everything downstream can tell: local-cart derives the
+      // quantity ceiling from stock, the cart drawer labels it by stock, and
+      // checkout's mixed-bag guard cannot see it at all.
+      preOrderDeliveryDate: product?.preOrderDeliveryDate ?? undefined,
     }, {
       onSuccess: () => toast('Added to bag', 'success'),
       onError: () => toast('Failed to add to bag', 'error'),
@@ -99,6 +133,12 @@ export default function WishlistPage() {
                   const product = item.product;
                   const rawImage = product?.images?.[0];
                   const imageSrc = typeof rawImage === 'string' ? rawImage : (rawImage as any)?.url;
+                  // Both the label and the Add button come from the one shared
+                  // rule, so this page can no longer disagree with the product
+                  // page about whether a saved item can be bought.
+                  const availability = savedAvailability(product);
+                  const isPreOrder = isPreOrderListing(availability);
+                  const isOutOfStock = !isPurchasable(availability);
                   return (
                     <motion.div
                       key={item.id}
@@ -148,15 +188,27 @@ export default function WishlistPage() {
                           )}
                         </div>
 
-                        {product?.stock !== undefined && product.stock <= 0 && (
+                        {/* Mutually exclusive by construction: isPurchasable is
+                            true for every pre-order, so isOutOfStock can never
+                            be true for one. Written as a ternary so it stays
+                            that way. Numbered primary shades, never
+                            `bg-primary/15` — primary.DEFAULT is
+                            `hsl(var(--primary))` with no <alpha-value>
+                            placeholder, so an opacity variant compiles to
+                            nothing and the badge renders unstyled. */}
+                        {isPreOrder ? (
+                          <span className="inline-flex w-fit items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">
+                            Pre-order · expected {formatDate(availability.preOrderDeliveryDate!)}
+                          </span>
+                        ) : isOutOfStock ? (
                           <p className="text-xs text-red-500 font-medium">Out of stock</p>
-                        )}
+                        ) : null}
 
                         {/* Actions */}
                         <div className="flex gap-2 pt-2">
                           <button
                             onClick={() => handleAddToCart(item.productId)}
-                            disabled={addToCart.isPending || (product?.stock !== undefined && product.stock <= 0)}
+                            disabled={addToCart.isPending || isOutOfStock}
                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500 text-white text-sm font-semibold rounded-xl hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <ShoppingBag className="w-4 h-4" />

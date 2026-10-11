@@ -28,6 +28,10 @@ import {
   getSellingPrice,
   getEffectiveDiscountPercent,
   generateProductSlug,
+  formatDate,
+  isPreOrderListing,
+  isPurchasable,
+  maxOrderableQty,
 } from '@yukizi/utils';
 import type { Product } from '@yukizi/utils';
 import { usePlatformConfig } from '@/hooks/usePlatformConfig';
@@ -123,6 +127,10 @@ export default function QuickReviewModal({ product, isOpen, onClose }: QuickRevi
       // quantity be raised past the stock that exists.
       stock: listing.stock,
       maximumOrderQuantity: listing.maximumOrderQuantity,
+      // And without this a pre-order arrives in the cart looking like an
+      // ordinary line with zero stock — the one shape the cart's ceiling
+      // reads as "unbuyable".
+      preOrderDeliveryDate: listing.preOrderDeliveryDate,
     });
   };
 
@@ -246,7 +254,11 @@ export default function QuickReviewModal({ product, isOpen, onClose }: QuickRevi
               <div className="flex w-full flex-col gap-3">
                 {comparisonListings.length > 0 ? (
                   comparisonListings.map((listing: any) => {
-                    const inStock = true;
+                    // Was hardcoded `true`, so this modal never reported
+                    // anything unavailable. Same rule as the product page, the
+                    // quick view and the carousel now.
+                    const canBuy = isPurchasable(listing);
+                    const isPreOrder = isPreOrderListing(listing);
                     const cartItem = cartData?.items?.find(
                       (item: any) => item.productId === listing.id,
                     );
@@ -264,6 +276,14 @@ export default function QuickReviewModal({ product, isOpen, onClose }: QuickRevi
                       discountMeta.discountPercent
                         ? discountMeta.discountPercent
                         : 0;
+
+                    // Availability ceiling from the shared helper; the
+                    // platform-wide cap is separate policy and still applies on
+                    // top. This modal previously ignored stock entirely here.
+                    const maxQty = Math.min(
+                      maxOrderableQty(listing),
+                      listing.maxOrderQty || config?.max_order_qty || 100,
+                    );
 
                     const handleQtyChange = (newQty: number) => {
                       if (itemQty === 0) {
@@ -288,6 +308,11 @@ export default function QuickReviewModal({ product, isOpen, onClose }: QuickRevi
                           {listing.moq > 1 && (
                             <span className="mt-1 truncate text-2xs font-medium leading-none text-gray-500 sm:text-xs">
                               {listing.moq * 10}% off on purchase of {listing.moq}
+                            </span>
+                          )}
+                          {isPreOrder && (
+                            <span className="mt-1 inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">
+                              Pre-order · expected {formatDate(listing.preOrderDeliveryDate)}
                             </span>
                           )}
                         </div>
@@ -318,7 +343,7 @@ export default function QuickReviewModal({ product, isOpen, onClose }: QuickRevi
 
                         {/* 5. Actions */}
                         <div className="flex flex-shrink-0 items-center justify-end min-w-[32px]">
-                          {inStock ? (
+                          {canBuy ? (
                             itemQty > 0 ? (
                               <div className="flex h-7 w-20 select-none items-center justify-between overflow-hidden rounded-[8px] bg-[#48286b] text-2xs font-bold text-white shadow-sm sm:h-8">
                                 <button
@@ -334,7 +359,6 @@ export default function QuickReviewModal({ product, isOpen, onClose }: QuickRevi
                                   className="h-full px-2 sm:px-2.5 text-xs font-bold text-white/80 transition-all hover:bg-black/10 hover:text-white active:scale-95"
                                   onClick={() => {
                                     const nextQty = itemQty + 1;
-                                    const maxQty = listing.maximumOrderQuantity || listing.maxOrderQty || config?.max_order_qty || 100;
                                     if (nextQty > maxQty) {
                                       handleQtyChange(minQty);
                                     } else {

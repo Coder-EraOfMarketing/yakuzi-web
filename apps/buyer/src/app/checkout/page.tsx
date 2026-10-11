@@ -12,6 +12,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import AuthGuard from '@/components/shared/AuthGuard';
 import { useAuth, createRazorpayOrder, verifyRazorpayPayment, cancelOrder } from '@yukizi/api-client';
+import { formatDate, isPreOrderListing, type ListingAvailability } from '@yukizi/utils';
 import { track } from '@/lib/analytics/tracker';
 import { metaPixelPurchase } from '@/lib/analytics/meta-pixel';
 
@@ -53,6 +54,47 @@ function readSavedAddress(): Partial<SavedAddress> | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * What a cart line says about its own availability, in the shape the shared
+ * availability helpers take. Mirrors the reader in CartDrawer on purpose: a
+ * buyer who opens /checkout directly must be told exactly what the bag would
+ * have told them.
+ *
+ * Read off the line as well as its `product` — useCart's revalidation writes
+ * the refreshed date onto the LINE, while the add-to-cart payload that created
+ * it may have put it on either. Unreported stock stays Infinity, the same
+ * "the API did not say" convention the bag uses.
+ */
+function lineAvailability(item: any): ListingAvailability {
+  return {
+    stock: item?.stock ?? item?.product?.stock ?? Infinity,
+    preOrderDeliveryDate:
+      item?.preOrderDeliveryDate ?? item?.product?.preOrderDeliveryDate,
+  };
+}
+
+/**
+ * The furthest promised date across these lines.
+ *
+ * The furthest, not the earliest: an order completes when its last item does,
+ * so quoting the nearest date would be a promise the order cannot keep.
+ */
+function furthestPreOrderDate(lines: any[]): string | null {
+  let bestTime: number | null = null;
+  let best: string | null = null;
+  for (const line of lines) {
+    const raw = lineAvailability(line).preOrderDeliveryDate;
+    if (raw == null) continue;
+    const time = new Date(raw).getTime();
+    if (Number.isNaN(time)) continue;
+    if (bestTime === null || time > bestTime) {
+      bestTime = time;
+      best = typeof raw === 'string' ? raw : raw.toISOString();
+    }
+  }
+  return best;
 }
 
 function persistSavedAddress(value: SavedAddress | null): void {
@@ -147,6 +189,20 @@ export default function CheckoutPage() {
   const items = cart.items ?? [];
   const subtotal = Math.round(cart.total ?? 0);
   const total = subtotal;
+
+  // The API refuses an order holding both a pre-order and an in-stock item:
+  // orderStatus lives on the Order and settlement fires per order, so a mixed
+  // order would strand a paid in-stock item for however many months the
+  // pre-order takes. The cart drawer already says so before "Go to Checkout",
+  // but a buyer who navigates straight to /checkout never passes that notice
+  // and would learn it from a server refusal at the payment step instead. The
+  // server's decision remains the authority; this is the same courtesy, one
+  // screen later.
+  const preOrderLines = items.filter((item: any) => isPreOrderListing(lineAvailability(item)));
+  const hasPreOrder = preOrderLines.length > 0;
+  const hasMixedBag = hasPreOrder && preOrderLines.length !== items.length;
+  const preOrderDate = furthestPreOrderDate(preOrderLines);
+  const placeOrderDisabled = createOrder.isPending || items.length === 0 || hasMixedBag;
 
 
   const loadRazorpayCheckout = (): Promise<boolean> =>
@@ -281,6 +337,13 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = () => {
+    // A backstop, not the mechanism — the button below is disabled for this,
+    // and the server refuses a mixed order regardless of what reaches it.
+    if (hasMixedBag) {
+      toast('Pre-order items need an order of their own — please order them separately', 'error');
+      return;
+    }
+
     const combinedName = address.firstName && address.lastName
       ? `${address.firstName} ${address.lastName}`
       : address.name;
@@ -592,7 +655,20 @@ export default function CheckoutPage() {
               <div style={{ background: '#f9f9f9', border: '1px solid #e0e0e0', borderRadius: 8, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Truck size={16} color="#666" />
-                  <span style={{ fontSize: 14, color: '#444' }}>Delivered in 4 - 11 Business Days!</span>
+                  {/* "4 - 11 business days" is a promise only an in-stock item
+                      can keep. A pre-order ships on the date its seller
+                      promised, typically months out, so quoting the in-stock
+                      lead time for a bag holding one is simply false. A mixed
+                      bag names both, and cannot be ordered anyway. */}
+                  {hasPreOrder && preOrderDate ? (
+                    <span style={{ fontSize: 14, color: '#444' }}>
+                      {hasMixedBag
+                        ? `In-stock items in 4 - 11 business days · pre-order expected ${formatDate(preOrderDate)}`
+                        : `Pre-order · expected ${formatDate(preOrderDate)}`}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 14, color: '#444' }}>Delivered in 4 - 11 Business Days!</span>
+                  )}
                 </div>
                 <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>
                   { 'FREE (Included in price)' }
@@ -665,15 +741,34 @@ export default function CheckoutPage() {
               </div>
             )}
 
+            {/* The same warning the cart drawer shows before "Go to Checkout",
+                repeated here because arriving at /checkout directly skips it
+                entirely — and the alternative is a server refusal at the
+                payment step, which is precisely the ambush the drawer notice
+                exists to prevent. */}
+            {hasMixedBag && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: 14, marginBottom: 20, display: 'flex', gap: 10 }}>
+                <AlertCircle size={18} color="#b45309" style={{ flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#78350f', marginBottom: 4 }}>Pre-order items need their own order</p>
+                  <p style={{ fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>
+                    A pre-order ships on its promised date, so it can&apos;t be ordered
+                    alongside items that are in stock — those would be held back with it.
+                    Order one kind now and the rest separately.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* PAY NOW */}
             <button
               onClick={handlePlaceOrder}
-              disabled={createOrder.isPending || items.length === 0}
+              disabled={placeOrderDisabled}
               style={{
                 width: '100%', height: 52,
-                background: (createOrder.isPending || items.length === 0) ? '#93c5fd' : '#0066cc',
+                background: placeOrderDisabled ? '#93c5fd' : '#0066cc',
                 color: '#fff', border: 'none', borderRadius: 8,
-                fontSize: 16, fontWeight: 700, cursor: (createOrder.isPending || items.length === 0) ? 'not-allowed' : 'pointer',
+                fontSize: 16, fontWeight: 700, cursor: placeOrderDisabled ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 transition: 'background 0.15s', fontFamily: 'inherit',
               }}
@@ -722,6 +817,7 @@ export default function CheckoutPage() {
                   const name = item.product?.name || item.productName || item.name || 'Product';
                   const price = item.price || item.unitPrice || 0;
                   const qty = item.quantity || 1;
+                  const itemPreOrderDate = lineAvailability(item).preOrderDeliveryDate;
                   return (
                     <div key={item.id} style={{ display: 'flex', gap: 12, marginBottom: 14, alignItems: 'flex-start' }}>
                       <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -737,6 +833,16 @@ export default function CheckoutPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: 14, fontWeight: 500, color: '#1a1a1a', lineHeight: 1.4, marginBottom: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>{name}</p>
                         {item.variantName && <p style={{ fontSize: 12, color: '#888' }}>{item.variantName}</p>}
+                        {/* Which line is the pre-order, and when it is due.
+                            The summary said nothing at all, so a bag with one
+                            of each looked entirely ordinary. Inline colours
+                            here (primary-700) because this panel is
+                            inline-styled throughout. */}
+                        {itemPreOrderDate && (
+                          <p style={{ fontSize: 12, fontWeight: 600, color: '#3d236b', marginTop: 2 }}>
+                            Pre-order · expected {formatDate(itemPreOrderDate)}
+                          </p>
+                        )}
                       </div>
                       <span style={{ flexShrink: 0, fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>
                         ₹{(price * qty).toLocaleString('en-IN')}

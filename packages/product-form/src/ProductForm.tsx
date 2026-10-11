@@ -97,6 +97,9 @@ export function ProductForm({
       min_order_qty: 1,
       max_order_qty: 100,
       delivery_text: "",
+      is_pre_order: false,
+      pre_order_delivery_date: "",
+      pre_order_original_date: "",
       shipping_charges: 0,
       image_list: [],
       custom_extra_fields: [],
@@ -154,6 +157,7 @@ export function ProductForm({
   const watchGst = watch("gst_percent") || 0;
   const watchMinMoq = watch("min_order_qty");
   const watchStock = watch("stock");
+  const preOrder = watch("is_pre_order");
   const watchMaxMoq = watch("max_order_qty");
   const watchDiscount = watch("discount_form_details");
   const watchShippingCharges = watch("shipping_charges") || 0;
@@ -511,7 +515,22 @@ export function ProductForm({
         boxCondition: data.box_condition,
         categoryId: data.categories[0],
         ...(data.sub_categories?.length && { subCategoryId: data.sub_categories[0] }),
-        stock: payloadStock,
+        // Zero for a pre-order, not whatever the greyed-out field still holds.
+        // Not cosmetic: on CREATE the API calls createDefaultBatch(offer,
+        // stock) unguarded, so ticking pre-order with 50 left in the box seeds
+        // a real 50-unit batch on a listing that never had stock. The
+        // purchasability rules ignore it while the date is set, so it stays
+        // invisible until someone unticks pre-order — and then the seller has
+        // 50 phantom units. The update path guards that write, but one rule
+        // here beats two rules split across create and update.
+        stock: data.is_pre_order ? 0 : payloadStock,
+        // Null, not omitted. Omitting it would mean "leave whatever is stored
+        // alone", which is the one thing it must not mean when a seller has
+        // just UNTICKED pre-order.
+        preOrderDeliveryDate:
+          data.is_pre_order && data.pre_order_delivery_date
+            ? new Date(data.pre_order_delivery_date).toISOString()
+            : null,
         expiryDate: new Date('2099-12-31').toISOString(),
         minimumOrderQuantity: data.min_order_qty,
         maximumOrderQuantity: data.max_order_qty,
@@ -531,8 +550,20 @@ export function ProductForm({
             id: v.id && v.id.includes('-') ? v.id : undefined,
             name: v.name, 
             variantName: v.name,
-            price: Number(v.price), 
-            available: Number(v.available),
+            price: Number(v.price),
+            // Zeroed for a pre-order for the same reason as the top-level
+            // stock above, and NOT covered by that one. The API's variants
+            // create branch calls
+            //   createDefaultBatch(product.id, v.available > 0 ? v.available : normalized.stock)
+            // and `v.available > 0` wins, so a per-variant figure overrides
+            // the zero we just forced and seeds a real sellable batch on a
+            // listing that never had stock. The greyed-out column still holds
+            // whatever was typed or prefilled — disabling an input does not
+            // clear the React state behind it — so the value really does
+            // arrive. Sending 0 rather than omitting the key leaves the batch
+            // row to exist at zero, which is what unticking pre-order later
+            // needs something to update.
+            available: data.is_pre_order ? 0 : Number(v.available),
             image: v.image,
             sku: v.sku,
             serialNo: v.serialNo,
@@ -731,15 +762,71 @@ export function ProductForm({
                   {...register("discount_form_details.discountPercent", { valueAsNumber: true })}
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50">
-                <Input
-                  label="Current Stock *"
-                  type="number"
-                  min={0}
-                  placeholder="0"
-                  error={errors.stock?.message}
-                  {...register("stock", { valueAsNumber: true })}
+            </>
+          )}
+
+          {/* Pre-order. Outside the variants check, like Shipping Charges
+              below, and for the same kind of reason: a seller can tick this
+              with no variants and then add some, at which point the Current
+              Stock field here disappears and the per-variant stock column
+              greys out instead. This checkbox is then the only thing on screen
+              that explains why that column cannot be typed in. */}
+          <div className="pt-4 border-t border-border/50 space-y-3">
+            <div className="space-y-1">
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primary"
+                  {...register("is_pre_order")}
                 />
+                Pre-order
+              </label>
+              {/* Careful with this wording. A pre-order is not limited by
+                  stock, but the per-order maximum still applies to it and this
+                  form has no field for that, so "any quantity" would be untrue
+                  for every listing carrying the default. */}
+              <p className="text-xs text-muted-foreground">
+                For an item you do not have yet. Buyers are not limited by your stock, and you
+                give the date you expect to deliver by.
+              </p>
+            </div>
+
+            {preOrder && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Expected delivery date *"
+                  type="date"
+                  error={errors.pre_order_delivery_date?.message}
+                  {...register("pre_order_delivery_date")}
+                />
+              </div>
+            )}
+          </div>
+
+          {variants.length === 0 && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                <div className="space-y-1">
+                  {/* No asterisk while it is disabled: a required marker on a
+                      field the seller cannot fill in is a small lie, and the
+                      schema does not ask for a stock count on a pre-order. */}
+                  <Input
+                    label={preOrder ? "Current Stock" : "Current Stock *"}
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    readOnly={preOrder}
+                    disabled={preOrder}
+                    error={errors.stock?.message}
+                    {...register("stock", { valueAsNumber: true })}
+                  />
+                  {preOrder && (
+                    <p className="text-xs text-muted-foreground">
+                      A pre-order has no stock to count, so there is nothing to enter here — buyers
+                      are not limited by your stock and you deliver by the date above.
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -823,6 +910,7 @@ export function ProductForm({
             isSuggestedProductSelected={!!selectedMasterId}
             activeVariantId={activeVariantId}
             isEditMode={isEditing}
+            preOrder={preOrder}
           />
         </div>
 
