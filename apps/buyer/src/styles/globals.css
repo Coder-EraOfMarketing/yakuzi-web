@@ -812,15 +812,29 @@
 
 /* Form fields default to a white background in every browser, so they stay
    white in dark mode unless given one explicitly - the utility remap above
-   cannot help where no bg class was set in the first place. */
-.dark input:not([type='checkbox']):not([type='radio']):not([type='range']),
+   cannot help where no bg class was set in the first place.
+
+   `.co-input` / `.co-select` are exempt. Those belong to the checkout page,
+   which is hand-styled light throughout from its own <style> block with
+   hardcoded hex colours rather than the theme variables. This rule assumes a
+   dark surface sits behind the field, and on that one page the assumption is
+   false: it made the background 6% white (so the LIGHT card showed through)
+   and the text var(--ink), which is near-white. The result was near-white
+   text on a near-white card - the buyer's own address became invisible
+   unless they selected it, which is how it was reported.
+
+   Exempting keeps checkout internally coherent rather than readable-by-luck.
+   The page staying light while the rest of the site is dark is the known cost
+   of that; making checkout genuinely theme-aware is the follow-up, and is a
+   bigger change to a payment page than belongs in a visibility fix. */
+.dark input:not([type='checkbox']):not([type='radio']):not([type='range']):not(.co-input),
 .dark textarea,
-.dark select {
+.dark select:not(.co-select) {
   background-color: rgba(255, 255, 255, 0.06) !important;
   border-color: var(--edge) !important;
   color: var(--ink) !important;
 }
-.dark input:not([type='checkbox']):not([type='radio']):focus,
+.dark input:not([type='checkbox']):not([type='radio']):not(.co-input):focus,
 .dark textarea:focus {
   background-color: rgba(255, 255, 255, 0.10) !important;
   border-color: rgba(168, 119, 255, 0.55) !important;
