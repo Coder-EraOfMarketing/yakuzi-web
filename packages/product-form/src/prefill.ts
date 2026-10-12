@@ -31,9 +31,31 @@ function hasRealVariants(product: any): boolean {
   return !['Default', product?.name].includes(variants[0]?.name);
 }
 
-/** The listing row that corresponds to a variant, matched however it was stored. */
-function listingForVariant(product: any, v: any) {
-  return (product?.listings || []).find(
+/**
+ * The listing row that corresponds to a variant, matched however it was stored.
+ *
+ * ⚠️ `product.listings` is the MULTI-SELLER list that powers the product page:
+ * every seller's offer for this catalogue product is in it, and several of
+ * them carry the same `variantName`. Matching on the name alone returns
+ * whichever sorts first, which is very often somebody else.
+ *
+ * That is why `ownerSellerId` exists and why callers in the edit flow must
+ * pass it. Without it the form opened showing another seller's base price,
+ * stock and discount, and saving wrote them onto the editor's own offer — one
+ * seller's pricing silently replaced by another's, with nothing erroring.
+ * Live example: for "Maayan Issue 1" / "English" the first listing is
+ * MAAYAN's at ₹250, so Testing Seller 1 editing their own ₹350 offer saw
+ * ₹250.
+ *
+ * Passing no owner keeps the old any-seller behaviour, which is correct for
+ * read-only callers that genuinely want "any listing of this variant".
+ */
+function listingForVariant(product: any, v: any, ownerSellerId?: string) {
+  const all = product?.listings || [];
+  const mine = ownerSellerId
+    ? all.filter((l: any) => l.seller?.id === ownerSellerId)
+    : all;
+  return mine.find(
     (l: any) =>
       l.variantName === v.name ||
       l.variantName === v.options?.name ||
@@ -59,16 +81,35 @@ export function buildProductFormPrefill(
   const productVariants = product?.variants || [];
   const productListings = product?.listings || [];
 
+  // This seller's own offer, found by the one identifier that cannot belong to
+  // anybody else. Everything below prefers it over any name-based match.
+  const ownListing = productListings.find((l: any) => l.id === productId);
+  // Every listing carries its seller, so once we know which offer is being
+  // edited we know whose other variant rows to read. Undefined for a caller
+  // that passed a variant id rather than a listing id, which falls back to the
+  // old any-seller behaviour.
+  const ownSellerId: string | undefined = ownListing?.seller?.id;
+
   let activeVariantId: string | undefined;
   if (variantParam) {
     activeVariantId = productVariants.find(
       (v: any) => v.name === variantParam || v.options?.name === variantParam,
     )?.id;
   }
+  // Which variant is being edited is answered by this seller's own listing,
+  // not by asking each variant which listing it resolves to — listingForVariant
+  // searches every seller's offer and matches loosely, including a substring
+  // test on the name.
+  if (!activeVariantId && ownListing?.variantName) {
+    activeVariantId = productVariants.find(
+      (v: any) =>
+        v.name === ownListing.variantName || v.options?.name === ownListing.variantName,
+    )?.id;
+  }
   if (!activeVariantId && product && productId !== product.id) {
     activeVariantId =
       productVariants.find((v: any) => {
-        const listing = listingForVariant(product, v);
+        const listing = listingForVariant(product, v, ownSellerId);
         return listing?.id === productId || v.id === productId;
       })?.id || productId;
   }
@@ -76,12 +117,29 @@ export function buildProductFormPrefill(
   const activeVariant = activeVariantId
     ? productVariants.find((v: any) => v.id === activeVariantId)
     : undefined;
-  const activeListing = activeVariant
-    ? productListings.find(
-        (l: any) =>
-          l.variantName === activeVariant.name || l.variantName === activeVariant.options?.name,
-      )
-    : productListings.find((l: any) => l.id === productId);
+
+  // The listing being edited is the one whose id IS the route's productId —
+  // that is this seller's own offer, and it is the only unambiguous answer.
+  //
+  // `product.listings` is the MULTI-SELLER list that powers the product page:
+  // every seller's offer for this catalogue product is in it. Matching a
+  // variant by name alone therefore returns whichever seller's "English"
+  // listing happens to sort first, which may not be the person editing. That
+  // prefilled another seller's base price, stock and discount into this
+  // seller's form, and saving wrote them onto their offer — one seller's
+  // pricing silently replaced by another's. It only ever bit variant products,
+  // because the non-variant branch already matched on the id.
+  //
+  // Name matching is kept only as a fallback, for a caller that hands in a
+  // variant id rather than a listing id.
+  const activeListing =
+    ownListing ??
+    (activeVariant
+      ? productListings.find(
+          (l: any) =>
+            l.variantName === activeVariant.name || l.variantName === activeVariant.options?.name,
+        )
+      : undefined);
 
   const resolvedSku =
     product?.sku || activeVariant?.sku || activeVariant?.options?.sku || activeListing?.sku ||
@@ -188,7 +246,7 @@ export function buildProductFormPrefill(
           : [],
     initialVariants: realVariants
       ? productVariants.map((v: any) => {
-          const listing = listingForVariant(product, v);
+          const listing = listingForVariant(product, v, ownSellerId);
           const derivedDiscount = listing
             ? listing.discountMeta?.discountPercent ?? listing.discountPercent ?? listing.discount
             : undefined;
