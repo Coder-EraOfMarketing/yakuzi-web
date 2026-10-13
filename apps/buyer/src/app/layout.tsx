@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Jost } from 'next/font/google';
 import '../styles/globals.css';
 import { Providers } from './providers';
 import SiteFooter from '@/components/shared/SiteFooter';
@@ -8,6 +8,20 @@ import { MetaPixelProvider } from '@/components/analytics/MetaPixelProvider';
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, DEFAULT_OG_IMAGE } from '@/lib/seo/site';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+
+/**
+ * The brand face, used for section headings only (Tailwind `font-brand`).
+ *
+ * Jost is a geometric sans cut in the Futura tradition, which is the brand
+ * font — Futura itself is licensed and cannot be self-hosted without buying a
+ * webfont licence, so this stands in for it. If that licence is ever bought,
+ * swapping it is a change to this constant alone: every heading already points
+ * at --font-brand rather than naming a typeface.
+ *
+ * Headings only, deliberately. Geometric faces have a small x-height and get
+ * hard to read at body sizes, so running text stays on Inter.
+ */
+const brand = Jost({ subsets: ['latin'], variable: '--font-brand', display: 'swap' });
 
 /**
  * Admin-pasted verification tokens (Admin → Settings → Search Engine
@@ -138,7 +152,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // who chose light means neither theme ever flashes the other.
     // suppressHydrationWarning because the inline script below legitimately
     // edits this exact className before React hydrates.
-    <html lang="en" className={`${inter.variable} dark`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${brand.variable} dark`}
+      suppressHydrationWarning
+    >
       <head>
         {apiOrigin && <link rel="preconnect" href={apiOrigin} crossOrigin="" />}
         <link rel="preconnect" href="https://storage.googleapis.com" crossOrigin="" />

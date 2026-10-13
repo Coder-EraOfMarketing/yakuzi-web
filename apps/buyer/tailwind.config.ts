@@ -81,6 +81,10 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-inter)', '"Inter"', 'system-ui', 'sans-serif'],
+        // The brand face, for headings. Named for the role, not the typeface,
+        // so buying a Futura licence later is a one-line change in layout.tsx
+        // and nothing that uses it has to be touched.
+        brand: ['var(--font-brand)', '"Jost"', 'Futura', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         '2xs': ['0.625rem', { lineHeight: '0.875rem', letterSpacing: '0.01em' }],

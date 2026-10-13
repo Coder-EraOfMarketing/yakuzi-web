@@ -122,6 +122,20 @@
   body, h1, h2, h3, h4, h5, h6, button, input, select, textarea {
     font-family: var(--font-inter, 'Inter'), system-ui, sans-serif !important;
   }
+  /* ...except where something opts into the brand face on purpose.
+   *
+   * The rule above names h1-h6 with !important, which beats a Tailwind
+   * utility however late it is emitted — so `font-brand` on a heading would
+   * silently do nothing without this. Being a class, this selector is more
+   * specific than those element selectors, so it wins the !important contest
+   * rather than fighting it.
+   *
+   * Scoped to the opt-in class and nothing else: the blanket rule still does
+   * its job of keeping stray elements, and form controls that do not inherit
+   * font-family at all, on Inter. */
+  .font-brand {
+    font-family: var(--font-brand, 'Jost'), Futura, system-ui, sans-serif !important;
+  }
   body {
     @apply text-foreground antialiased;
     overflow-x: hidden;
