@@ -297,4 +297,69 @@ export function getEffectiveDiscountPercent(mrp: number, sellingPrice: number): 
   return pct > 0 && pct < 100 ? pct : 0;
 }
 
+/** The shipping fields a variant row carries. Strings, because they come from inputs. */
+export interface VariantShippingSource {
+  shippingCharges?: string | number | null;
+  shippingGstPercent?: string | number | null;
+  /** The GST-inclusive figure, as stored against the variant. */
+  finalShippingPrice?: string | number | null;
+}
+
+/** What the parent listing charges, used when a variant overrides nothing. */
+export interface VariantShippingFallback {
+  shippingCharges?: number;
+  shippingGstPercent?: number;
+  isTaxIncluded?: boolean;
+}
+
+/**
+ * What the buyer pays to have ONE unit of a variant delivered, GST included.
+ *
+ * Mirrors the API's buyerShipping(): finalShippingPrice ?? shippingCharges.
+ * The stored figure wins, because it is what was saved against the variant and
+ * what the API will bill, even if the parts it was derived from have drifted.
+ *
+ * This lives here, not in the variant table, because the Shipping column and
+ * the "Final" total both need it and they used to compute it separately. The
+ * column rendered the stored finalShippingPrice while Final re-derived its own
+ * number from shippingCharges and a shippingGstPercent that had fallen back to
+ * the parent's — so a row holding finalShippingPrice 106.2 against
+ * shippingCharges 90 displayed "₹106.2" next to "Final: ₹340" (250 + 90) when
+ * the buyer would actually be charged ₹356.20. One number, one function.
+ */
+export function variantShippingTotal(
+  variant: VariantShippingSource,
+  fallback: VariantShippingFallback = {},
+): number {
+  const stored = variant.finalShippingPrice;
+  // "0" counts as unset, matching how the variant table has always read these.
+  if (stored !== undefined && stored !== null && stored !== '' && String(stored) !== '0') {
+    const parsed = Number(stored);
+    if (!isNaN(parsed)) return parsed;
+  }
+
+  const charge =
+    variant.shippingCharges !== undefined &&
+    variant.shippingCharges !== null &&
+    variant.shippingCharges !== '' &&
+    !isNaN(Number(variant.shippingCharges))
+      ? Number(variant.shippingCharges)
+      : fallback.shippingCharges || 0;
+
+  const gst =
+    variant.shippingGstPercent !== undefined &&
+    variant.shippingGstPercent !== null &&
+    variant.shippingGstPercent !== '' &&
+    Number(variant.shippingGstPercent) !== 0
+      ? Number(variant.shippingGstPercent)
+      : fallback.shippingGstPercent || 0;
+
+  return calculatePricing(0, 0, {
+    type: 'none',
+    shippingCharges: charge,
+    shippingGstPercent: gst,
+    isTaxIncluded: fallback.isTaxIncluded,
+  }).shippingTotal;
+}
+
 
