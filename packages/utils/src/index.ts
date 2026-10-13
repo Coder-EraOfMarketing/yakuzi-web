@@ -32,10 +32,17 @@ export {
   isSpecialPriceType,
   getSellingPrice,
   getEffectiveDiscountPercent,
+  variantShippingTotal,
   VALID_GST_PERCENTAGES,
 } from './pricing';
 
-export type { PricingDiscountType, DiscountFormInput, PricingOutput } from './pricing';
+export type {
+  PricingDiscountType,
+  DiscountFormInput,
+  PricingOutput,
+  VariantShippingSource,
+  VariantShippingFallback,
+} from './pricing';
 
 // Currency formatting
 export { formatCurrency, parseCurrency, formatNumber, formatCompact } from './formatCurrency';

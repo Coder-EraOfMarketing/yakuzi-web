@@ -5,7 +5,7 @@ import { Plus, GripVertical, Image as ImageIcon, Search, ArrowDownUp, Grid2X2, X
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { cn } from "./lib/utils";
-import { calculatePricing, formatCurrency } from "@yukizi/utils";
+import { calculatePricing, formatCurrency, variantShippingTotal } from "@yukizi/utils";
 import type { DiscountFormDetails } from "@yukizi/utils";
 
 export type MediaItem = {
@@ -223,6 +223,14 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({
     }));
   };
 
+  /** The buyer-paid shipping for one row. See variantShippingTotal in @yukizi/utils. */
+  const shippingForVariant = (variant: VariantCombination): number =>
+    variantShippingTotal(variant, {
+      shippingCharges,
+      shippingGstPercent,
+      isTaxIncluded,
+    });
+
   if (options.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -415,11 +423,18 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({
                                 discountPercent = vDiscountDetails?.discountPercent || 0;
                               }
 
+                              // Shipping comes in already GST-inclusive, from
+                              // the same helper the Shipping column renders, so
+                              // the two can no longer disagree. It is passed at
+                              // 0% because it is a total, not a charge to be
+                              // grossed up again: calculatePricing leaves
+                              // shippingTotal === shippingCharges at 0%,
+                              // whichever way isTaxIncluded is set.
                               const pricing = calculatePricing(p, vGst, {
                                 type: discountPercent > 0 ? 'ptr_discount' : discountType,
                                 discountPercent: discountPercent,
-                                shippingCharges: (variant.shippingCharges !== undefined && variant.shippingCharges !== null && variant.shippingCharges !== "" && !isNaN(Number(variant.shippingCharges))) ? Number(variant.shippingCharges) : (shippingCharges || 0),
-                                shippingGstPercent: (variant.shippingGstPercent !== undefined && variant.shippingGstPercent !== null && variant.shippingGstPercent !== 0 && variant.shippingGstPercent !== "" as any) ? Number(variant.shippingGstPercent) : (shippingGstPercent || 0),
+                                shippingCharges: shippingForVariant(variant),
+                                shippingGstPercent: 0,
                                 isTaxIncluded: isTaxIncluded
                               });
 
@@ -466,15 +481,7 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({
                           </div>
                           <input
                             type="text"
-                            value={(() => {
-                              if (variant.finalShippingPrice !== undefined && variant.finalShippingPrice !== null && variant.finalShippingPrice !== "" && variant.finalShippingPrice !== "0") {
-                                return variant.finalShippingPrice.toString();
-                              }
-                              const sc = (variant.shippingCharges !== undefined && variant.shippingCharges !== null && variant.shippingCharges !== "") ? Number(variant.shippingCharges) : (shippingCharges || 0);
-                              const gst = (variant.shippingGstPercent !== undefined && variant.shippingGstPercent !== null && variant.shippingGstPercent !== 0 && variant.shippingGstPercent !== "" as any) ? Number(variant.shippingGstPercent) : (shippingGstPercent || 0);
-                              const computed = calculatePricing(0, 0, { type: 'none', shippingCharges: sc, shippingGstPercent: gst, isTaxIncluded }).shippingTotal;
-                              return computed.toString();
-                            })()}
+                            value={shippingForVariant(variant).toString()}
                             onChange={(e) => updateVariant(variant.id, "finalShippingPrice", e.target.value)}
                             disabled={true}
                             className="block w-full pl-9 pr-3 sm:text-sm border-gray-300 rounded-md py-1.5 border bg-gray-100 text-gray-500 cursor-not-allowed"

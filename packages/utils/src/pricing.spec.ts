@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculatePricing } from './pricing';
+import { calculatePricing, variantShippingTotal } from './pricing';
 
 /**
  * The product from the 2026-10-03 report: ₹1,600 tax-inclusive, 15% commission,
@@ -53,5 +53,80 @@ describe('calculatePricing shipping régimes', () => {
       FEES,
     );
     expect(noFlag.sellerPayout).toBe(price(false).sellerPayout);
+  });
+});
+
+describe('variantShippingTotal', () => {
+  it('returns the stored GST-inclusive figure when the variant has one', () => {
+    // The row from the 2026-10-12 report: the Shipping column showed ₹106.2
+    // while Final showed ₹340, i.e. 250 + 90, because the total re-derived its
+    // own shipping from shippingCharges instead of reading this figure.
+    expect(
+      variantShippingTotal(
+        { shippingCharges: '90', shippingGstPercent: 0, finalShippingPrice: '106.2' },
+        { shippingCharges: 0, shippingGstPercent: 0 },
+      ),
+    ).toBe(106.2);
+  });
+
+  it('derives the figure from charge + GST when nothing is stored', () => {
+    expect(
+      variantShippingTotal({ shippingCharges: '90', shippingGstPercent: 18 }, {}),
+    ).toBe(106.2);
+  });
+
+  it('treats a stored 0 as unset and falls back to the parts', () => {
+    expect(
+      variantShippingTotal(
+        { shippingCharges: '90', shippingGstPercent: 18, finalShippingPrice: '0' },
+        {},
+      ),
+    ).toBe(106.2);
+  });
+
+  it('falls back to the parent listing when the variant overrides nothing', () => {
+    expect(
+      variantShippingTotal({}, { shippingCharges: 50, shippingGstPercent: 18 }),
+    ).toBe(59);
+  });
+
+  it('prefers the variant charge over the parent', () => {
+    expect(
+      variantShippingTotal(
+        { shippingCharges: '90' },
+        { shippingCharges: 50, shippingGstPercent: 18 },
+      ),
+    ).toBe(106.2);
+  });
+
+  it('keeps a tax-inclusive charge as-is rather than grossing it up again', () => {
+    expect(
+      variantShippingTotal(
+        { shippingCharges: '106.2', shippingGstPercent: 18 },
+        { isTaxIncluded: true },
+      ),
+    ).toBe(106.2);
+  });
+
+  it('is zero when neither the variant nor the parent charges for delivery', () => {
+    expect(variantShippingTotal({}, {})).toBe(0);
+    expect(variantShippingTotal({ shippingCharges: '0' }, {})).toBe(0);
+  });
+
+  it('agrees with what calculatePricing then bills the buyer', () => {
+    // The whole point: the number shown in the Shipping column and the number
+    // inside Final come from one function, so 250 + 106.2 can only be 356.20.
+    const shipping = variantShippingTotal(
+      { shippingCharges: '90', shippingGstPercent: 0, finalShippingPrice: '106.2' },
+      {},
+    );
+    const pricing = calculatePricing(250, 0, {
+      type: 'none',
+      shippingCharges: shipping,
+      shippingGstPercent: 0,
+    });
+
+    expect(shipping).toBe(106.2);
+    expect(pricing.finalCustomerPayable).toBe(356.2);
   });
 });
