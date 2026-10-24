@@ -174,18 +174,36 @@ export async function getProductById(id: string): Promise<Product> {
   }
 }
 
-export async function getCategories(): Promise<Category[]> {
+/**
+ * Same fetch as getCategories(), but tells you whether the empty list is an
+ * answer or a failure — the distinction getProducts() already exposes via its
+ * `failed` flag (see ProductsResponseSchema above).
+ *
+ * getCategories() returns a bare array with nowhere to hang that flag, so
+ * callers that must not confuse "no categories" with "could not ask" use this
+ * instead. The category pages do: an empty list there means notFound(), and a
+ * swallowed error therefore 404'd every category at once whenever the API
+ * blipped.
+ */
+export async function getCategoriesResult(): Promise<{ categories: Category[]; failed: boolean }> {
   try {
     const { data } = await api.get('/products/categories');
-    
+
     // Most robust way to find the array:
     const payload = data?.data ?? (Array.isArray(data) ? data : data?.categories);
-    
-    return Array.isArray(payload) ? payload : [];
+
+    return { categories: Array.isArray(payload) ? payload : [], failed: false };
   } catch (err) {
     console.warn('[Categories] Failed to fetch categories:', (err as any)?.response?.status, (err as any)?.message);
-    return [];
+    return { categories: [], failed: true };
   }
+}
+
+// Unchanged behaviour on purpose: admin, seller and the buyer's llms.txt /
+// brand.json / blog-footer callers all treat a failure as "no categories" and
+// are fine doing so. Only the routes that 404 on an empty list need the flag.
+export async function getCategories(): Promise<Category[]> {
+  return (await getCategoriesResult()).categories;
 }
 
 export async function createProduct(input: CreateProductInput): Promise<Product> {

@@ -23,14 +23,24 @@ import { organizationSchema, webSiteSchema } from '@/lib/seo/schema';
 
 // Shared across generateMetadata + the page body so both consume the same
 // getCategories() fetch (deduped per-request by React's cache()).
+//
+// This deliberately does NOT swallow errors. It used to `catch` and return
+// `[]`, which made an unreachable API indistinguishable from "that category
+// does not exist": findCategory() found nothing in the empty list, the page
+// called notFound(), and EVERY category 404'd at once while the API was
+// unhappy. Worse for SEO, generateMetadata's `!cat` branch simultaneously
+// emitted `robots: noindex` on all of them. Google reads a 404 as "drop this
+// URL" and a noindex as "stop ranking it", so a brief blip cost real rankings.
+// Letting the failure propagate renders app/error.tsx as a 5xx instead, which
+// Google treats as transient and retries without deindexing anything.
 const getCategoriesCached = cache(async (): Promise<any[]> => {
-  try {
-    const categories = await getCategoriesCachedShared();
-    return Array.isArray(categories) ? categories : [];
-  } catch (error) {
-    console.error("Failed to fetch categories on server", error);
-    return [];
+  const categories = await getCategoriesCachedShared();
+  if (!Array.isArray(categories)) {
+    throw new Error(
+      `Categories API returned ${typeof categories}, expected an array — refusing to treat this as "no categories exist".`,
+    );
   }
+  return categories;
 });
 
 const findCategory = cache(async (slug: string) => {
