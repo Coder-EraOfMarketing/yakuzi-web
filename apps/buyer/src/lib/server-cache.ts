@@ -4,9 +4,9 @@ import {
   getBanners,
   getComingSoonStatus,
   getHomepageSections,
-  getCategories,
 } from '@yukizi/api-client';
 import { fetchProductsOrThrow } from './products-fetch';
+import { fetchCategoriesOrThrow } from './categories-fetch';
 
 // Cross-request TTL caches for the anonymous storefront's server fetches.
 //
@@ -61,8 +61,12 @@ export const getComingSoonStatusCached = unstable_cache(
   { revalidate: 60 },
 );
 
+// Rejects rather than resolving to `[]` on failure — same reason
+// getProductsCached goes through fetchProductsOrThrow. An empty list here is
+// cached for the full 300s and makes every category page 404 + noindex.
+// See lib/categories-fetch.ts.
 export const getCategoriesCachedShared = unstable_cache(
-  () => getCategories(),
+  () => fetchCategoriesOrThrow('storefront:getCategories'),
   ['storefront:getCategories'],
   { revalidate: 300 },
 );

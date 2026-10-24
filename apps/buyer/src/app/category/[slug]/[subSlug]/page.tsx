@@ -57,26 +57,30 @@ interface SubCatRef {
   subSlug: string;
 }
 
+// Throws rather than returning `[]` when the categories API is unreachable —
+// at request time an empty list is read as "this sub-category does not exist"
+// and 404s + noindexes a live page. See the matching note in ../page.tsx.
 const allSubCategories = cache(async (): Promise<SubCatRef[]> => {
-  try {
-    const cats = (await getCategoriesCachedShared()) as any[];
-    const out: SubCatRef[] = [];
-    for (const c of Array.isArray(cats) ? cats : []) {
-      if (!c?.slug) continue;
-      for (const s of c.subCategories ?? []) {
-        if (!s?.slug) continue;
-        out.push({
-          categoryName: c.name,
-          categorySlug: c.slug,
-          subName: s.name,
-          subSlug: s.slug,
-        });
-      }
-    }
-    return out;
-  } catch {
-    return [];
+  const cats = (await getCategoriesCachedShared()) as any[];
+  if (!Array.isArray(cats)) {
+    throw new Error(
+      `Categories API returned ${typeof cats}, expected an array — refusing to treat this as "no sub-categories exist".`,
+    );
   }
+  const out: SubCatRef[] = [];
+  for (const c of cats) {
+    if (!c?.slug) continue;
+    for (const s of c.subCategories ?? []) {
+      if (!s?.slug) continue;
+      out.push({
+        categoryName: c.name,
+        categorySlug: c.slug,
+        subName: s.name,
+        subSlug: s.slug,
+      });
+    }
+  }
+  return out;
 });
 
 const findSubCategory = cache(
@@ -89,7 +93,17 @@ const findSubCategory = cache(
 );
 
 export async function generateStaticParams() {
-  const all = await allSubCategories();
+  // Build time is the one place an empty list is safe: pre-rendering nothing
+  // just means these routes render on demand instead. Throwing here would
+  // abort the whole deploy over a transient catalogue blip, so this is the
+  // deliberate exception to the no-swallowing rule above.
+  let all: SubCatRef[] = [];
+  try {
+    all = await allSubCategories();
+  } catch (error) {
+    console.error('generateStaticParams: categories unavailable, pre-rendering no sub-category pages', error);
+    return [];
+  }
   return all.map((s) => ({ slug: s.categorySlug, subSlug: s.subSlug }));
 }
 
