@@ -88,3 +88,9 @@ export { generateProductSlug, parseProductIdFromSlug } from './slugs';
 
 // Banner media — whether a banner slot holds a picture or a video
 export { isVideoUrl, isVideoFile, BANNER_ACCEPT } from './media';
+
+// What a front-end should do with a 401: refresh, queue, or end the session.
+// Shared so the seller portal and (once it is fixed too) the admin panel apply
+// one tested policy instead of a hand-rolled logout each.
+export { decideOn401, isAuthEndpoint } from './session-refresh';
+export type { RefreshDecision, Refresh401Input } from './session-refresh';
