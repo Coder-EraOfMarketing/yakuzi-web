@@ -75,6 +75,31 @@ export function writeAccessToken(token: string | null): void {
   }
 }
 
+/**
+ * The refresh token was issued by the API from the start (7d) but this app
+ * never stored it, so there was nothing to refresh WITH — which is why the
+ * 401 handler could only log the seller out. Same migration treatment as the
+ * access token: a session saved under the PharmaBag-era `pb_refresh_token`
+ * is carried forward rather than dropped.
+ */
+export function readRefreshToken(): string | null {
+  return readWithMigration(REFRESH_KEY, LEGACY_REFRESH_KEYS);
+}
+
+export function writeRefreshToken(token: string | null): void {
+  if (!hasWindow()) return;
+  try {
+    if (clean(token)) {
+      localStorage.setItem(REFRESH_KEY, token as string);
+    } else {
+      localStorage.removeItem(REFRESH_KEY);
+    }
+    for (const legacy of LEGACY_REFRESH_KEYS) localStorage.removeItem(legacy);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 /** Clears both tokens under every name, new and legacy. Used on logout/401. */
 export function clearTokens(): void {
   if (!hasWindow()) return;

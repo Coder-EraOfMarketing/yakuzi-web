@@ -22,7 +22,7 @@ import {
   getExternalOrders } from "@/api/seller.api";
 import type { ProductPayload } from "@yukizi/utils";
 import { useSellerAuth } from "@/store";
-import { writeAccessToken } from "@/lib/tokenStorage";
+import { writeAccessToken, writeRefreshToken } from "@/lib/tokenStorage";
 
 export function useSendOtp() { return useMutation({ mutationFn: sendOtp }); }
 
@@ -36,6 +36,11 @@ export function useVerifyOtp() {
       const inner = (data as any).data ?? data;
       if (typeof window !== "undefined" && inner.accessToken) {
         writeAccessToken(inner.accessToken);
+        // The API has always issued a refresh token here (7d) and this app
+        // threw it away, so the 401 handler had nothing to refresh with and
+        // could only log the seller out. Storing it is what makes
+        // apiClient's refresh-and-retry possible.
+        if (inner.refreshToken) writeRefreshToken(inner.refreshToken);
       }
       if (inner.user) setUser(inner.user);
       // Invalidate ALL seller queries so guard fetches fresh status
