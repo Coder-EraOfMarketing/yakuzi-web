@@ -52,6 +52,7 @@ export default function OrderDetailPage() {
   
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [refundHandled, setRefundHandled] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundAmount, setRefundAmount] = useState("");
   const [refundReference, setRefundReference] = useState("");
@@ -92,9 +93,10 @@ export default function OrderDetailPage() {
 
   const handleCancel = async () => {
     try {
-      await cancelOrder.mutateAsync({ orderId: id, reason: cancelReason });
-      toast.success("Order cancelled");
+      await cancelOrder.mutateAsync({ orderId: id, reason: cancelReason, refundHandled });
+      toast.success("Order cancelled and stock restored");
       setShowCancelModal(false);
+      setRefundHandled(false);
     } catch (err: any) {
       // The API refuses an order with a confirmed payment and says so — that
       // message tells an admin to arrange a refund instead. A generic failure
@@ -208,6 +210,22 @@ export default function OrderDetailPage() {
   const currentStatusIdx = ORDER_STATUSES.findIndex(s => s.key === normalizedStatus);
   const items: any[] = order.items ?? order.orderItems ?? [];
   const isCancelled = order.orderStatus === "CANCELLED";
+
+  // Mirror of the API's own refusal list (OrdersService.cancelOrder). The gate
+  // used to be just "not cancelled and not delivered", which offered the
+  // button on SHIPPED and RETURNED orders too — the admin filled in a reason,
+  // confirmed, and only then learned the API would never accept it. Keep these
+  // two lists in step: a status cancellable here but not there is the same bug
+  // again.
+  const UNCANCELLABLE = ["SHIPPED", "DELIVERED", "RETURNED", "CANCELLED"];
+  const canCancel = !UNCANCELLABLE.includes(order.orderStatus);
+
+  // A paid order can be cancelled by an admin, but not silently: the API
+  // refuses unless a refund is already recorded or the admin confirms they
+  // have handled one. Surfaced in the modal as a tick rather than as a
+  // rejection after the fact.
+  const isPaid = order.paymentStatus === "SUCCESS" || order.paymentStatus === "PARTIAL";
+  const needsRefundConfirmation = isPaid && !order.refundedAt;
   // Self-ship orders are fulfilled by the seller's own courier: no Shiprocket
   // push, no label/manifest/invoice uploads — just the seller's tracking link.
   const isSelfShip = order.fulfillmentMode === "self_ship";
@@ -293,7 +311,7 @@ export default function OrderDetailPage() {
                 Refunded {new Date(order.refundedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
               </span>
             )}
-            {!isCancelled && order.orderStatus !== "DELIVERED" && (
+            {canCancel && (
               <Button size="sm" variant="danger" onClick={() => setShowCancelModal(true)} leftIcon={<XCircle className="h-4 w-4" />}>Cancel Order</Button>
             )}
           </div>
@@ -336,7 +354,10 @@ export default function OrderDetailPage() {
               <XCircle className="h-6 w-6 text-red-500" />
               <div>
                 <h2 className="font-semibold text-red-600 dark:text-red-400">Order Cancelled</h2>
-                {order.cancelReason && <p className="text-sm text-muted-foreground mt-1">Reason: {order.cancelReason}</p>}
+                {/* `cancellationReason` — the API has no `cancelReason`
+                    field, so this read was always undefined and the reason
+                    an admin typed never appeared back on the order. */}
+                {order.cancellationReason && <p className="text-sm text-muted-foreground mt-1">Reason: {order.cancellationReason}</p>}
               </div>
             </div>
           </motion.div>
@@ -658,7 +679,10 @@ export default function OrderDetailPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Status</span>
-                  <Badge variant={order.paymentStatus === "PAID" ? "success" : order.paymentStatus === "PENDING" ? "warning" : "error"}>{order.paymentStatus ?? "—"}</Badge>
+                  {/* PaymentStatus is PENDING | SUCCESS | FAILED | PARTIAL —
+                      there is no "PAID", so a successful payment fell through
+                      to the error variant and rendered red. */}
+                  <Badge variant={order.paymentStatus === "SUCCESS" ? "success" : order.paymentStatus === "PARTIAL" ? "warning" : order.paymentStatus === "PENDING" ? "warning" : "error"}>{order.paymentStatus ?? "—"}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Method</span>
@@ -1000,11 +1024,45 @@ export default function OrderDetailPage() {
       <Modal open={showCancelModal} onClose={() => setShowCancelModal(false)} title="Cancel Order">
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">Are you sure you want to cancel this order? This action cannot be undone.</p>
-          <p className="text-sm text-muted-foreground">The buyer is told the order is cancelled, and is shown the reason you give below.</p>
+          <p className="text-sm text-muted-foreground">The stock goes back to the seller, and the buyer is told the order is cancelled along with the reason you give below.</p>
           <Input label="Reason — shown to the buyer" value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="e.g. Customer requested cancellation" />
+
+          {/* The money half. Cancelling restores stock and tells the buyer
+              their order is gone — doing that while their payment is still
+              held, with nothing recorded about returning it, is how the
+              ledger and the warehouse drift apart. The API refuses this
+              combination outright; asking here means the admin finds out
+              before typing a reason, not after. */}
+          {needsRefundConfirmation && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 space-y-2">
+              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                This order has been paid and no refund is recorded against it.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Record the refund first if you want it tracked here, or confirm below that you have returned the money another way.
+              </p>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={refundHandled}
+                  onChange={e => setRefundHandled(e.target.checked)}
+                />
+                <span className="text-sm text-foreground">I have refunded the buyer, or will do so</span>
+              </label>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={() => setShowCancelModal(false)}>Keep Order</Button>
-            <Button variant="danger" onClick={handleCancel} loading={cancelOrder.isPending} disabled={cancelReason.trim().length < 3}>Cancel Order</Button>
+            <Button
+              variant="danger"
+              onClick={handleCancel}
+              loading={cancelOrder.isPending}
+              disabled={cancelReason.trim().length < 3 || (needsRefundConfirmation && !refundHandled)}
+            >
+              Cancel Order
+            </Button>
           </div>
         </div>
       </Modal>
