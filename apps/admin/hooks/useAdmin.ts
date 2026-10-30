@@ -406,7 +406,15 @@ export function useRecordOrderRefund() {
 export function useCancelOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ orderId, reason }: { orderId: string; reason?: string }) => cancelOrder(orderId, reason),
+    mutationFn: ({
+      orderId,
+      reason,
+      refundHandled,
+    }: {
+      orderId: string;
+      reason: string;
+      refundHandled?: boolean;
+    }) => cancelOrder(orderId, reason, refundHandled),
     onSuccess: (_, { orderId }) => {
       void qc.invalidateQueries({ queryKey: ["admin", "orders"] });
       void qc.invalidateQueries({ queryKey: ["admin", "order", orderId] });

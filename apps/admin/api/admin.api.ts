@@ -401,14 +401,28 @@ export async function getAdminOrdersFiltered(params: { page?: number; limit?: nu
 }
 
 /**
- * Cancels an order and tells the buyer why.
+ * Cancels an order, restores its stock, and tells the buyer why.
  *
- * Hits `/orders/:id/cancel`, NOT `/admin/orders/...` — there has never been an
- * admin mirror of this route, so every cancel from this panel 404'd and showed
- * "Failed to cancel order". The real route already allows ADMIN.
+ * Now hits the admin mirror `/admin/orders/:id/cancel`. The shared
+ * `/orders/:id/cancel` route allows ADMIN but refuses any order with a
+ * confirmed payment — deliberately, since it also serves the buyer-facing
+ * auto-cancel — so every attempt to cancel a PAID order from this panel
+ * failed with "This order has a confirmed payment…". That is the bug this
+ * replaces: an admin had no correct way to cancel a paid order.
+ *
+ * `refundHandled` is only consulted for a paid order with no refund already
+ * recorded; the API refuses that combination without it, rather than
+ * restocking an order whose money is still held.
  */
-export async function cancelOrder(orderId: string, reason?: string) {
-  const { data } = await apiClient.patch<{ data: any }>(`/orders/${orderId}/cancel`, { reason });
+export async function cancelOrder(
+  orderId: string,
+  reason: string,
+  refundHandled?: boolean,
+) {
+  const { data } = await apiClient.patch<{ data: any }>(
+    `/admin/orders/${orderId}/cancel`,
+    { reason, ...(refundHandled ? { refundHandled: true } : {}) },
+  );
   return data.data;
 }
 
