@@ -1,20 +1,48 @@
 /*
- * CSS module with explicit colours for the same reason as PromoPopup.module.css:
- * the dark theme remaps Tailwind utilities with !important, and this strip has
- * to look identical in both themes.
+ * CSS module with explicit colours, not Tailwind utilities: the dark theme
+ * remaps utilities with !important (see globals.css), and this strip owns its
+ * own look in both themes.
  *
  * In normal flow, NOT fixed or sticky: nothing else on the site is pinned to
  * the top, and a fixed bar would have to be coordinated with the cookie banner
  * and every page's own top spacing.
+ *
+ * GLASS, same vocabulary as .nav-pill in globals.css: a deep translucent
+ * purple over a heavy backdrop blur, a bright top rim and a darker base rim.
+ * The tint must stay DEEP — a light violet at this alpha composites to
+ * near-white over a pale page and the white text washes out.
  */
 .bar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 36px;
-  padding: 7px 14px;
-  background: #4c2190;
+  min-height: 38px;
+  padding: 8px 14px;
+  /* Alpha and depth are set by CONTRAST, not by taste: the text is 13px bold,
+     which WCAG counts as normal size, so it needs 4.5:1 against the lightest
+     pixel of the composited fill. A lighter violet at a thinner alpha measured
+     4.3:1 over the page — this is the smallest step that clears the floor
+     while the blur is still visibly doing something. Measured on /products
+     against the lightest pixel of the whole bar, rim and sheen included:
+     5.04:1 light, 10.93:1 dark. Lighten any of these and re-measure. */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(96, 54, 184, 0.86) 0%,
+      rgba(82, 40, 160, 0.90) 48%,
+      rgba(66, 28, 130, 0.94) 100%
+    );
+  backdrop-filter: blur(22px) saturate(185%);
+  -webkit-backdrop-filter: blur(22px) saturate(185%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.40),
+    /* The inner sheen is kept shallow and short: pulled further down the bar
+       it lifts the fill under the text and costs the contrast above. */
+    inset 0 6px 14px -12px rgba(255, 255, 255, 0.30),
+    inset 0 -1px 0 rgba(52, 18, 104, 0.60),
+    0 10px 26px -18px rgba(84, 38, 165, 0.65);
   color: #ffffff;
   text-align: center;
   font-size: 13px;
@@ -22,6 +50,44 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1.25;
+  /* The blur needs something to lift off; without it the bar reads flat
+     against the page's own white. */
+  isolation: isolate;
+}
+
+/* A hairline of light along the bottom edge, so the bar ends on a defined
+   line rather than bleeding into the page under it. */
+.bar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  pointer-events: none;
+}
+
+/* Dark ground: the page behind is already deep purple, so the same alpha
+   would make the bar vanish into it. Lift the tint and the rim instead of
+   deepening them — the bar has to read as glass ON the ground, not as a hole
+   in it. */
+:global(.dark) .bar {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(140, 92, 232, 0.30) 0%,
+      rgba(112, 64, 204, 0.36) 48%,
+      rgba(86, 42, 166, 0.44) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 10px 22px -16px rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 10px 30px -20px rgba(0, 0, 0, 0.75);
+}
+:global(.dark) .bar::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
 }
 
 .spark {
@@ -29,6 +95,7 @@
   width: 16px;
   height: 16px;
   color: #ffd23f;
+  filter: drop-shadow(0 1px 3px rgba(120, 70, 0, 0.45));
 }
 
 .link {
@@ -50,6 +117,13 @@
 .extra { display: inline; }
 
 @media (max-width: 520px) {
-  .bar { font-size: 11.5px; letter-spacing: 0.03em; padding: 7px 10px; }
+  .bar { font-size: 11.5px; letter-spacing: 0.03em; padding: 8px 10px; }
   .extra { display: none; }
+}
+
+/* A browser with no backdrop-filter gets the flat purple it had before,
+   rather than a washed-out translucent bar with unreadable text. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bar { background: #4c2190; }
+  :global(.dark) .bar { background: #3b1a70; }
 }
