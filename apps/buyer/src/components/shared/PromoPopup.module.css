@@ -1,0 +1,275 @@
+/*
+ * Deliberately a CSS module with explicit colours, not Tailwind utilities.
+ *
+ * The buyer app is dark by default and globals.css retrofits it with
+ * `.dark .bg-white { ... !important }` and `.dark .text-gray-900 { ... !important }`
+ * style overrides (see yukizi-buyer-theme-architecture). Any utility class here
+ * would be silently recoloured in dark mode, and this popup has to look the same
+ * in both themes. Module class names are hashed, so those rules cannot reach it.
+ */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100; /* above the bottom nav / drawers (<=1002); below toasts (9999) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 5, 22, 0.62);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: fadeIn 200ms ease-out both;
+}
+
+.card {
+  position: relative;
+  width: min(100%, 460px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  border-radius: 28px;
+  background: #ffffff;
+  color: #14101f;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  animation: popIn 260ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  margin: 10px 10px 0;
+  aspect-ratio: 460 / 270;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(70% 90% at 50% 100%, rgba(255, 190, 90, 0.32), transparent 70%),
+    radial-gradient(60% 80% at 12% 0%, rgba(176, 120, 255, 0.55), transparent 65%),
+    linear-gradient(160deg, #2a1052 0%, #4c2190 52%, #854cbc 100%);
+}
+
+.shape {
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+}
+.shapeA { width: 46%; aspect-ratio: 1; right: -12%; top: -34%; }
+.shapeB { width: 34%; aspect-ratio: 1; left: -10%; bottom: -30%; background: rgba(255, 210, 63, 0.09); }
+
+.sparkle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #ffd23f;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  pointer-events: none;
+  animation: twinkle 2.6s ease-in-out infinite;
+}
+.sparkleA { left: 30%; top: 14%; }
+.sparkleB { right: 17%; top: 38%; width: 10px; height: 10px; animation-delay: 0.9s; }
+.sparkleC { left: 9%; bottom: 14%; width: 11px; height: 11px; animation-delay: 1.6s; }
+
+.item {
+  position: absolute;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 14px 16px rgba(8, 2, 22, 0.55));
+}
+.cards { width: 17%; left: 5%; bottom: 6%; transform: rotate(-9deg); z-index: 1; }
+.car   { width: 31%; right: 3%; bottom: 8%; transform: rotate(6deg);  z-index: 1; }
+.figure { width: 56%; left: 22%; bottom: 3%; z-index: 2; }
+
+/* The point of the popup. Yellow on purple is the highest-contrast pairing in
+   the hero, so this reads before anything else does. */
+.badge {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: #ffd23f;
+  color: #2a1052;
+  text-align: center;
+  line-height: 1;
+  transform: rotate(-9deg);
+  box-shadow: 0 8px 18px -6px rgba(0, 0, 0, 0.55), inset 0 0 0 3px rgba(42, 16, 82, 0.14);
+}
+.badgeTruck { width: 26px; height: 26px; margin-bottom: 3px; }
+.badgeBig { font-size: 15px; font-weight: 900; letter-spacing: 0.02em; }
+.badgeSmall { margin-top: 2px; font-size: 9px; font-weight: 800; letter-spacing: 0.08em; }
+
+.close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #14101f;
+  cursor: pointer;
+  box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.45);
+  transition: transform 140ms ease;
+}
+.close:hover { transform: scale(1.06); }
+
+/* ── Body ─────────────────────────────────────────────────────────────── */
+
+.body {
+  padding: 22px 28px 26px;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(24px, 6.4vw, 32px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: #14101f;
+}
+.titleAccent { color: #6b2fb3; }
+
+.lead {
+  margin: 12px auto 0;
+  max-width: 34ch;
+  font-size: 16px;
+  line-height: 1.45;
+  color: #4a4457;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  margin-top: 20px;
+  padding: 0 46px;
+  border-radius: 999px;
+  background: #0b0b10;
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 140ms ease, background 140ms ease;
+}
+.cta:hover { background: #26202f; transform: translateY(-1px); }
+
+.fine {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: #6f6980;
+}
+.fine a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+.close:focus-visible,
+.cta:focus-visible,
+.fine a:focus-visible {
+  outline: 3px solid #854cbc;
+  outline-offset: 3px;
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────── */
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.8); }
+  50%      { opacity: 1;    transform: scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop, .card, .sparkle { animation: none; }
+  .close, .cta { transition: none; }
+}
+
+@media (max-width: 380px) {
+  .body { padding: 18px 20px 22px; }
+  .badge { width: 66px; height: 66px; left: 10px; top: 10px; }
+  .badgeBig { font-size: 13px; }
+  .cta { padding: 0 36px; }
+}
+
+/* ── Side notification ────────────────────────────────────────────────── */
+
+.toast {
+  position: fixed;
+  right: 16px;
+  /* `top` is set inline: it has to clear the cookie banner when that is up. */
+  z-index: 1050; /* over the bottom nav and drawers, under the popup (1100) */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Percent, not vw: 100vw includes a classic scrollbar, so calc(100vw - Npx)
+     is wider than the real viewport and pushes the card off the left edge. */
+  width: 320px;
+  max-width: calc(100% - 32px);
+  padding: 14px 42px 14px 14px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #14101f;
+  box-shadow: 0 18px 44px -14px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(20, 16, 31, 0.06);
+  animation: slideIn 320ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+
+.toastIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #fff0de;
+  color: #e8730c;
+}
+.toastTruck { width: 26px; height: 26px; }
+
+.toastText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.toastTitle { font-size: 15px; font-weight: 700; line-height: 1.2; }
+.toastSub { font-size: 13px; line-height: 1.3; color: #6f6980; }
+
+.toastClose {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #9a93a8;
+  cursor: pointer;
+}
+.toastClose:hover { background: rgba(20, 16, 31, 0.06); color: #14101f; }
+.toastClose:focus-visible { outline: 3px solid #854cbc; outline-offset: 1px; }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
+}
+
+@media (max-width: 480px) {
+  .toast { left: 12px; right: 12px; width: auto; max-width: none; }
+}
