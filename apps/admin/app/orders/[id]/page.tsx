@@ -7,7 +7,7 @@ import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Clock, CreditCard, Fil
 
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Badge, Modal, Input, Skeleton } from "@/components/ui";
-import { formatCurrency, calculatePricing } from "@yukizi/utils";
+import { formatCurrency, calculatePricing, paymentBadge } from "@yukizi/utils";
 import { cn } from "@/lib/utils";
 import { useOrderById, useUpdateAdminOrderStatus, useCancelOrder, useRecordOrderRefund, useUpdateAdminShippingDocs, useUploadAdminOrderDocument, useOrderTracking, useOrderInvoices } from "@/hooks/useAdmin";
 import { downloadOrderInvoicePdf, type OrderInvoice } from "@/api/admin.api";
@@ -682,7 +682,7 @@ export default function OrderDetailPage() {
                   {/* PaymentStatus is PENDING | SUCCESS | FAILED | PARTIAL —
                       there is no "PAID", so a successful payment fell through
                       to the error variant and rendered red. */}
-                  <Badge variant={order.paymentStatus === "SUCCESS" ? "success" : order.paymentStatus === "PARTIAL" ? "warning" : order.paymentStatus === "PENDING" ? "warning" : "error"}>{order.paymentStatus ?? "—"}</Badge>
+                  <Badge variant={paymentBadge(order).variant}>{paymentBadge(order).label}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Method</span>

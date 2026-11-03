@@ -97,3 +97,7 @@ export { decideOn401, isAuthEndpoint } from './session-refresh';
 // Where and when the storefront's promo popup may appear.
 export { isPromoPage, isPromoSuppressed, showsAnnouncementBar } from './promo-popup';
 export type { RefreshDecision, Refresh401Input } from './session-refresh';
+
+// Label and colour for the admin Payment column.
+export { paymentBadge } from './payment-badge';
+export type { PaymentBadge, PaymentBadgeVariant } from './payment-badge';
