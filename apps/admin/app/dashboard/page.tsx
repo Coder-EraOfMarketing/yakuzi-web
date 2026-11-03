@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Users, Package, ShoppingBag, TrendingUp, AlertTriangle, CheckCircle, Clock, Flag, Bell, Search } from "lucide-react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { StatCard, Badge, StatusBadge, Button } from "@/components/ui";
-import { formatCurrency, formatCompact } from "@yukizi/utils";
+import { formatCurrency, formatCompact, paymentBadge } from "@yukizi/utils";
 import { useAdminDashboard, usePlatformSettings, useUpdatePlatformSettings } from "@/hooks/useAdmin";
 import { useAdminAccess } from "@/hooks/useAccess";
 import toast from "react-hot-toast";
@@ -233,7 +233,7 @@ export default function AdminDashboardPage() {
                     <p className="text-xs text-muted-foreground">{o.buyer?.phone ?? ""}</p>
                   </td>
                   <td className="px-5 py-4 text-sm font-semibold text-foreground">{formatCurrency(o.totalAmount ?? 0)}</td>
-                  <td className="px-5 py-4"><Badge variant={o.paymentStatus === "PAID" ? "success" : o.paymentStatus === "PENDING" ? "warning" : "error"}>{o.paymentStatus ?? "—"}</Badge></td>
+                  <td className="px-5 py-4"><Badge variant={paymentBadge(o).variant}>{paymentBadge(o).label}</Badge></td>
                   <td className="px-5 py-4 text-xs text-muted-foreground whitespace-nowrap">{o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-IN") : "—"}</td>
                 </motion.tr>
               ))}

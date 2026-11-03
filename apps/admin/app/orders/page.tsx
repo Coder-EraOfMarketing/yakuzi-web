@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Search, Loader2 } from "lucide-react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Input, Badge, Pagination, Modal } from "@/components/ui";
-import { formatCurrency } from "@yukizi/utils";
+import { formatCurrency, paymentBadge } from "@yukizi/utils";
 import { cn } from "@/lib/utils";
 import { useAdminOrdersFiltered, useUpdateAdminOrderStatus, useCancelTestOrders, useTestOrdersCount, useClassifyOrder } from "@/hooks/useAdmin";
 import { getPresignedUrl } from "@yukizi/api-client";
@@ -246,9 +246,7 @@ export default function AdminOrdersPage() {
                             {o.paymentStatus === "SUCCESS" ? "PAID" : "PROOF UPLOADED"}
                           </Badge>
                         ) : (
-                          <Badge variant={o.paymentStatus === "SUCCESS" || o.paymentStatus === "PAID" ? "success" : o.paymentStatus === "PENDING" ? "warning" : "error"}>
-                            {o.paymentStatus === "SUCCESS" ? "PAID" : (o.paymentStatus ?? "—")}
-                          </Badge>
+                          <Badge variant={paymentBadge(o).variant}>{paymentBadge(o).label}</Badge>
                         )}
                       </div>
                     </td>
