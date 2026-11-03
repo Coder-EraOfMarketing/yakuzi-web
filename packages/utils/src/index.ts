@@ -101,3 +101,6 @@ export type { RefreshDecision, Refresh401Input } from './session-refresh';
 // Label and colour for the admin Payment column.
 export { paymentBadge } from './payment-badge';
 export type { PaymentBadge, PaymentBadgeVariant } from './payment-badge';
+
+// Which order-status steps a self-ship order skips (they cannot be tracked).
+export { isUntrackedStep, nextStepKey, SELF_SHIP_UNTRACKED_STEPS } from './order-stepper';

@@ -19,7 +19,8 @@ function isValidHttpUrl(value: string): boolean {
 /**
  * Rendered on the seller order page instead of the measurements/photos/
  * Shiprocket-documents card when the order's fulfillmentMode is 'self_ship'.
- * Submitting marks the order shipped; the link stays editable afterwards.
+ * Submitting accepts the order (the later stages are not tracked for self-ship);
+ * the link stays editable afterwards.
  */
 export function SelfShipTrackingCard({ order, orderId, isUnpaid }: { order: any; orderId: string; isUnpaid: boolean }) {
   const submitTracking = useSubmitSelfShipTracking();
@@ -42,7 +43,7 @@ export function SelfShipTrackingCard({ order, orderId, isUnpaid }: { order: any;
           ...(courierName.trim() ? { courierName: courierName.trim() } : {}),
         },
       });
-      toast.success(alreadySubmitted ? "Tracking link updated" : "Order marked as shipped");
+      toast.success(alreadySubmitted ? "Tracking link updated" : "Tracking link submitted — order accepted");
       setIsEditing(false);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to save tracking link");
@@ -131,8 +132,8 @@ export function SelfShipTrackingCard({ order, orderId, isUnpaid }: { order: any;
           </div>
           {!alreadySubmitted && (
             <p className="text-xs text-muted-foreground">
-              Submitting the tracking link marks this order as <span className="font-semibold">Shipped</span> and
-              notifies the buyer.
+              Submitting the tracking link marks this order as <span className="font-semibold">Accepted</span> and
+              sends the buyer your courier details.
             </p>
           )}
           <div className="pt-1 flex justify-end gap-2">
@@ -142,7 +143,7 @@ export function SelfShipTrackingCard({ order, orderId, isUnpaid }: { order: any;
               </Button>
             )}
             <Button size="sm" onClick={handleSubmit} loading={submitTracking.isPending}>
-              {alreadySubmitted ? "Save Changes" : "Submit & Mark as Shipped"}
+              {alreadySubmitted ? "Save Changes" : "Submit Tracking Link"}
             </Button>
           </div>
         </div>

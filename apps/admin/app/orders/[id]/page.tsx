@@ -7,7 +7,7 @@ import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Clock, CreditCard, Fil
 
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button, Badge, Modal, Input, Skeleton } from "@/components/ui";
-import { formatCurrency, calculatePricing, paymentBadge } from "@yukizi/utils";
+import { formatCurrency, calculatePricing, paymentBadge, isUntrackedStep, nextStepKey } from "@yukizi/utils";
 import { cn } from "@/lib/utils";
 import { useOrderById, useUpdateAdminOrderStatus, useCancelOrder, useRecordOrderRefund, useUpdateAdminShippingDocs, useUploadAdminOrderDocument, useOrderTracking, useOrderInvoices } from "@/hooks/useAdmin";
 import { downloadOrderInvoicePdf, type OrderInvoice } from "@/api/admin.api";
@@ -325,11 +325,16 @@ export default function OrderDetailPage() {
               <div className="absolute top-4 left-0 right-0 h-0.5 bg-border" />
               <div className="absolute top-4 left-0 h-0.5 bg-primary transition-all" style={{ width: `${(currentStatusIdx / (ORDER_STATUSES.length - 1)) * 100}%` }} />
               {ORDER_STATUSES.map(({ key, label, icon: Icon, color }, idx) => {
-                const done = idx <= currentStatusIdx;
+                // A self-ship order's courier stages cannot be tracked (the seller
+                // booked the courier), so they are greyed out and skipped:
+                // Accepted advances straight to Delivered.
+                const untracked = isUntrackedStep(key, normalizedStatus, isSelfShip);
+                const done = idx <= currentStatusIdx && !untracked;
                 const isCurrent = idx === currentStatusIdx;
-                const isNext = idx === currentStatusIdx + 1;
+                const isNext = key === nextStepKey(ORDER_STATUSES.map(s => s.key), normalizedStatus, isSelfShip);
                 return (
-                  <div key={key} className="relative flex flex-col items-center z-10">
+                  <div key={key} className={cn("relative flex flex-col items-center z-10", untracked && "opacity-40")}
+                    title={untracked ? "Not tracked on self-ship orders" : undefined}>
                     <div className={cn("h-8 w-8 rounded-full flex items-center justify-center border-2 transition-all",
                       done ? `${color} border-transparent text-white` : "bg-background border-border text-muted-foreground",
                       isNext && "cursor-pointer hover:border-primary hover:text-primary")}
