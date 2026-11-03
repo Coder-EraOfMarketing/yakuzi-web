@@ -253,8 +253,9 @@ export default function AdminOrdersPage() {
                     <td className="px-5 py-4">
                       {["PLACED", "ACCEPTED", "PAYMENT_RECEIVED", "READY_TO_SHIP", "DISPATCHED_FROM_SELLER", "RECEIVED_AT_WAREHOUSE", "SHIPPED", "OUT_FOR_DELIVERY"].includes(o.orderStatus) && ( /* legacy statuses kept so old orders stay advanceable */
                         <div className="flex flex-col items-start gap-1">
-                          <button onClick={(e) => void handleOverride(e, o.id, o.orderStatus)} className="text-xs text-primary underline hover:text-primary/80">
-                            → {o.orderStatus === "PLACED" ? "Accept" : o.orderStatus === "ACCEPTED" ? "Ready to Ship" : o.orderStatus === "PAYMENT_RECEIVED" ? "Ready to Ship" : o.orderStatus === "READY_TO_SHIP" ? "Dispatch" : o.orderStatus === "DISPATCHED_FROM_SELLER" ? "Ship" : o.orderStatus === "RECEIVED_AT_WAREHOUSE" ? "Ship" : o.orderStatus === "SHIPPED" ? "Out for Delivery" : "Deliver"}
+                          {/* A self-ship order has no courier stages to walk through (nothing can track them), so Accepted goes straight to Delivered. */}
+                          <button onClick={(e) => void handleOverride(e, o.id, o.orderStatus, o.fulfillmentMode === "self_ship" && o.orderStatus === "ACCEPTED" ? "DELIVERED" : undefined)} className="text-xs text-primary underline hover:text-primary/80">
+                            → {o.orderStatus === "ACCEPTED" && o.fulfillmentMode === "self_ship" ? "Deliver" : o.orderStatus === "PLACED" ? "Accept" : o.orderStatus === "ACCEPTED" ? "Ready to Ship" : o.orderStatus === "PAYMENT_RECEIVED" ? "Ready to Ship" : o.orderStatus === "READY_TO_SHIP" ? "Dispatch" : o.orderStatus === "DISPATCHED_FROM_SELLER" ? "Ship" : o.orderStatus === "RECEIVED_AT_WAREHOUSE" ? "Ship" : o.orderStatus === "SHIPPED" ? "Out for Delivery" : "Deliver"}
                           </button>
                         </div>
                       )}
