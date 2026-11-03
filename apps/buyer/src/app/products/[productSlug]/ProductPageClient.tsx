@@ -38,6 +38,7 @@ import { useProductReviews, useCreateReview, useReviewEligibility } from '@/hook
 import { useBuyerProfile } from '@/hooks/useBuyerProfile';
 import { uploadReviewImage, useAuth } from '@yukizi/api-client';
 import Navbar from '@/components/landing/Navbar';
+import TrustBadges from '@/components/products/TrustBadges';
 import {
   generateProductSlug,
   parseProductIdFromSlug,
@@ -623,7 +624,7 @@ function ComparisonOffersList({
         return (
           <div
             key={listing.id}
- className="glass-panel transition-all duration-200 w-full hover:bg-white/70 hover:shadow-[0_10px_26px_-14px_rgba(88,54,150,0.38)] flex items-center justify-between py-1 px-2.5 sm:py-1.5 sm:px-4 xl:py-2 xl:px-6 rounded-[12px]"
+ className="glass-panel transition-all duration-200 w-full hover:bg-white/70 hover:shadow-[0_10px_26px_-14px_rgba(88,54,150,0.38)] flex flex-wrap items-center justify-between gap-x-1.5 gap-y-1.5 sm:gap-x-3 py-1.5 px-2.5 sm:py-2 sm:px-4 xl:py-2.5 xl:px-6 rounded-[12px]"
           >
             {/* 1. Price & Subtext */}
             <div className="flex flex-col items-start justify-center min-w-[40px] sm:min-w-[56px] md:min-w-[64px] xl:min-w-[72px] 2xl:min-w-[80px] text-left">
@@ -633,11 +634,6 @@ function ComparisonOffersList({
               {subText && (
                 <span className="text-2xs sm:text-xs xl:text-sm 2xl:text-sm text-gray-500 font-medium mt-1 leading-none whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
                   {subText}
-                </span>
-              )}
-              {isPreOrder && (
-                <span className="mt-1 inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">
-                  Pre-order · expected {formatDate(listing.preOrderDeliveryDate)}
                 </span>
               )}
             </div>
@@ -759,6 +755,17 @@ function ComparisonOffersList({
                 </button>
               )}
             </div>
+
+            {/* The pre-order date gets a line of its own (basis-full on a
+                wrapping row), rather than a slot inside the price column. In
+                that column it was the widest thing in the row and had nowhere
+                to go on a phone, so it wrapped onto three lines and squeezed
+                the rating, edition and action into each other. */}
+            {isPreOrder && (
+              <span className="basis-full order-last inline-flex w-fit items-center rounded-full bg-primary-100 px-2 py-0.5 text-2xs sm:text-xs font-semibold text-primary-700 leading-snug">
+                Pre-order · expected {formatDate(listing.preOrderDeliveryDate)}
+              </span>
+            )}
           </div>
         );
       })}
@@ -1490,6 +1497,13 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
             </div>
           </div>
 
+          {/* The platform's standing promises, immediately before the reviews:
+              on a product with no reviews yet (most of the catalogue) this is
+              the reassurance that section cannot give. */}
+          <div className="mt-4 border-t border-gray-100 pt-6">
+            <TrustBadges />
+          </div>
+
           {/* Reviews Summary Section */}
           <div className="mt-4 border-t border-gray-100 pt-6">
             <h2 className="mb-4 text-base font-bold text-gray-600 uppercase tracking-wider">Reviews</h2>
@@ -1743,6 +1757,12 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
                 productShippingCharges={product.shippingCharges}
                 productIsTaxIncluded={product.isTaxIncluded}
               />
+
+              {/* Standing promises, immediately before the reviews — see the
+                  mobile layout above. */}
+              <div className="border-t border-gray-100 pt-8 mt-6">
+                <TrustBadges />
+              </div>
 
               {/* Reviews - moved inside right column to avoid XL height gaps */}
               <div className="flex flex-col border-t border-gray-100 pt-8 mt-6">
