@@ -93,4 +93,7 @@ export { isVideoUrl, isVideoFile, BANNER_ACCEPT } from './media';
 // Shared so the seller portal and (once it is fixed too) the admin panel apply
 // one tested policy instead of a hand-rolled logout each.
 export { decideOn401, isAuthEndpoint } from './session-refresh';
+
+// Where and when the storefront's promo popup may appear.
+export { isPromoPage, isPromoSuppressed, showsAnnouncementBar } from './promo-popup';
 export type { RefreshDecision, Refresh401Input } from './session-refresh';

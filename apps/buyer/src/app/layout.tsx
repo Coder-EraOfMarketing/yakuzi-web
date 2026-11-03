@@ -4,6 +4,8 @@ import '../styles/globals.css';
 import { Providers } from './providers';
 import SiteFooter from '@/components/shared/SiteFooter';
 import CookieConsent from '@/components/shared/CookieConsent';
+import AnnouncementBar from '@/components/shared/AnnouncementBar';
+import PromoPopup from '@/components/shared/PromoPopup';
 import { MetaPixelProvider } from '@/components/analytics/MetaPixelProvider';
 import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, DEFAULT_OG_IMAGE } from '@/lib/seo/site';
 
@@ -166,6 +168,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${inter.className} font-sans`}>
         <Providers>
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            {/* Slim free-shipping strip; in normal flow, hidden on payment/login. */}
+            <AnnouncementBar />
             <div style={{ flex: 1 }}>
               {children}
             </div>
@@ -173,6 +177,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
           {/* Fixed top overlay; renders nothing once a choice is stored. */}
           <CookieConsent />
+          {/* Free-shipping promo. Shows once per visitor per week, on landing pages only. */}
+          <PromoPopup />
           {/* Meta Pixel — inert unless Meta is on AND marketing consent given. */}
           <MetaPixelProvider pixelId={metaPixelId ?? ''} />
         </Providers>
