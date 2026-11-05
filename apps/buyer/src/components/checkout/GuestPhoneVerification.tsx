@@ -7,11 +7,13 @@ const RESEND_SECONDS = 30;
 const PHONE_RE = /^[6-9]\d{9}$/;
 
 /**
- * Shown on checkout to someone who is not logged in.
+ * Sits directly under the Phone field on checkout, for someone who is not logged
+ * in. There is deliberately NO second phone input: the Phone field the shopper
+ * is already filling in is the number being confirmed.
  *
- * The phone number is mandatory at checkout, so it is also the proof of who the
- * buyer is: confirming it by one-time code either logs them into the account
- * that number already belongs to, or creates a buyer account for it (the same
+ * The phone is mandatory at checkout, so it doubles as the proof of who the
+ * buyer is. Confirming it by one-time code either logs them into the account that
+ * number already belongs to, or creates a buyer account for it (the same
  * /auth/send-otp + /auth/verify-otp the login popup uses; the server finds or
  * creates the buyer). From then on the order is placed exactly as for any
  * logged-in buyer, so sellers, settlements and reporting see an ordinary order.
@@ -24,21 +26,26 @@ const PHONE_RE = /^[6-9]\d{9}$/;
  * page in both themes.
  */
 export default function GuestPhoneVerification({
+  phone: phoneField,
   onVerified,
-  initialPhone = '',
 }: {
+  /** The current value of the Phone field above; whatever was typed there. */
+  phone: string;
   /** Called with the confirmed 10-digit number once the session exists. */
   onVerified: (phone: string) => void;
-  initialPhone?: string;
 }) {
   const { sendOtp, verifyOtp } = useAuth();
-  const [phone, setPhone] = useState(initialPhone.replace(/\D/g, '').slice(-10));
   const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [step, setStep] = useState<'idle' | 'otp'>('idle');
+  const [sentTo, setSentTo] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
   const otpRef = useRef<HTMLInputElement>(null);
+
+  // The field takes "+91 98765 43210" or "098765…" as readily as ten bare digits.
+  const phone = phoneField.replace(/\D/g, '').slice(-10);
+  const phoneValid = PHONE_RE.test(phone);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -50,17 +57,26 @@ export default function GuestPhoneVerification({
     if (step === 'otp') otpRef.current?.focus();
   }, [step]);
 
-  const phoneValid = PHONE_RE.test(phone);
+  // If they edit the Phone field after a code was sent, that code belongs to the
+  // old number: go back to the start rather than verifying the wrong one.
+  useEffect(() => {
+    if (step === 'otp' && phone !== sentTo) {
+      setStep('idle');
+      setOtp('');
+      setError(null);
+    }
+  }, [phone, sentTo, step]);
 
   const send = async () => {
     if (!phoneValid) {
-      setError('Enter a valid 10-digit mobile number.');
+      setError('Enter a valid 10-digit mobile number in the Phone field above.');
       return;
     }
     setBusy(true);
     setError(null);
     try {
       await sendOtp(phone);
+      setSentTo(phone);
       setStep('otp');
       setOtp('');
       setCooldown(RESEND_SECONDS);
@@ -79,8 +95,8 @@ export default function GuestPhoneVerification({
     setBusy(true);
     setError(null);
     try {
-      await verifyOtp(phone, otp);
-      onVerified(phone);
+      await verifyOtp(sentTo, otp);
+      onVerified(sentTo);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'That code did not work. Check it and try again.');
     } finally {
@@ -92,36 +108,22 @@ export default function GuestPhoneVerification({
     height: 42, padding: '0 18px', border: 'none', borderRadius: 6, background: '#0066cc',
     color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
   };
+  const link: React.CSSProperties = {
+    background: 'none', border: 'none', color: '#0066cc', cursor: 'pointer', fontSize: 12, padding: 0,
+    textDecoration: 'underline', fontFamily: 'inherit',
+  };
 
   return (
     <div
       id="guest-phone-verification"
-      style={{ background: '#fff', border: '1px solid #cfe0f5', borderRadius: 10, padding: 16, marginBottom: 24 }}
+      style={{ background: '#fff', border: '1px solid #cfe0f5', borderRadius: 8, padding: 12, marginTop: 8 }}
     >
-      <p className="co-section-title" style={{ marginBottom: 4 }}>Verify your mobile number</p>
-      <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, marginBottom: 12 }}>
-        We&apos;ll confirm it with a one-time code and set up your Yukizi account with it, so you can track
-        this order. No password needed. Already a customer? Use the number on your account.
-      </p>
-
-      {step === 'phone' ? (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <span style={{ position: 'absolute', left: 12, top: 0, height: 42, display: 'flex', alignItems: 'center', fontSize: 14, color: '#555', pointerEvents: 'none' }}>+91</span>
-            <input
-              className="co-input"
-              style={{ paddingLeft: 44 }}
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel-national"
-              name="verify-phone"
-              placeholder="Mobile number"
-              maxLength={10}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              onKeyDown={(e) => { if (e.key === 'Enter') void send(); }}
-            />
-          </div>
+      {step === 'idle' ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <p style={{ flex: 1, minWidth: 180, fontSize: 13, color: '#555', lineHeight: 1.4 }}>
+            Confirm this number with a one-time code to place your order. It also sets up your Yukizi
+            account, so you can track it. No password needed.
+          </p>
           <button type="button" style={{ ...primary, opacity: busy || !phoneValid ? 0.6 : 1 }} disabled={busy || !phoneValid} onClick={send}>
             {busy ? 'Sending…' : 'Send code'}
           </button>
@@ -129,11 +131,7 @@ export default function GuestPhoneVerification({
       ) : (
         <>
           <p style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>
-            Code sent to +91 {phone}.{' '}
-            <button type="button" onClick={() => { setStep('phone'); setError(null); }}
-              style={{ background: 'none', border: 'none', color: '#0066cc', cursor: 'pointer', fontSize: 13, padding: 0, textDecoration: 'underline', fontFamily: 'inherit' }}>
-              Change
-            </button>
+            We sent a code to +91 {sentTo}. Edit the Phone field above to use a different number.
           </p>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
@@ -159,8 +157,7 @@ export default function GuestPhoneVerification({
             {cooldown > 0 ? (
               <span>Resend in {cooldown}s</span>
             ) : (
-              <button type="button" onClick={send} disabled={busy}
-                style={{ background: 'none', border: 'none', color: '#0066cc', cursor: 'pointer', fontSize: 12, padding: 0, textDecoration: 'underline', fontFamily: 'inherit' }}>
+              <button type="button" onClick={send} disabled={busy} style={link}>
                 Send a new code
               </button>
             )}
