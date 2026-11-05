@@ -79,9 +79,13 @@ export function useCart() {
             // exists to prevent.
             const preOrderDeliveryDate = liveOffer.preOrderDeliveryDate ?? null;
 
+            // Compared as numbers: the API sends prices as strings ("3500") while
+            // the add-to-bag path stores them as numbers (3500). `!==` read that
+            // as "changed" for every line the first time it was validated, which
+            // is a write, which is the start of the burst described below.
             if (
-              item.price !== liveOffer.price ||
-              item.mrp !== liveOffer.mrp ||
+              Number(item.price) !== Number(liveOffer.price) ||
+              Number(item.mrp) !== Number(liveOffer.mrp) ||
               item.stock !== liveOffer.stock ||
               (item.preOrderDeliveryDate ?? null) !== preOrderDeliveryDate ||
               item.quantity !== quantity
@@ -97,6 +101,17 @@ export function useCart() {
           });
 
         if (!changed) return local;
+
+        // Several parts of the page listen for the same cart-changed event and
+        // each one invalidates this query, so a single change starts a handful of
+        // these runs at once, all reading the SAME not-yet-updated cart. Each used
+        // to write its result back, and each write fired the event again: on the
+        // live site one tap of "Pre-order" caused ~30 validation calls in six
+        // seconds, most of them rate-limited (429), and a throttled bag read as
+        // empty. If the stored cart is no longer the one this run started from,
+        // somebody else has already written; take theirs and write nothing.
+        const latest = localCart.get();
+        if (JSON.stringify(latest.items) !== JSON.stringify(local.items)) return latest;
 
         const newCart = {
           ...local,
