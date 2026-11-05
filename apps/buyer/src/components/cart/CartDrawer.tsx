@@ -509,10 +509,8 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
               {/* Primary: Go to Checkout */}
               <button
                 onClick={() => {
-                  if (!isAuthenticated) {
-                    window.dispatchEvent(new CustomEvent('open-login'));
-                    return;
-                  }
+                  // No login wall: checkout confirms the buyer's mobile number by
+                  // one-time code and creates their account there.
                   onClose();
                   router.push('/checkout');
                 }}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCart, addToCart, updateCartItem, removeCartItem, clearCart, useAuth, validateProductIds } from '@yukizi/api-client';
 import { isPreOrderListing, maxOrderableQty } from '@yukizi/utils';
 import { localCart, CART_CHANGED_EVENT } from '@/lib/local-cart';
@@ -114,6 +114,13 @@ export function useCart() {
     },
     staleTime: 15 * 1000,
     gcTime: 60 * 1000,
+    // The key includes the login state, so signing in (a guest confirming their
+    // phone at checkout) starts a brand-new query with no data, and `isLoading`
+    // flips back to true until the cart re-validates. Checkout replaces the whole
+    // page with a spinner while that is true, which wiped the form from view for
+    // seconds right after verifying. The bag itself has not changed: keep showing
+    // it while the new query catches up.
+    placeholderData: keepPreviousData,
   });
 }
 

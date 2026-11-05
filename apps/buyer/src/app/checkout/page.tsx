@@ -10,7 +10,7 @@ import { useToast } from '@/components/shared/Toast';
 import { usePlatformConfig } from '@/hooks/usePlatformConfig';
 import Image from 'next/image';
 import Link from 'next/link';
-import AuthGuard from '@/components/shared/AuthGuard';
+import GuestPhoneVerification from '@/components/checkout/GuestPhoneVerification';
 import { useAuth, createRazorpayOrder, verifyRazorpayPayment, cancelOrder } from '@yukizi/api-client';
 import { formatDate, isPreOrderListing, type ListingAvailability } from '@yukizi/utils';
 import { track } from '@/lib/analytics/tracker';
@@ -112,7 +112,7 @@ export default function CheckoutPage() {
     track('checkout_started');
   }, []);
 
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
   // The buyer KYC flags that used to live here are gone. They drove a
   // full-page block further down that stopped anyone without an
   // admin-approved GST/PAN submission from checking out — PharmaBag's B2B
@@ -132,6 +132,13 @@ export default function CheckoutPage() {
   // Set as soon as handler starts, before any await, so ondismiss can tell
   // "payment is being handled" apart from "buyer actually backed out".
   const paymentHandledRef = useRef(false);
+
+  // A guest confirms their phone by one-time code on this page (see
+  // GuestPhoneVerification) and is then an ordinary logged-in buyer. Set only
+  // for that moment, so the role check below cannot touch a session that was
+  // already here.
+  const justVerifiedRef = useRef(false);
+  const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
 
   // Online payment is the only method offered at checkout.
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('RAZORPAY');
@@ -171,19 +178,48 @@ export default function CheckoutPage() {
     if (profile) {
       const fullName = profile.legalName || profile.name || (user as any)?.name || '';
       const parts = fullName.split(' ');
-      setAddress({
-        name: fullName,
-        firstName: parts[0] || '',
-        lastName: parts.slice(1).join(' ') || '',
-        phone: profile.phone || (user as any)?.phone || (user as any)?.mobile || '',
-        address: profile.address?.street1 || (typeof profile.address === 'string' ? profile.address : ''),
-        city: profile.address?.city || profile.city || '',
-        state: profile.address?.state || profile.state || 'West Bengal',
-        pincode: profile.address?.pincode || profile.pincode || '',
-        email: (user as any)?.email || '',
-      });
+      // A value from the account wins; where the account has nothing, whatever
+      // is already in the form stays. This matters for a guest who has typed
+      // their delivery details and then verified their phone: the brand-new
+      // account is blank, and replacing the form with it would erase what they
+      // just entered.
+      const from = (fromProfile: string, current: string) => fromProfile || current;
+      setAddress((prev) => ({
+        name: from(fullName, prev.name),
+        firstName: from(parts[0] || '', prev.firstName),
+        lastName: from(parts.slice(1).join(' ') || '', prev.lastName),
+        phone: from(profile.phone || (user as any)?.phone || (user as any)?.mobile || '', prev.phone),
+        address: from(profile.address?.street1 || (typeof profile.address === 'string' ? profile.address : ''), prev.address),
+        city: from(profile.address?.city || profile.city || '', prev.city),
+        state: from(profile.address?.state || profile.state || '', prev.state || 'West Bengal'),
+        pincode: from(profile.address?.pincode || profile.pincode || '', prev.pincode),
+        email: from((user as any)?.email || '', prev.email),
+      }));
     }
   }, [profileData, user]);
+
+  // Confirming a phone logs the buyer into whatever account owns that number.
+  // If that is a seller or admin account, this storefront cannot place an order
+  // for it (the orders API is for buyers), so say so and sign it out rather
+  // than leave them stuck at a Place order button that fails.
+  useEffect(() => {
+    if (!justVerifiedRef.current || !isAuthenticated || !user) return;
+    justVerifiedRef.current = false;
+    const role = (user as any).role;
+    if (role && role !== 'BUYER') {
+      toast('That number belongs to a seller or admin account. Please use a different mobile number to order.', 'error');
+      setVerifiedPhone(null);
+      void logout();
+    }
+  }, [isAuthenticated, user, logout, toast]);
+
+  const handleGuestVerified = (phone: string) => {
+    justVerifiedRef.current = true;
+    setVerifiedPhone(phone);
+    // The delivery contact starts as the verified number, still editable.
+    setAddress((prev) => ({ ...prev, phone: prev.phone || phone }));
+    toast('Mobile number verified', 'success');
+  };
 
   const cart = (cartData as any)?.data || cartData || { items: [], total: 0 };
   const items = cart.items ?? [];
@@ -202,7 +238,9 @@ export default function CheckoutPage() {
   const hasPreOrder = preOrderLines.length > 0;
   const hasMixedBag = hasPreOrder && preOrderLines.length !== items.length;
   const preOrderDate = furthestPreOrderDate(preOrderLines);
-  const placeOrderDisabled = createOrder.isPending || items.length === 0 || hasMixedBag;
+  // A guest has to confirm their phone first; until then there is no account to order on.
+  const needsVerification = isAuthLoading || !isAuthenticated;
+  const placeOrderDisabled = createOrder.isPending || items.length === 0 || hasMixedBag || needsVerification;
 
 
   const loadRazorpayCheckout = (): Promise<boolean> =>
@@ -337,6 +375,11 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = () => {
+    if (!isAuthenticated) {
+      toast('Please verify your mobile number first', 'error');
+      document.getElementById('guest-phone-verification')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     // A backstop, not the mechanism — the button below is disabled for this,
     // and the server refuses a mixed order regardless of what reaches it.
     if (hasMixedBag) {
@@ -486,7 +529,7 @@ export default function CheckoutPage() {
     : address.name || (user as any)?.name || '';
 
   return (
-    <AuthGuard>
+    <>
       <style>{`
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -557,6 +600,16 @@ export default function CheckoutPage() {
               <div style={{ marginBottom: 22 }}>
                 <p style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a' }}>{userName}</p>
               </div>
+            )}
+
+            {/* A guest confirms their mobile number first. Hidden while the
+                session is still being read, so a logged-in buyer never sees it
+                flash. */}
+            {!isAuthLoading && !isAuthenticated && <GuestPhoneVerification onVerified={handleGuestVerified} initialPhone={address.phone} />}
+            {isAuthenticated && verifiedPhone && (
+              <p style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 20 }}>
+                ✓ Mobile number +91 {verifiedPhone} verified. Your Yukizi account is ready.
+              </p>
             )}
 
             {/* CONTACT */}
@@ -777,6 +830,11 @@ export default function CheckoutPage() {
                 ? <div style={{ width: 20, height: 20, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                 : `Place order`}
             </button>
+            {!isAuthLoading && !isAuthenticated && (
+              <p style={{ marginTop: 10, fontSize: 12, color: '#777', textAlign: 'center' }}>
+                Verify your mobile number above to place your order.
+              </p>
+            )}
 
             {/* Footer links. Every one of these pages exists; they were all
                 href="#" until now, on the one page where a buyer is most
@@ -888,6 +946,6 @@ export default function CheckoutPage() {
           </div>
         </div>
       </main>
-    </AuthGuard>
+    </>
   );
 }
