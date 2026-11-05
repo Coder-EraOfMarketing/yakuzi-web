@@ -1,0 +1,55 @@
+/*
+ * The round sign-in icons (Google fallback, Facebook, Apple).
+ *
+ * A CSS module with explicit colours, not the Tailwind `bg-white` they used
+ * before: the dark theme remaps `.bg-white` to a translucent glass surface
+ * (globals.css), which turned these into dark discs. A navy Apple glyph and a
+ * blue Facebook "f" on a dark disc are nearly invisible, and `opacity-40`
+ * (the disabled state) then washed them out further. That was the "bad colours".
+ *
+ * The three brand marks are designed for a light ground, and Google's own
+ * rendered button (the real one) is a white disc in both themes. So these are
+ * white discs in both themes too: one consistent row, every glyph at the
+ * contrast its brand intends.
+ */
+.disc {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+button.disc:not(:disabled):hover { transform: scale(1.08); }
+
+button.disc:focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 3px;
+}
+
+/* Not wired up yet. Lighter and desaturated rather than half-transparent, so it
+   still reads as a deliberate, finished-looking control on either ground. */
+.disabled {
+  cursor: not-allowed;
+  filter: saturate(0.55);
+  opacity: 0.72;
+}
+
+:global(.dark) .disc {
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 0 0 3px rgba(168, 119, 255, 0.10),
+    0 6px 16px -6px rgba(0, 0, 0, 0.7);
+}
+
+:global(.dark) .disabled {
+  /* Over a dark ground a 72%-white disc looks grey and dirty; keep it clean. */
+  opacity: 0.8;
+  filter: saturate(0.6) brightness(0.96);
+}
