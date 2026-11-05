@@ -22,6 +22,7 @@ import { useWaitlist, useAddToWaitlist, useRemoveFromWaitlist } from '@/hooks/us
 import { useToast } from '@/components/shared/Toast';
 import WishlistIcon from '@/components/shared/WishlistIcon';
 import { NotifyStockAlertModal } from '@/components/shared/NotifyStockAlertModal';
+import PreOrderChip from '@/components/products/PreOrderChip';
 
 interface ProductCarouselProps {
   reverse?: boolean;
@@ -532,10 +533,8 @@ export function GridProductCard({ product, index, onOpenReview, showFullTitle }:
                that line already carries price, strike-through and the offer
                badge, and the cards are 2-up on a phone. */}
            {isPreOrder && (
-              <div>
-                 <span className="inline-flex items-center rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700">
-                    Pre-order · expected {formatDate(product.preOrderDeliveryDate)}
-                 </span>
+              <div className="min-w-0">
+                 <PreOrderChip label={`Pre-order · expected ${formatDate(product.preOrderDeliveryDate)}`} />
               </div>
            )}
         </div>

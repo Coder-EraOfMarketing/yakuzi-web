@@ -39,6 +39,7 @@ import { useBuyerProfile } from '@/hooks/useBuyerProfile';
 import { uploadReviewImage, useAuth } from '@yukizi/api-client';
 import Navbar from '@/components/landing/Navbar';
 import TrustBadges from '@/components/products/TrustBadges';
+import PreOrderChip from '@/components/products/PreOrderChip';
 import {
   generateProductSlug,
   parseProductIdFromSlug,
@@ -762,9 +763,9 @@ function ComparisonOffersList({
                 to go on a phone, so it wrapped onto three lines and squeezed
                 the rating, edition and action into each other. */}
             {isPreOrder && (
-              <span className="basis-full order-last inline-flex w-fit items-center rounded-full bg-primary-100 px-2 py-0.5 text-2xs sm:text-xs font-semibold text-primary-700 leading-snug">
-                Pre-order · expected {formatDate(listing.preOrderDeliveryDate)}
-              </span>
+              <div className="basis-full order-last min-w-0">
+                <PreOrderChip label={`Pre-order · expected ${formatDate(listing.preOrderDeliveryDate)}`} className="w-fit max-w-full" />
+              </div>
             )}
           </div>
         );
@@ -1487,6 +1488,15 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
             <FaqAccordion faqs={faqs} />
           </div>
 
+          {/* The platform's standing promises. On a phone they sit directly
+              after this product's own detail — the offer and the accordions —
+              and before attention moves on to Related Products and reviews.
+              (The desktop column puts them just above the reviews instead; the
+              two layouts order these sections differently.) */}
+          <div className="mt-4 border-t border-gray-100 pt-6">
+            <TrustBadges />
+          </div>
+
           {/* Related Products */}
           <div className="mt-4 border-t border-gray-100 pt-6">
             <h2 className="mb-4 text-base sm:text-lg font-bold text-gray-500">Related Products</h2>
@@ -1495,13 +1505,6 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
                 <GridProductCard key={prod.id} product={prod} index={idx} />
               ))}
             </div>
-          </div>
-
-          {/* The platform's standing promises, immediately before the reviews:
-              on a product with no reviews yet (most of the catalogue) this is
-              the reassurance that section cannot give. */}
-          <div className="mt-4 border-t border-gray-100 pt-6">
-            <TrustBadges />
           </div>
 
           {/* Reviews Summary Section */}

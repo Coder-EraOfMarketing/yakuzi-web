@@ -1,0 +1,91 @@
+/*
+ * The pre-order pill. A CSS module with explicit colours per theme, because
+ * the old `bg-primary-100 text-primary-700` pair is not covered by the dark
+ * retrofit in globals.css: on the dark ground it stayed a bright lavender
+ * block — the "white box" on a product card.
+ *
+ * Always ONE line. The date makes this string long enough to wrap inside a
+ * 2-up card, and a wrapped pill doubles the card's bottom row. When it does
+ * not fit it scrolls instead (see PreOrderChip.tsx).
+ */
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #f1e9ff;
+  color: #5b21b6;
+  border: 1px solid rgba(109, 40, 217, 0.14);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+:global(.dark) .chip {
+  /* Translucent violet over the ground rather than a filled block, so the
+     pill belongs to the dark card instead of sitting on top of it. */
+  background: rgba(168, 119, 255, 0.16);
+  color: #d9c7ff;
+  border-color: rgba(168, 119, 255, 0.28);
+}
+
+/* The viewport the text scrolls inside. */
+.window {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.track {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+/* Only set once the text is measured as too wide (see the component): a chip
+   that fits must not move. The second copy follows the first so the loop has
+   no visible gap at the wrap point. */
+.scrolling .track {
+  animation: marquee var(--yz-marquee-duration, 9s) linear infinite;
+}
+/* The trailing gap goes on EVERY copy, not just the second one. The keyframe
+   below travels exactly -50% of the track, so the two copies have to be
+   identical widths or the loop jumps at the wrap point. */
+.scrolling .copy {
+  padding-right: 28px;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Pausing on hover lets someone actually read a date that is mid-scroll. */
+.chip:hover .track { animation-play-state: paused; }
+
+/* Motion off: no scroll at all. The text is clipped with an ellipsis instead,
+   and the full string stays available as the element's title/aria-label. */
+@media (prefers-reduced-motion: reduce) {
+  .scrolling .track { animation: none; display: block; }
+  .scrolling .copy + .copy { display: none; }
+  .scrolling .copy {
+    display: block;
+    padding-right: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.75;
+}

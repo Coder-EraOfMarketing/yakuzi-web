@@ -70,6 +70,17 @@ function TruckIcon({ className }: { className?: string }) {
   );
 }
 
+/* Matches the shield in the product page's trust strip, so the authenticity
+   promise looks the same wherever a buyer meets it. */
+function ShieldIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 2.5l7.5 3v6c0 4.6-3.1 8.6-7.5 10-4.4-1.4-7.5-5.4-7.5-10v-6z" />
+      <path d="M8.75 11.9l2.2 2.2 4.3-4.4" />
+    </svg>
+  );
+}
+
 export default function PromoPopup() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -192,11 +203,17 @@ export default function PromoPopup() {
         // dialog, this is not something the visitor has to deal with.
         <div className={styles.toast} role="status" style={{ top: toastTop }}>
           <span className={styles.toastIcon} aria-hidden="true">
-            <TruckIcon className={styles.toastTruck} />
+            <ShieldIcon className={styles.toastTruck} />
           </span>
           <div className={styles.toastText}>
-            <strong className={styles.toastTitle}>Free shipping</strong>
-            <span className={styles.toastSub}>On all eligible orders across India</span>
+            {/* The notification carries the authenticity promise, not the
+                shipping one: the bar and the popup already say free shipping,
+                and three identical messages is one claim repeated, not three
+                reasons to buy. Wording matches the invoice's existing
+                "100% Authentic Products — sourced directly from trusted
+                sellers" and the product page's trust strip. */}
+            <strong className={styles.toastTitle}>100% authenticity guarantee</strong>
+            <span className={styles.toastSub}>Every item from verified sellers</span>
           </div>
           <button type="button" className={styles.toastClose} onClick={dismissToast} aria-label="Dismiss notification">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" aria-hidden="true">
