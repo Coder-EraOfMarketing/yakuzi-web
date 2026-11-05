@@ -104,3 +104,6 @@ export type { PaymentBadge, PaymentBadgeVariant } from './payment-badge';
 
 // Which order-status steps a self-ship order skips (they cannot be tracked).
 export { isUntrackedStep, nextStepKey, SELF_SHIP_UNTRACKED_STEPS } from './order-stepper';
+
+// Which file a video banner loads, and the pre-hydration script that picks it.
+export { pickBannerSource, bannerSourceBootstrap, NARROW_VIEWPORT_QUERY } from "./video-banner-source";
