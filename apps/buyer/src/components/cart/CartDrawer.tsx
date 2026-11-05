@@ -388,10 +388,23 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                            tapping the row's product still reaches the page. */}
                        <div className="flex flex-shrink-0 flex-col items-end gap-2">
                          <div className="flex h-7 select-none items-center justify-between gap-0.5 rounded-full bg-[linear-gradient(180deg,#8f5ad4_0%,#7745bd_48%,#5f2f9f_100%)] px-1 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.34),0_4px_12px_-4px_rgba(88,54,150,0.75)]">
+                           {/* At the lowest quantity the seller allows, "−" has
+                               nowhere left to go, and a button that silently
+                               does nothing reads as broken. It removes the line
+                               instead, exactly like the bin on the image. */}
                            <button
-                             onClick={() => updateItem.mutate({ itemId: item.id, quantity: Math.max(minQuantity, quantity - 1) })}
-                             disabled={updateItem.isPending || syncCart.isPending || quantity <= minQuantity}
-                             aria-label="Decrease quantity"
+                             onClick={() => {
+                               if (quantity <= minQuantity) {
+                                 removeItem.mutate(item.id, {
+                                   onSuccess: () => toast('Item removed from bag', 'info'),
+                                 });
+                                 return;
+                               }
+                               updateItem.mutate({ itemId: item.id, quantity: quantity - 1 });
+                             }}
+                             disabled={updateItem.isPending || removeItem.isPending || syncCart.isPending}
+                             aria-label={quantity <= minQuantity ? 'Remove item' : 'Decrease quantity'}
+                             title={quantity <= minQuantity ? 'Remove' : undefined}
                              className="flex h-5 w-5 items-center justify-center rounded-full text-sm font-bold text-white/90 transition-colors hover:bg-white/20 hover:text-white active:scale-90 disabled:opacity-40"
                            >
                              −
