@@ -235,8 +235,10 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: #fff0de;
-  color: #e8730c;
+  /* Violet, not the old amber: this badge is the authenticity shield now, and
+     it matches the trust strip on the product page. */
+  background: #f1e9ff;
+  color: #6d28d9;
 }
 .toastTruck { width: 26px; height: 26px; }
 
