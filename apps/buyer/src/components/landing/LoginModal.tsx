@@ -7,7 +7,9 @@ import { useAuth } from '@yukizi/api-client';
 import { useToast } from '@/components/shared/Toast';
 import { useScrollLock } from '@/hooks/useScrollLock';
 import GoogleSignInButton from '@/components/shared/GoogleSignInButton';
-import { GoogleFallbackIcon, FacebookIcon, AppleIcon } from '@/components/shared/SocialIcons';
+import { GoogleFallbackIcon } from '@/components/shared/SocialIcons';
+import FacebookSignInButton from '@/components/shared/FacebookSignInButton';
+import AppleSignInButton from '@/components/shared/AppleSignInButton';
 import ForgotPasswordFlow from '@/app/login/ForgotPasswordFlow';
 
 interface LoginModalProps {
@@ -698,9 +700,10 @@ export default function LoginModal({ isOpen: isOpenProp, onClose: onCloseProp }:
               fallback={<GoogleFallbackIcon />}
             />
 
-            {/* Not wired up yet: rendered disabled with a tooltip. */}
-            <FacebookIcon />
-            <AppleIcon />
+            {/* Each renders the disabled "not available yet" icon until its
+                NEXT_PUBLIC_* id is configured, then becomes a real button. */}
+            <FacebookSignInButton active={isOpen} onSuccess={handleCloseCleanup} onLoadingChange={setIsLoading} />
+            <AppleSignInButton active={isOpen} onSuccess={handleCloseCleanup} onLoadingChange={setIsLoading} />
           </div>
 
             {!isOtpMode && (

@@ -133,6 +133,30 @@ export async function loginWithGoogle(idToken: string): Promise<VerifyOtpRespons
   return parsed;
 }
 
+/**
+ * Exchanges the identity token from Sign in with Apple for our own token pair.
+ * Same response shape as every other login path.
+ */
+export async function loginWithApple(idToken: string): Promise<VerifyOtpResponse> {
+  const { data } = await api.post('/auth/apple', { idToken });
+  const raw = data?.data ?? data;
+  const parsed = VerifyOtpResponseSchema.parse(raw);
+  setAccessToken(parsed.accessToken, parsed.refreshToken);
+  return parsed;
+}
+
+/**
+ * Exchanges the Facebook user access token from FB.login for our own token pair.
+ * Same response shape as every other login path.
+ */
+export async function loginWithFacebook(accessToken: string): Promise<VerifyOtpResponse> {
+  const { data } = await api.post('/auth/facebook', { accessToken });
+  const raw = data?.data ?? data;
+  const parsed = VerifyOtpResponseSchema.parse(raw);
+  setAccessToken(parsed.accessToken, parsed.refreshToken);
+  return parsed;
+}
+
 export async function resetPassword(params: ResetPasswordRequest): Promise<ResetPasswordResponse> {
   const body = ResetPasswordRequestSchema.parse(params);
   const { data } = await api.post('/auth/reset-password', body);

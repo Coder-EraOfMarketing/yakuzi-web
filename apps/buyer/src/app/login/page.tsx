@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@yukizi/api-client';
 import { useToast } from '@/components/shared/Toast';
 import GoogleSignInButton from '@/components/shared/GoogleSignInButton';
-import { GoogleFallbackIcon, FacebookIcon, AppleIcon } from '@/components/shared/SocialIcons';
+import { GoogleFallbackIcon } from '@/components/shared/SocialIcons';
+import FacebookSignInButton from '@/components/shared/FacebookSignInButton';
+import AppleSignInButton from '@/components/shared/AppleSignInButton';
 import ForgotPasswordFlow from './ForgotPasswordFlow';
 
 export default function LoginPage() {
@@ -648,9 +650,10 @@ export default function LoginPage() {
                   fallback={<GoogleFallbackIcon />}
                 />
 
-                {/* Not wired up yet: rendered disabled with a tooltip. */}
-                <FacebookIcon />
-                <AppleIcon />
+                {/* Each renders the disabled "not available yet" icon until its
+                    NEXT_PUBLIC_* id is configured, then becomes a real button. */}
+                <FacebookSignInButton onLoadingChange={setIsLoading} />
+                <AppleSignInButton onLoadingChange={setIsLoading} />
               </div>
 
               {!isOtpMode && (
