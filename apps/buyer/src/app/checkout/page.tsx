@@ -602,16 +602,6 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* A guest confirms their mobile number first. Hidden while the
-                session is still being read, so a logged-in buyer never sees it
-                flash. */}
-            {!isAuthLoading && !isAuthenticated && <GuestPhoneVerification onVerified={handleGuestVerified} initialPhone={address.phone} />}
-            {isAuthenticated && verifiedPhone && (
-              <p style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 20 }}>
-                ✓ Mobile number +91 {verifiedPhone} verified. Your Yukizi account is ready.
-              </p>
-            )}
-
             {/* CONTACT */}
             <div className="co-section">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -685,6 +675,18 @@ export default function CheckoutPage() {
                   value={address.phone} onChange={(e) => setAddress({ ...address, phone: e.target.value })} />
                 <HelpCircle size={16} color="#aaa" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               </div>
+
+              {/* A guest confirms THIS number by one-time code (no second phone
+                  field). Hidden while the session is still being read, so a
+                  logged-in buyer never sees it flash. */}
+              {!isAuthLoading && !isAuthenticated && (
+                <GuestPhoneVerification phone={address.phone} onVerified={handleGuestVerified} />
+              )}
+              {isAuthenticated && verifiedPhone && (
+                <p style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginTop: 8 }}>
+                  ✓ Mobile number +91 {verifiedPhone} verified. Your Yukizi account is ready.
+                </p>
+              )}
 
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, cursor: 'pointer' }}>
                 <input type="checkbox" checked={saveInfo}
@@ -832,7 +834,7 @@ export default function CheckoutPage() {
             </button>
             {!isAuthLoading && !isAuthenticated && (
               <p style={{ marginTop: 10, fontSize: 12, color: '#777', textAlign: 'center' }}>
-                Verify your mobile number above to place your order.
+                Confirm your mobile number under the Phone field to place your order.
               </p>
             )}
 
