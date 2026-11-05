@@ -827,14 +827,14 @@
    The page staying light while the rest of the site is dark is the known cost
    of that; making checkout genuinely theme-aware is the follow-up, and is a
    bigger change to a payment page than belongs in a visibility fix. */
-.dark input:not([type='checkbox']):not([type='radio']):not([type='range']):not(.co-input),
+.dark input:not([type='checkbox']):not([type='radio']):not([type='range']):not(.co-input):not(.yz-underline-input),
 .dark textarea,
 .dark select:not(.co-select) {
   background-color: rgba(255, 255, 255, 0.06) !important;
   border-color: var(--edge) !important;
   color: var(--ink) !important;
 }
-.dark input:not([type='checkbox']):not([type='radio']):not(.co-input):focus,
+.dark input:not([type='checkbox']):not([type='radio']):not(.co-input):not(.yz-underline-input):focus,
 .dark textarea:focus {
   background-color: rgba(255, 255, 255, 0.10) !important;
   border-color: rgba(168, 119, 255, 0.55) !important;
@@ -1144,4 +1144,34 @@
 .dark .text-lime-700,
 .dark .text-lime-800 {
   color: #b6f05a !important;
+}
+
+
+/* ─── Underlined OTP / code fields ────────────────────────────────────────
+   The login screens' one-line fields used `border-b border-[#e2e8f0]`: a
+   near-white grey, so on the light panel the underline all but vanished and
+   there was no visible "type here" cue. This is a visible slate in light mode,
+   and in dark mode a light line, with an explicit !important because the dark
+   input rules above set `border-color` with !important themselves.
+   ──────────────────────────────────────────────────────────────────────── */
+.yz-underline-input {
+  border-bottom: 2px solid #64748b;
+  border-radius: 0;
+  transition: border-color 0.15s ease;
+}
+.yz-underline-input:focus {
+  border-bottom-color: #593696;
+}
+.yz-underline-input::placeholder {
+  color: #64748b;
+}
+.dark .yz-underline-input {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.55) !important;
+  background-color: transparent !important;
+}
+.dark .yz-underline-input:focus {
+  border-bottom-color: #a877ff !important;
+}
+.dark .yz-underline-input::placeholder {
+  color: var(--ink-faint);
 }
