@@ -1,14 +1,20 @@
 import styles from './SocialIcons.module.css';
 
 /**
- * The static sign-in icons shared by /login and the login modal.
+ * The round sign-in icons shared by /login and the login modal.
  *
- * Only Google is real, and only when NEXT_PUBLIC_GOOGLE_CLIENT_ID is set (see
- * GoogleSignInButton, which renders Google's own button and calls this one as
- * its fallback). Facebook and Apple have no backend and no app registered, so
- * they render disabled with an honest tooltip rather than a button that
- * silently does nothing.
+ * Google renders its own button when NEXT_PUBLIC_GOOGLE_CLIENT_ID is set and
+ * falls back to the static icon here. Facebook and Apple (FacebookSignInButton,
+ * AppleSignInButton) pass `onClick` when their provider is configured; with no
+ * `onClick` they render disabled with an honest tooltip instead of a button
+ * that silently does nothing.
  */
+interface ProviderIconProps {
+  /** Present only when the provider is configured and ready. */
+  onClick?: () => void;
+  /** A sign-in is in flight: ignore further clicks. */
+  busy?: boolean;
+}
 
 export function GoogleFallbackIcon() {
   return (
@@ -25,14 +31,16 @@ export function GoogleFallbackIcon() {
   );
 }
 
-export function FacebookIcon() {
+export function FacebookIcon({ onClick, busy }: ProviderIconProps) {
+  const live = !!onClick;
   return (
     <button
       type="button"
-      disabled
-      title="Facebook sign-in is not available yet"
-      aria-label="Facebook sign-in is not available yet"
-      className={`${styles.disc} ${styles.disabled}`}
+      disabled={!live || busy}
+      onClick={onClick}
+      title={live ? 'Continue with Facebook' : 'Facebook sign-in is not available yet'}
+      aria-label={live ? 'Continue with Facebook' : 'Facebook sign-in is not available yet'}
+      className={live ? styles.disc : `${styles.disc} ${styles.disabled}`}
     >
       <svg viewBox="0 0 24 24" width="28" height="28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
@@ -41,14 +49,16 @@ export function FacebookIcon() {
   );
 }
 
-export function AppleIcon() {
+export function AppleIcon({ onClick, busy }: ProviderIconProps) {
+  const live = !!onClick;
   return (
     <button
       type="button"
-      disabled
-      title="Apple sign-in is not available yet"
-      aria-label="Apple sign-in is not available yet"
-      className={`${styles.disc} ${styles.disabled}`}
+      disabled={!live || busy}
+      onClick={onClick}
+      title={live ? 'Continue with Apple' : 'Apple sign-in is not available yet'}
+      aria-label={live ? 'Continue with Apple' : 'Apple sign-in is not available yet'}
+      className={live ? styles.disc : `${styles.disc} ${styles.disabled}`}
     >
       <svg viewBox="0 0 24 24" width="30" height="30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path fill="#0f172a" d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.19 2.31-.88 3.5-.8 1.55.06 2.85.74 3.65 1.88-3.13 1.82-2.6 5.98.54 7.22-.72 1.76-1.64 3.12-2.77 3.87zm-2.45-13.8c.63-1.64-.17-3.32-1.63-4.15-1.57-.65-3.32.22-3.86 1.95-.57 1.81.4 3.44 1.93 4.04 1.48.59 3.01-.27 3.56-1.84z" />

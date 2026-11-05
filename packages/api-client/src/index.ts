@@ -9,6 +9,8 @@ export {
   loginWithPassword,
   loginWithSimplePassword,
   loginWithGoogle,
+  loginWithApple,
+  loginWithFacebook,
   refreshToken,
   logout,
   getProfile,

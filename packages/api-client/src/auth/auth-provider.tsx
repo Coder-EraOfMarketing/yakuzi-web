@@ -8,7 +8,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { sendOtp, verifyOtp, registerBuyer, loginWithPassword as apiLoginWithPassword, loginWithGoogle as apiLoginWithGoogle, logout as apiLogout, getProfile, type User, type RegisterBuyerRequest } from '../modules/auth.api';
+import { sendOtp, verifyOtp, registerBuyer, loginWithPassword as apiLoginWithPassword, loginWithGoogle as apiLoginWithGoogle, loginWithApple as apiLoginWithApple, loginWithFacebook as apiLoginWithFacebook, logout as apiLogout, getProfile, type User, type RegisterBuyerRequest } from '../modules/auth.api';
 import { getAccessToken, setAccessToken, setBaseURL } from '../api';
 import { readAccessToken, readRefreshToken } from '../token-storage';
 
@@ -21,6 +21,8 @@ interface AuthContextValue {
   registerBuyer: (params: RegisterBuyerRequest) => Promise<void>;
   loginWithPassword: (params: { contact: string; password: string }) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithApple: (idToken: string) => Promise<void>;
+  loginWithFacebook: (accessToken: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -117,6 +119,16 @@ export function AuthProvider({ children, baseURL }: { children: ReactNode; baseU
     setUser(response.user);
   }, []);
 
+  const handleLoginWithApple = useCallback(async (idToken: string) => {
+    const response = await apiLoginWithApple(idToken);
+    setUser(response.user);
+  }, []);
+
+  const handleLoginWithFacebook = useCallback(async (accessToken: string) => {
+    const response = await apiLoginWithFacebook(accessToken);
+    setUser(response.user);
+  }, []);
+
   const handleLogout = useCallback(async () => {
     try {
       await apiLogout();
@@ -148,6 +160,8 @@ export function AuthProvider({ children, baseURL }: { children: ReactNode; baseU
         registerBuyer: handleRegisterBuyer,
         loginWithPassword: handleLoginWithPassword,
         loginWithGoogle: handleLoginWithGoogle,
+        loginWithApple: handleLoginWithApple,
+        loginWithFacebook: handleLoginWithFacebook,
         logout: handleLogout,
         refresh: handleRefresh,
       }}
