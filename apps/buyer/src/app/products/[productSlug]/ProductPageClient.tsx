@@ -990,7 +990,20 @@ export default function ProductPageClient({ productSlug, initialProduct, initial
   // Extract ID from slug
   const productSlugOrId = parseProductIdFromSlug(productSlug);
 
-  const { data: productData, isLoading, isError } = useProductById(productSlugOrId, initialProduct ? { initialData: initialProduct } : {});
+  // The server-rendered page is cached (`revalidate = 300` plus the CDN's own
+  // stale-while-revalidate), so `initialProduct` can be many minutes old. Seeding
+  // the query with it and then trusting it for the global 60s staleTime meant the
+  // browser never asked the API, and a seller adding or removing availability
+  // took minutes to show on this page while the cart and wishlist, which fetch
+  // live, updated instantly. Keep it as the first paint (that is what search
+  // engines and a slow connection see) but always re-check on arrival, and again
+  // when the tab is refocused.
+  const { data: productData, isLoading, isError } = useProductById(
+    productSlugOrId,
+    initialProduct
+      ? { initialData: initialProduct, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: true }
+      : {},
+  );
   const { data: cartData } = useCart();
   const addToCart = useAddToCart();
   const updateCartItem = useUpdateCartItem();
