@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { isVideoUrl } from '@yukizi/utils';
+import {
+  bannerSourceBootstrap,
+  NARROW_VIEWPORT_QUERY,
+  pickBannerSource,
+} from '@yukizi/utils';
 
 /**
  * A banner slide that happens to be a video.
@@ -51,26 +55,40 @@ export function BannerVideo({
   className?: string;
 }) {
   const ref = useRef<HTMLVideoElement | null>(null);
-  // Server-rendered as the desktop source; corrected on mount if the viewport
-  // is narrow. Nothing is fetched until the effect below has run, because
-  // preload is "none" and playback is what starts the download.
-  const [isNarrow, setIsNarrow] = useState(false);
+  // null until the viewport has been read. The server cannot know it, so the
+  // FIRST source is chosen by the inline script rendered after the <video> (see
+  // bannerSourceBootstrap), before any JavaScript hydrates; this state then
+  // takes over and tracks later changes, such as a rotated tablet.
+  const [isNarrow, setIsNarrow] = useState<boolean | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    const query = window.matchMedia('(max-width: 639px)');
+    const query = window.matchMedia(NARROW_VIEWPORT_QUERY);
     const apply = () => setIsNarrow(query.matches);
     apply();
     query.addEventListener('change', apply);
     return () => query.removeEventListener('change', apply);
   }, []);
 
-  const source = isNarrow && mobile ? mobile : desktop;
   // The other slot can hold a still image — a common and sensible combination:
   // video on desktop, a light picture on phones. If the narrow slot is not a
   // video, show that picture instead of playing the desktop file down a mobile
   // connection.
-  const narrowStill = isNarrow && mobile && !isVideoUrl(mobile) ? mobile : null;
+  const picked = pickBannerSource({ isNarrow: isNarrow === true, desktop, mobile });
+  const narrowStill = picked.still;
+  const source = picked.videoSrc;
+
+  // `src` is deliberately NOT a React prop. The server-rendered HTML has no src
+  // (the viewport is unknown there); the bootstrap script sets it at parse time,
+  // and this effect sets it on a client-side mount or a viewport change. If it
+  // were a prop, React would write the attribute again after hydration — and
+  // assigning a media element's `src` restarts the load even when the value is
+  // unchanged, throwing away what had already downloaded.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || isNarrow === null || !source) return;
+    if (el.getAttribute('src') !== source) el.setAttribute('src', source);
+  }, [isNarrow, source]);
 
   useEffect(() => {
     const el = ref.current;
@@ -87,8 +105,7 @@ export function BannerVideo({
   const objectFit = fit === 'cover' ? 'object-cover' : 'object-contain';
 
   if (narrowStill || failed) {
-    const still =
-      narrowStill ?? (isVideoUrl(desktop) ? null : desktop) ?? poster ?? null;
+    const still = narrowStill ?? poster ?? null;
     return still ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={still} alt={title || 'Yukizi banner'} className={`h-full w-full ${objectFit} ${className}`} />
@@ -98,32 +115,44 @@ export function BannerVideo({
   }
 
   return (
-    <video
-      ref={ref}
-      src={source}
-      className={`h-full w-full ${objectFit} ${className}`}
-      // Autoplay is only allowed for muted video, and iOS needs playsInline or
-      // it takes over the screen.
-      muted
-      loop
-      playsInline
-      autoPlay={active}
-      {...(poster ? { poster } : {})}
-      // 'metadata' rather than 'none' for the slides waiting their turn.
-      //
-      // 'none' meant a video slide started downloading only at the instant it
-      // became visible, so the first thing the viewer saw was the empty
-      // element over a white background. 'metadata' asks for just the header
-      // and enough of the stream to establish the first frame, which is a few
-      // KB rather than the whole file — cheap enough to do for every slide,
-      // and it means the frame is ready before the slide arrives.
-      preload={active ? 'auto' : 'metadata'}
-      // A banner is decoration: it carries no controls and no sound, and its
-      // meaning is in the title next to it.
-      controls={false}
-      aria-label={title || undefined}
-      aria-hidden={title ? undefined : true}
-      onError={() => setFailed(true)}
-    />
+    <>
+      <video
+        ref={ref}
+        className={`h-full w-full ${objectFit} ${className}`}
+        // The bootstrap script below adds `src` before React runs, so the DOM
+        // has an attribute the virtual DOM does not. That is intended.
+        suppressHydrationWarning
+        // Autoplay is only allowed for muted video, and iOS needs playsInline or
+        // it takes over the screen.
+        muted
+        loop
+        playsInline
+        autoPlay={active}
+        {...(poster ? { poster } : {})}
+        // 'metadata' rather than 'none' for the slides waiting their turn.
+        //
+        // 'none' meant a video slide started downloading only at the instant it
+        // became visible, so the first thing the viewer saw was the empty
+        // element over a white background. 'metadata' asks for just the header
+        // and enough of the stream to establish the first frame, which is a few
+        // KB rather than the whole file — cheap enough to do for every slide,
+        // and it means the frame is ready before the slide arrives.
+        preload={active ? 'auto' : 'metadata'}
+        // A banner is decoration: it carries no controls and no sound, and its
+        // meaning is in the title next to it.
+        controls={false}
+        aria-label={title || undefined}
+        aria-hidden={title ? undefined : true}
+        onError={() => setFailed(true)}
+      />
+      {/* Must stay immediately after the <video>: it finds it as its previous
+          sibling. Runs once, in the server-rendered HTML only (React does not
+          execute a <script> it creates on a client-side mount; the effect above
+          covers that path). */}
+      <script
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: bannerSourceBootstrap(desktop, mobile) }}
+      />
+    </>
   );
 }
