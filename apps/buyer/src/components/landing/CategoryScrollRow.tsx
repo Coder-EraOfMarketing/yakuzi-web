@@ -15,17 +15,35 @@ export default function CategoryScrollRow({ section }: { section: HomepageSectio
   // not the primary guard against an empty row rendering.
   if (!section.products?.length) return null;
 
+  const categorySlug = section.category?.slug ?? section.subCategory?.categorySlug;
+
   return (
     <div className="w-full max-w-[1600px] 2xl:max-w-none mx-auto mb-8 sm:mb-12">
-      <div className="flex items-center justify-between px-4 sm:px-8 mb-3">
-        <h2 className="text-base sm:text-xl font-semibold text-[#333333]">{section.title}</h2>
-        <Link
-          href={`/category/${section.category?.slug ?? section.subCategory?.categorySlug}`}
-          className="flex items-center justify-center h-7 w-7 rounded-full text-gray-500 hover:text-[#7B2FBE] hover:bg-[#7B2FBE]/10 transition-colors shrink-0"
-          aria-label={`View all products in ${section.title}`}
-        >
-          <ChevronRight className="w-5 h-5" />
-        </Link>
+      <div className="px-4 sm:px-8 mb-3">
+        <h2 className="text-base sm:text-xl font-semibold text-[#333333]">
+          {/* The title AND the arrow are one link, side by side. Before, only a
+              small arrow pinned to the far right edge was clickable, so tapping
+              the heading itself — the obvious thing to tap — did nothing.
+              The link sits inside the h2 so the heading keeps its semantics and
+              crawlers see a heading that links to the category page. */}
+          {categorySlug ? (
+            <Link
+              href={`/category/${categorySlug}`}
+              className="group inline-flex items-center gap-1 rounded-md hover:text-[#7B2FBE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7B2FBE] transition-colors"
+              aria-label={`View all products in ${section.title}`}
+            >
+              <span>{section.title}</span>
+              <ChevronRight
+                className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-[#7B2FBE] transition-transform duration-200 group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
+            </Link>
+          ) : (
+            // A section with no category to point at stays a plain heading
+            // rather than linking to /category/undefined.
+            section.title
+          )}
+        </h2>
       </div>
 
       {/* scroll-pl-* must match px-*: scroll snapping aligns a snap-start item
