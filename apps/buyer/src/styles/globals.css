@@ -840,6 +840,28 @@
   border-color: rgba(168, 119, 255, 0.55) !important;
 }
 
+/* Checkout's own fields. The page is deliberately light in both themes, and the
+   exemption above keeps its BACKGROUND and border; but the plain `.dark input`
+   rule further up (color: var(--ink), near-white) has higher specificity than
+   the page's `.co-input { color: #1a1a1a }`, so the typed or prefilled text
+   still came out near-white on a white field. Re-assert the page's own colours
+   at a specificity that wins, and fix the placeholder, which `.dark
+   input::placeholder` also lightened. */
+.dark .co-input,
+.dark .co-select {
+  color: #1a1a1a;
+  -webkit-text-fill-color: #1a1a1a;
+}
+.dark .co-input::placeholder {
+  /* #767676 is the lightest grey that still reaches 4.5:1 on the white field. */
+  color: #767676;
+  -webkit-text-fill-color: #767676;
+}
+.dark .co-select option {
+  color: #1a1a1a;
+  background: #ffffff;
+}
+
 /* ─── Corner radius, one scale for the whole site ─────────────────────────
    The glass surfaces had SEVEN different radii between them (12/16/18/24/32px
    plus Tailwind's xl/2xl/3xl), which is why nothing quite matched. The radius
