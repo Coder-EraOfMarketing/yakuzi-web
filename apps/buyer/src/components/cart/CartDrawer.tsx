@@ -22,6 +22,7 @@ import { useScrollLock } from '@/hooks/useScrollLock';
 import { useState } from 'react';
 import { QuickViewModal } from '@/components/products/QuickViewModal';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
+import PreOrderChip from '@/components/products/PreOrderChip';
 
 
 
@@ -371,9 +372,12 @@ export default function CartDrawer({ isOpen, onClose }: { isOpen: boolean; onClo
                              placeholder, so opacity variants compile to
                              nothing and the badge renders unstyled. */}
                          {isPreOrder ? (
-                           <span className="mt-1 inline-flex w-fit items-center rounded-full bg-primary-100 px-2 py-0.5 text-2xs font-semibold text-primary-700">
-                             Pre-order · expected {formatDate(availability.preOrderDeliveryDate!)}
-                           </span>
+                           // One line, readable in both themes; scrolls only if the
+                           // drawer is too narrow to hold it (shared with the cards).
+                           <PreOrderChip
+                             label={`Pre-order · expected ${formatDate(availability.preOrderDeliveryDate!)}`}
+                             className="mt-1.5 w-fit"
+                           />
                          ) : isOutOfStock ? (
                            <span className="mt-1 text-2xs font-bold uppercase tracking-wide text-red-600">Out of stock</span>
                          ) : null}
